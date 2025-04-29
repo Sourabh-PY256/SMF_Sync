@@ -1,6 +1,6 @@
 ﻿using EWP.SF.Common.Models;
-using EWP.SF.ShopFloor.BusinessEntities;
-using EWP.SF.ShopFloor.BusinessLayer;
+using EWP.SF.Item.BusinessEntities;
+using EWP.SF.Item.BusinessLayer;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;

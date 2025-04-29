@@ -7,7 +7,7 @@ using EWP.SF.Helper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace EWP.SF.ShopFloor.BusinessLayer;
+namespace EWP.SF.Item.BusinessLayer;
 
 [JsonConverter(typeof(StringEnumConverter))]
 internal enum EntityLogType

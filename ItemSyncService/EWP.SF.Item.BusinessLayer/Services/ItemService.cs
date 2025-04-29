@@ -1,13 +1,11 @@
-﻿using EWP.SF.API.BusinessEntities;
-using EWP.SF.API.BusinessEntities.MesModels.DataSync;
-using EWP.SF.API.BusinessLayer.Services.DataSync.Processors;
+﻿using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Helper;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace EWP.SF.API.BusinessLayer.Services.DataSync;
+namespace EWP.SF.Item.BusinessLayer;
 
 public class ItemService(ILogger<ItemService> logger, IServiceScopeFactory serviceFactory, IApplicationSettings settings) : BackgroundService
 {

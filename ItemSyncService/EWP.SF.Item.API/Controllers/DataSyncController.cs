@@ -1,19 +1,21 @@
-using EWP.SF.API.ActionFilters;
-using EWP.SF.API.Attributes;
-using EWP.SF.API.BusinessEntities;
-using EWP.SF.API.BusinessEntities.MesModels.DataSync;
-using EWP.SF.API.BusinessLayer.Services.DataSync;
-using EWP.SF.API.BusinessLayer.Services.DataSync.Processors;
-using EWP.SF.API.Middlewares;
+
 
 using Microsoft.AspNetCore.Mvc;
-
-using static EWP.SF.Item.BusinessLayer.Services
-
+using  EWP.SF.Item.BusinessLayer;
+using EWP.SF.Item.BusinessEntities;
+using EWP.SF.Common.Models;
 namespace EWP.SF.Item.API;
 
 public partial class DataSyncController : BaseController
 {
+	private readonly ILogger<DataSyncController> _logger;
+	private readonly IDataSyncService _DataSyncService;
+
+    public DataSyncController(ILogger<DataSyncController> logger, IDataSyncService DataSyncService)
+    {
+        _logger = logger;
+		_DataSyncService = DataSyncService;
+    }
 	#region DataSync
 
 	/// <summary>
@@ -21,14 +23,12 @@ public partial class DataSyncController : BaseController
 	/// </summary>
 	/// <returns></returns>
 	[HttpGet("DataSyncService/Catalog/Erp")]
-	[RequestValidator]
-	[RequiresToken]
 	public async Task<ResponseModel> ListDataSyncErp([FromQuery] DataSyncCatalogFilter SearchFilter)
 	{
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncErp(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncErp(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -43,7 +43,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncErpVersion(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncErpVersion(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -58,7 +58,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncErpDatabase(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncErpDatabase(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -73,7 +73,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncErpDatabaseVersion(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncErpDatabaseVersion(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -88,7 +88,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncErpManufacturing(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncErpManufacturing(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -103,7 +103,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncErpManufacturingVersion(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncErpManufacturingVersion(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -118,7 +118,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncInstanceCategory(context.User, SearchFilter);
+		returnValue.Data = _DataSyncService.ListDataSyncInstanceCategory(context.User, SearchFilter);
 
 		return returnValue;
 	}
@@ -132,7 +132,7 @@ public partial class DataSyncController : BaseController
 	{
 		ResponseModel returnValue = new()
 		{
-			Data = BusinessManager.Operations.ListDataSyncERP(Id, EnableType.Yes)
+			Data = _DataSyncService.ListDataSyncERP(Id, EnableType.Yes)
 		};
 
 		return returnValue;
@@ -147,7 +147,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.GetServiceInstancesFullData(context.User, Id);
+		returnValue.Data = _DataSyncService.GetServiceInstancesFullData(context.User, Id);
 
 		return returnValue;
 	}
@@ -162,7 +162,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.MergeDataSyncERP(context.User, Request);
+		returnValue.Data = _DataSyncService.MergeDataSyncERP(context.User, Request);
 
 		return returnValue;
 	}
@@ -177,7 +177,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.ListDataSyncService(context.User, Id, (TriggerType)Trigger);
+		returnValue.Data = _DataSyncService.ListDataSyncService(context.User, Id, (TriggerType)Trigger);
 
 		return returnValue;
 	}
@@ -192,7 +192,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		DataSyncService responseData = BusinessManager.Operations.MergeDataSyncService(context.User, DataSyncInfo);
+		BusinessEntities.DataSyncService responseData = _DataSyncService.MergeDataSyncService(context.User, DataSyncInfo);
 		ServiceManager.UpdateServiceData(responseData.Entity.Name, responseData);
 		returnValue.Data = responseData;
 
@@ -234,8 +234,6 @@ public partial class DataSyncController : BaseController
 	/// </summary>
 	/// <returns></returns>
 	[HttpPost("DataSyncService/Execute/Single/{ExecType}/{Trigger?}")]
-	[RequestValidator]
-	[RequiresToken]
 	[PermissionsTypeRequired("Sync")]
 	[PermissionsValidator]
 	public async Task<ResponseModel> DataSyncServiceExecuteSingle([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest, [FromRoute] int ExecType, [FromRoute] TriggerType Trigger = TriggerType.SmartFactory)
@@ -348,7 +346,7 @@ public partial class DataSyncController : BaseController
 	{
 		ResponseModel returnValue = new();
 
-		DataSyncService ServiceData = await BusinessManager.Operations.GetBackgroundService(Service).ConfigureAwait(false);
+		BusinessEntities.DataSyncService ServiceData = await _DataSyncService.GetBackgroundService(Service).ConfigureAwait(false);
 		returnValue.IsSuccess = true;
 		returnValue.Data = ServiceData;
 
@@ -365,7 +363,7 @@ public partial class DataSyncController : BaseController
 	{
 		ResponseModel returnValue = new()
 		{
-			Data = await BusinessManager.Operations.GetDataSyncServiceLogs(LogId, LogType).ConfigureAwait(false)
+			Data = await _DataSyncService.GetDataSyncServiceLogs(LogId, LogType).ConfigureAwait(false)
 		};
 
 		return returnValue;
@@ -382,7 +380,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = await BusinessManager.Operations.GetSyncServiceInstanceVisibility(context.User, Services, Trigger).ConfigureAwait(false);
+		returnValue.Data = await _DataSyncService.GetSyncServiceInstanceVisibility(context.User, Services, Trigger).ConfigureAwait(false);
 
 		return returnValue;
 	}
@@ -397,12 +395,12 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		DataSyncErp responseData = BusinessManager.Operations.MergeFullData(context.User, DataInfo);
+		DataSyncErp responseData = _DataSyncService.MergeFullData(context.User, DataInfo);
 		if (responseData.Instances.Count > 0)
 		{
 			responseData.Instances.ForEach(instance => ServiceManager.UpdateServiceData(instance.Entity.Name, instance));
 		}
-		List<DataSyncService> disabledServices = BusinessManager.Operations.ListDisabledServices();
+		List<DataSyncService> disabledServices = _DataSyncService.ListDisabledServices();
 		disabledServices?.ForEach(service => ServiceManager.UpdateServiceData(service.EntityId, null));
 		ErpFailedRecordReprocessService scopedService = (ErpFailedRecordReprocessService)StaticServiceProvider.Provider.GetService(typeof(ErpFailedRecordReprocessService));
 		scopedService?.SetServiceData(responseData);
@@ -423,7 +421,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.GetDataSyncServiceHeaderLogs(context.User, ServiceInstanceId);
+		returnValue.Data = _DataSyncService.GetDataSyncServiceHeaderLogs(context.User, ServiceInstanceId);
 
 		return returnValue;
 	}
@@ -438,7 +436,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.GetDataSyncServiceHeaderErrorLogs(context.User, ServiceInstanceId);
+		returnValue.Data = _DataSyncService.GetDataSyncServiceHeaderErrorLogs(context.User, ServiceInstanceId);
 
 		return returnValue;
 	}
@@ -453,7 +451,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = await BusinessManager.Operations.GetDataSyncServiceHeaderDataLogs(logid, logtype, context.User).ConfigureAwait(false);
+		returnValue.Data = await _DataSyncService.GetDataSyncServiceHeaderDataLogs(logid, logtype, context.User).ConfigureAwait(false);
 
 		return returnValue;
 	}
@@ -468,7 +466,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = await BusinessManager.Operations.GetDataSyncServiceDetailLogs(context.User, LogId).ConfigureAwait(false);
+		returnValue.Data = await _DataSyncService.GetDataSyncServiceDetailLogs(context.User, LogId).ConfigureAwait(false);
 
 		return returnValue;
 	}
@@ -479,7 +477,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = await BusinessManager.Operations.GetDataSyncServiceDetailLogsSingle(context.User, LogId).ConfigureAwait(false);
+		returnValue.Data = await _DataSyncService.GetDataSyncServiceDetailLogsSingle(context.User, LogId).ConfigureAwait(false);
 
 		return returnValue;
 	}
@@ -494,7 +492,7 @@ public partial class DataSyncController : BaseController
 		ResponseModel returnValue = new();
 		RequestContext context = GetContext();
 
-		returnValue.Data = BusinessManager.Operations.MergeDataSyncServiceInstanceMapping(context.User, Request);
+		returnValue.Data = _DataSyncService.MergeDataSyncServiceInstanceMapping(context.User, Request);
 
 		return returnValue;
 	}
@@ -519,7 +517,7 @@ public partial class DataSyncController : BaseController
 	{
 		ResponseModel returnValue = new()
 		{
-			Data = BusinessManager.Operations.GetTimezones()
+			Data = _DataSyncService.GetTimezones()
 		};
 
 		return returnValue;

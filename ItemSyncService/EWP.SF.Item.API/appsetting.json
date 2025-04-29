@@ -12,7 +12,7 @@
     "AllowedHosts": "*",
     "JwtSettings": {
       "Secret": "your-secret-key",
-      "Issuer": "ewp-sf-floor-api",
+      "Issuer": "ewp-sf-item-api",
       "Audience": "ewp-sf-clients"
     }
   }

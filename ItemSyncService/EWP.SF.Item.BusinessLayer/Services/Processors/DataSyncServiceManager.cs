@@ -1,123 +1,16 @@
 ﻿using EWP.SF.Item.BusinessEntities;
 
-namespace EWP.SF.Item.BusinessLayer.Services
+namespace EWP.SF.Item.BusinessLayer;
 
 public class DataSyncServiceManager
 {
-	private static Operations _operations;
-	private readonly AllocationService _allocationService;
-	private readonly FacilityService _facilityService;
-	private readonly BinLocationService _binLocationService;
-	private readonly DemandService _demandService;
-	private readonly EmployeeService _employeeService;
-	private readonly InventoryService _inventoryService;
-	private readonly InventoryStatusService _inventoryStatusService;
 	private readonly ItemService _itemService;
-	private readonly LotSerialStatusService _lotSerialStatusService;
-	private readonly MachineService _machineService;
-	private readonly MaterialIssueService _materialIssueService;
-	private readonly MaterialReturnService _materialReturnService;
-	private readonly ProductService _productService;
-	private readonly ProductionOrderChangeStatusService _productionOrderChangeStatusService;
-	private readonly ProductionOrderService _productionOrderService;
-	private readonly ProductReceiptService _productReceiptService;
-	private readonly ProductReturnService _productReturnService;
-	private readonly PositionService _positionService;
-	private readonly SkillCatalogService _skillCatalogService;
-	private readonly StockService _stockService;
-	private readonly SupplyService _supplyService;
-	private readonly UnitMeasureService _unitMeasureService;
-	private readonly WarehouseService _warehouseService;
-	private readonly FullStockService _fullStockService;
-	private readonly ProcessTypeService _processTypeService;
-	private readonly ToolTypeService _toolTypeService;
-	private readonly FullAllocationService _fullAllocationService;
-	private readonly FloorService _floorService;
-	private readonly WorkCenterService _workCenterService;
-	private readonly ProductionLineService _productionLineService;
-	private readonly OrderScheduleService _orderScheduleService;
-	private readonly ClockInOutService _clockinoutService;
-	private readonly ProductTransferService _productTransferService;
-	private readonly MaterialScrapService _materialScrapService;
-	private readonly MachineIssueService _machineIssueService;
-	private readonly LaborIssueService _laborIssueService;
 	//	private readonly IoTDataSimulatorService _ioTDataSimulatorService;
-	public DataSyncServiceManager(
-		AllocationService allocationService,
-		FacilityService facilityService,
-		BinLocationService binLocationService,
-		DemandService demandService,
-		EmployeeService employeeService,
-		InventoryService inventoryService,
-		InventoryStatusService inventoryStatusService,
-		ItemService itemService,
-		LotSerialStatusService lotSerialStatusService,
-		MachineService machineService,
-		MaterialIssueService materialIssueService,
-		MaterialReturnService materialReturnService,
-		ProductService productService,
-		ProductionOrderChangeStatusService productionOrderChangeStatusService,
-		ProductionOrderService productionOrderService,
-		ProductReceiptService productReceiptService,
-		ProductReturnService productReturnService,
-		PositionService positionService,
-		SkillCatalogService skillCatalogService,
-		StockService stockService,
-		SupplyService supplyService,
-		UnitMeasureService unitMeasureService,
-		WarehouseService warehouseService,
-		FullStockService fullStockService,
-		ProcessTypeService processTypeService,
-		ToolTypeService toolTypeService,
-		FullAllocationService fullAllocationService,
-		FloorService floorService,
-		WorkCenterService workCenterService,
-		ProductionLineService productionLineService,
-		OrderScheduleService orderScheduleService,
-		ClockInOutService clockinoutService,
-		ProductTransferService productTransferService,
-		MaterialScrapService materialScrapService,
-		MachineIssueService machineIssueService,
-		LaborIssueService laborIssueService)
+	public DataSyncServiceManager(ItemService itemService)
 	//IoTDataSimulatorService ioTDataSimulatorService)
 	{
 		_operations = new Operations();
-		_allocationService = allocationService;
-		_facilityService = facilityService;
-		_binLocationService = binLocationService;
-		_demandService = demandService;
-		_employeeService = employeeService;
-		_inventoryService = inventoryService;
-		_inventoryStatusService = inventoryStatusService;
 		_itemService = itemService;
-		_lotSerialStatusService = lotSerialStatusService;
-		_machineService = machineService;
-		_materialIssueService = materialIssueService;
-		_materialReturnService = materialReturnService;
-		_productService = productService;
-		_productionOrderChangeStatusService = productionOrderChangeStatusService;
-		_productionOrderService = productionOrderService;
-		_productReceiptService = productReceiptService;
-		_productReturnService = productReturnService;
-		_positionService = positionService;
-		_skillCatalogService = skillCatalogService;
-		_stockService = stockService;
-		_supplyService = supplyService;
-		_unitMeasureService = unitMeasureService;
-		_warehouseService = warehouseService;
-		_fullStockService = fullStockService;
-		_processTypeService = processTypeService;
-		_toolTypeService = toolTypeService;
-		_fullAllocationService = fullAllocationService;
-		_floorService = floorService;
-		_workCenterService = workCenterService;
-		_productionLineService = productionLineService;
-		_orderScheduleService = orderScheduleService;
-		_clockinoutService = clockinoutService;
-		_productTransferService = productTransferService;
-		_materialScrapService = materialScrapService;
-		_machineIssueService = machineIssueService;
-		_laborIssueService = laborIssueService;
 		//_ioTDataSimulatorService = ioTDataSimulatorService;
 	}
 

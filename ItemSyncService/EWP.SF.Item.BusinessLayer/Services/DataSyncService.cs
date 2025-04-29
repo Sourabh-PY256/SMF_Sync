@@ -14,14 +14,19 @@ namespace EWP.SF.Item.BusinessLayer;
 
 public  class DataSyncService : IDataSyncService    
 {
+    private readonly IDataSyncRepository _dataSyncRepository;
 
+    public DataSyncService(IDataSyncRepository dataSyncRepository)
+    {
+        _dataSyncRepository = dataSyncRepository;
+    }
 	#region DataSync
 
 	public async Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "")
 	{
 		if (string.Equals(mode, "START", StringComparison.OrdinalIgnoreCase) || string.Equals(mode, "END", StringComparison.OrdinalIgnoreCase) || ApplicationSettings.Instance.GetAppSetting("LogTimedServices").ToBool())
 		{
-			await BrokerDAL.DatasyncTempServiceLogAsync(EntityCode, mode, Exception).ConfigureAwait(false);
+			await _dataSyncRepository.DatasyncTempServiceLogAsync(EntityCode, mode, Exception).ConfigureAwait(false);
 		}
 	}
 
@@ -31,13 +36,13 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
 		// searchFilter.LanguageCode = systemOperator.LanguageCode;
-		return BrokerDAL.ListDataSyncErp(searchFilter);
+		return _dataSyncRepository.ListDataSyncErp(searchFilter);
 	}
 
 	public List<DataSyncCatalog> ListDataSyncErpVersion(User systemOperator, DataSyncCatalogFilter searchFilter)
@@ -46,13 +51,13 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
 		// searchFilter.LanguageCode = systemOperator.LanguageCode;
-		return BrokerDAL.ListDataSyncErpVersion(searchFilter);
+		return _dataSyncRepository.ListDataSyncErpVersion(searchFilter);
 	}
 
 	public List<DataSyncCatalog> ListDataSyncErpDatabase(User systemOperator, DataSyncCatalogFilter searchFilter)
@@ -61,13 +66,13 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
 		// searchFilter.LanguageCode = systemOperator.LanguageCode;
-		return BrokerDAL.ListDataSyncErpDatabase(searchFilter);
+		return _dataSyncRepository.ListDataSyncErpDatabase(searchFilter);
 	}
 
 	public List<DataSyncCatalog> ListDataSyncErpDatabaseVersion(User systemOperator, DataSyncCatalogFilter searchFilter)
@@ -76,13 +81,13 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
 		// searchFilter.LanguageCode = systemOperator.LanguageCode;
-		return BrokerDAL.ListDataSyncErpDatabaseVersion(searchFilter);
+		return _dataSyncRepository.ListDataSyncErpDatabaseVersion(searchFilter);
 	}
 
 	public List<DataSyncCatalog> ListDataSyncErpManufacturing(User systemOperator, DataSyncCatalogFilter searchFilter)
@@ -91,13 +96,13 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
 		// searchFilter.LanguageCode = systemOperator.LanguageCode;
-		return BrokerDAL.ListDataSyncErpManufacturing(searchFilter);
+		return _dataSyncRepository.ListDataSyncErpManufacturing(searchFilter);
 	}
 
 	public List<DataSyncCatalog> ListDataSyncErpManufacturingVersion(User systemOperator, DataSyncCatalogFilter searchFilter)
@@ -106,13 +111,13 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
 		// searchFilter.LanguageCode = systemOperator.LanguageCode;
-		return BrokerDAL.ListDataSyncErpManufacturingVersion(searchFilter);
+		return _dataSyncRepository.ListDataSyncErpManufacturingVersion(searchFilter);
 	}
 
 	public List<DataSyncCatalog> ListDataSyncInstanceCategory(User systemOperator, DataSyncCatalogFilter searchFilter)
@@ -121,17 +126,17 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return BrokerDAL.ListDataSyncInstanceCategory(searchFilter);
+		return _dataSyncRepository.ListDataSyncInstanceCategory(searchFilter);
 	}
 
 	public List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes)
 	{
-		return BrokerDAL.ListDataSyncERP(id, getInstances);
+		return _dataSyncRepository.ListDataSyncERP(id, getInstances);
 	}
 
 	public DataSyncErp MergeDataSyncERP(User systemOperator, DataSyncErp dataSyncInfo)
@@ -140,11 +145,11 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
-		return BrokerDAL.MergeDataSyncERP(dataSyncInfo, systemOperator);
+		return _dataSyncRepository.MergeDataSyncERP(dataSyncInfo, systemOperator);
 	}
 
 	public List<DataSyncService> ListDataSyncService(User systemOperator, string id, TriggerType trigger)
@@ -153,12 +158,12 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return BrokerDAL.ListDataSyncService(trigger, id);
+		return _dataSyncRepository.ListDataSyncService(trigger, id);
 	}
 
 	public DataSyncService MergeDataSyncService(User systemOperator, DataSyncService dataSyncInfo)
@@ -167,32 +172,32 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return BrokerDAL.MergeDataSyncService(dataSyncInfo, systemOperator);
+		return _dataSyncRepository.MergeDataSyncService(dataSyncInfo, systemOperator);
 	}
 
 	public bool UpdateDataSyncServiceExecution(string id, DateTime executionDate)
 	{
-		return BrokerDAL.UpdateDataSyncServiceExecution(id, executionDate);
+		return _dataSyncRepository.UpdateDataSyncServiceExecution(id, executionDate);
 	}
 
 	public bool UpdateDataSyncServiceStatus(string id, ServiceStatus status)
 	{
-		return BrokerDAL.UpdateDataSyncServiceStatus(id, status);
+		return _dataSyncRepository.UpdateDataSyncServiceStatus(id, status);
 	}
 
 	public List<DataSyncService> ListDataSyncServiceInternal(TriggerType trigger)
 	{
-		return BrokerDAL.ListDataSyncService(trigger);
+		return _dataSyncRepository.ListDataSyncService(trigger);
 	}
 
 	public async Task<DataSyncService> GetBackgroundService(string backgroundService, string HttpMethod = "GET")
 	{
-		return (await BrokerDAL.GetBackgroundService(backgroundService, HttpMethod.ToUpperInvariant()).ConfigureAwait(false)).FirstOrDefault();
+		return (await _dataSyncRepository.GetBackgroundService(backgroundService, HttpMethod.ToUpperInvariant()).ConfigureAwait(false)).FirstOrDefault();
 	}
 
 	public async Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo)
@@ -205,7 +210,7 @@ public  class DataSyncService : IDataSyncService
 
 		using (TransactionScope childScope = new(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
 		{
-			returnValue = await BrokerDAL.InsertDataSyncServiceLog(logInfo).ConfigureAwait(false);
+			returnValue = await _dataSyncRepository.InsertDataSyncServiceLog(logInfo).ConfigureAwait(false);
 			childScope.Complete();
 		}
 		return returnValue;
@@ -220,7 +225,7 @@ public  class DataSyncService : IDataSyncService
 		};
 		using (TransactionScope childScope = new(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
 		{
-			returnValue = await BrokerDAL.InsertDataSyncServiceLogDetail(logInfo).ConfigureAwait(false);
+			returnValue = await _dataSyncRepository.InsertDataSyncServiceLogDetail(logInfo).ConfigureAwait(false);
 			childScope.Complete();
 		}
 		return returnValue;
@@ -236,7 +241,7 @@ public  class DataSyncService : IDataSyncService
 		using (TransactionScope childScope = new(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
 		{
 			string jsonBulk = JsonConvert.SerializeObject(logInfo, Formatting.None, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-			returnValue = BrokerDAL.InsertDataSyncServiceLogDetailBulk(jsonBulk);
+			returnValue = _dataSyncRepository.InsertDataSyncServiceLogDetailBulk(jsonBulk);
 			childScope.Complete();
 		}
 		return returnValue;
@@ -244,22 +249,22 @@ public  class DataSyncService : IDataSyncService
 
 	public bool InsertDataSyncServiceErpToken(DataSyncErpAuth tokenInfo)
 	{
-		return BrokerDAL.InsertDataSyncServiceErpToken(tokenInfo);
+		return _dataSyncRepository.InsertDataSyncServiceErpToken(tokenInfo);
 	}
 
 	public DataSyncErpAuth GetDataSyncServiceErpToken(string erpCode)
 	{
-		return BrokerDAL.GetDataSyncServiceErpToken(erpCode);
+		return _dataSyncRepository.GetDataSyncServiceErpToken(erpCode);
 	}
 
 	public List<DataSyncServiceLogDetail> GetDataSyncServiceFailRecords(string erpId)
 	{
-		return BrokerDAL.GetDataSyncServiceFailRecords(erpId);
+		return _dataSyncRepository.GetDataSyncServiceFailRecords(erpId);
 	}
 
 	public DataSyncService GetServiceInstanceFullData(string serviceInstance)
 	{
-		return BrokerDAL.GetServiceInstanceFullData(serviceInstance).FirstOrDefault();
+		return _dataSyncRepository.GetServiceInstanceFullData(serviceInstance).FirstOrDefault();
 	}
 
 	public List<DataSyncService> GetServiceInstancesFullData(User systemOperator, string serviceInstance)
@@ -268,17 +273,17 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return BrokerDAL.GetServiceInstanceFullData(serviceInstance);
+		return _dataSyncRepository.GetServiceInstanceFullData(serviceInstance);
 	}
 
 	public async Task<DataSyncServiceLog> GetDataSyncServiceLogs(string logId, int logType)
 	{
-		return await BrokerDAL.GetDataSyncServiceLogs(logId, logType).ConfigureAwait(false);
+		return await _dataSyncRepository.GetDataSyncServiceLogs(logId, logType).ConfigureAwait(false);
 	}
 
 	public async Task<List<DataSyncServiceInstanceVisibility>> GetSyncServiceInstanceVisibility(User systemOperator, string services, TriggerType trigger)
@@ -287,19 +292,19 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		List<DataSyncServiceInstanceVisibility> returnValue = BrokerDAL.GetSyncServiceInstanceVisibility(services, trigger);
+		List<DataSyncServiceInstanceVisibility> returnValue = _dataSyncRepository.GetSyncServiceInstanceVisibility(services, trigger);
 		await Parallel.ForEachAsync(returnValue, (v, cancellationToken) => { v.Running = ContextCache.IsServiceRunning(v.ServiceInstanceId); return new ValueTask(); }).ConfigureAwait(false);
 		return returnValue;
 	}
 
 	public List<DataSyncService> ListDisabledServices()
 	{
-		return BrokerDAL.ListDisabledServices();
+		return _dataSyncRepository.ListDisabledServices();
 	}
 
 	public DataSyncErp MergeFullData(User systemOperator, DataSyncErp dataInfo)
@@ -308,15 +313,15 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		DataSyncErp returnValue = BrokerDAL.MergeDataSyncERP(dataInfo, systemOperator);
+		DataSyncErp returnValue = _dataSyncRepository.MergeDataSyncERP(dataInfo, systemOperator);
 		if (returnValue is not null)
 		{
-			_ = BrokerDAL.SaveDatasyncLog(dataInfo, systemOperator).ConfigureAwait(false);
+			_ = _dataSyncRepository.SaveDatasyncLog(dataInfo, systemOperator).ConfigureAwait(false);
 		}
 		return returnValue;
 	}
@@ -327,12 +332,12 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return BrokerDAL.GetDataSyncServiceHeaderLogs(serviceInstanceId);
+		return _dataSyncRepository.GetDataSyncServiceHeaderLogs(serviceInstanceId);
 	}
 
 	public List<DataSyncServiceLog> GetDataSyncServiceHeaderErrorLogs(User systemOperator, string serviceInstanceId = "")
@@ -341,12 +346,12 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return BrokerDAL.GetDataSyncServiceHeaderErrorLogs(serviceInstanceId);
+		return _dataSyncRepository.GetDataSyncServiceHeaderErrorLogs(serviceInstanceId);
 	}
 
 	public async Task<string> GetDataSyncServiceHeaderDataLogs(string logId, string type, User systemOperator)
@@ -355,12 +360,12 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return await BrokerDAL.GetDataSyncServiceHeaderDataLogs(logId, type).ConfigureAwait(false);
+		return await _dataSyncRepository.GetDataSyncServiceHeaderDataLogs(logId, type).ConfigureAwait(false);
 	}
 
 	public async Task<List<DataSyncServiceLogDetail>> GetDataSyncServiceDetailLogs(User systemOperator, string logId)
@@ -369,17 +374,17 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		return await BrokerDAL.GetDataSyncServiceDetailLogs(logId).ConfigureAwait(false);
+		return await _dataSyncRepository.GetDataSyncServiceDetailLogs(logId).ConfigureAwait(false);
 	}
 
 	public async Task<DataSyncServiceLogDetail> GetDataSyncServiceDetailLogsSingle(User systemOperator, string logId)
 	{
-		return await BrokerDAL.GetDataSyncServiceDetailLogsSingle(logId).ConfigureAwait(false);
+		return await _dataSyncRepository.GetDataSyncServiceDetailLogsSingle(logId).ConfigureAwait(false);
 	}
 
 	public DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping)
@@ -388,15 +393,15 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
 
-		DataSyncErpMapping returnValue = BrokerDAL.MergeDataSyncServiceInstanceMapping(instanceMapping, systemOperator);
+		DataSyncErpMapping returnValue = _dataSyncRepository.MergeDataSyncServiceInstanceMapping(instanceMapping, systemOperator);
 		if (returnValue is not null)
 		{
-			_ = BrokerDAL.SaveDatasyncMappingLog(instanceMapping, systemOperator).ConfigureAwait(false);
+			_ = _dataSyncRepository.SaveDatasyncMappingLog(instanceMapping, systemOperator).ConfigureAwait(false);
 		}
 		return returnValue;
 	}
@@ -407,7 +412,7 @@ public  class DataSyncService : IDataSyncService
 
 		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
 		}
 
 		#endregion Permission validation
@@ -421,16 +426,16 @@ public  class DataSyncService : IDataSyncService
 
 	public List<TimeZoneCatalog> GetTimezones(bool currentValues = false)
 	{
-		return BrokerDAL.GetTimezones(currentValues);
+		return _dataSyncRepository.GetTimezones(currentValues);
 	}
 
 	public string GetDatasyncDynamicBody(string entityCode)
 	{
-		return BrokerDAL.GetDatasyncDynamicBody(entityCode);
+		return _dataSyncRepository.GetDatasyncDynamicBody(entityCode);
 	}
 	public async Task<List<DataSyncIoTDataSimulator>> GetTagsSimulatorService(bool IsInitial)
 	{
-		return await BrokerDAL.GetTagsSimulatorService(IsInitial).ConfigureAwait(false);
+		return await _dataSyncRepository.GetTagsSimulatorService(IsInitial).ConfigureAwait(false);
 	}
 	#endregion DataSync
 }

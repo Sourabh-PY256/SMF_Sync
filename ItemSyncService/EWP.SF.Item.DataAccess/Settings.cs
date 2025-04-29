@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 
 using NLog;
 
-namespace EWP.SF.ShopFloor.DataAccess;
+namespace EWP.SF.Item.DataAccess;
 
 public partial class Settings
 {
