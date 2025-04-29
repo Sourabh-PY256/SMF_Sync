@@ -6,7 +6,7 @@ using NLog;
 
 using EWP.SF.Common.Models;
 
-namespace EWP.SF.ShopFloor.API;
+namespace EWP.SF.Item.API;
 
 internal class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
 {

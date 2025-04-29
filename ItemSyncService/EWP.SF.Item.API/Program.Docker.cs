@@ -1,6 +1,6 @@
 using EWP.SF.Helper;
-using EWP.SF.ShopFloor.DataAccess;
-using EWP.SF.ShopFloor.BusinessLayer;
+using EWP.SF.Item.DataAccess;
+using EWP.SF.Item.BusinessLayer;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
 
@@ -52,9 +52,9 @@ ApplicationSettings appSettings = new(configuration);
 builder.Services.AddSingleton<IApplicationSettings>(appSettings);
 
 // Register WarehouseRepository
-builder.Services.AddScoped<IWorkCenterRepository, WorkCenterRepository>();
+builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
 // Register WarehouseServices
-builder.Services.AddScoped<IWorkCenterService, WorkCenterService>();
+builder.Services.AddScoped<IDataSyncService, DataSyncService>();
 builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
 builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
 // Add services to the container.
@@ -66,7 +66,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Shop Floor Service API",
+        Title = "Item Sync Service API",
         Version = "v1",
         Description = "API for managing shop floor operations in the Smart Factory system",
         Contact = new OpenApiContact
@@ -96,12 +96,12 @@ if (app.Environment.IsDevelopment())
         {
             // Check if we're being accessed through the gateway
             var forwardedPath = httpReq.Headers["X-Forwarded-Path"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedPath) && forwardedPath.Contains("/shopfloor"))
+            if (!string.IsNullOrEmpty(forwardedPath) && forwardedPath.Contains("/Itemsync"))
             {
                 // We're being accessed through the gateway, add the /shopfloor prefix to the server URL
                 swaggerDoc.Servers = new List<OpenApiServer>
                 {
-                    new OpenApiServer { Url = "/shopfloor" }
+                    new OpenApiServer { Url = "/Itemsync" }
                 };
                 Console.WriteLine("Swagger accessed through gateway, setting server URL to /shopfloor");
             }
@@ -127,16 +127,16 @@ if (app.Environment.IsDevelopment())
             <script>
                 window.onload = function() {
                     // Check if we're being accessed through the gateway
-                    if (window.location.pathname.includes('/shopfloor/')) {
+                    if (window.location.pathname.includes('/Itemsync/')) {
                         // We're being accessed through the gateway
                         console.log('Swagger UI accessed through gateway');
 
                         // Override the Swagger UI's URL building function
                         const originalBuildUrl = window.ui.buildUrl;
                         window.ui.buildUrl = function(url) {
-                            // If the URL doesn't start with /shopfloor, add it
-                            if (!url.startsWith('/shopfloor') && !url.startsWith('http')) {
-                                url = '/shopfloor' + url;
+                            // If the URL doesn't start with /Itemsync, add it
+                            if (!url.startsWith('/Itemsync') && !url.startsWith('http')) {
+                                url = '/Itemsync' + url;
                             }
                             return originalBuildUrl(url);
                         };

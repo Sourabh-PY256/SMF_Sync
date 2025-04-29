@@ -1,6 +1,6 @@
-﻿using EWP.SF.ShopFloor.DataAccess;
+﻿using EWP.SF.Item.DataAccess;
 
-namespace EWP.SF.ShopFloor.BusinessLayer;
+namespace EWP.SF.Item.BusinessLayer;
 
 public class SystemSettingsService(IUtilitiesRepository utilitiesRepository) : ISystemSettingsService
 {

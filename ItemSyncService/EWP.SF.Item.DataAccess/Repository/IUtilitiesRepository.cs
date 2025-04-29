@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace EWP.SF.ShopFloor.DataAccess;
+namespace EWP.SF.Item.DataAccess;
 
 /// <summary>
 /// Interface for utilities repository that provides common database utility functions

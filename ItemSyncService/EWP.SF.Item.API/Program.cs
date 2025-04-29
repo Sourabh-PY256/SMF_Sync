@@ -1,6 +1,6 @@
 using EWP.SF.Helper;
-using EWP.SF.ShopFloor.DataAccess;
-using EWP.SF.ShopFloor.BusinessLayer;
+using EWP.SF.Item.DataAccess;
+using EWP.SF.Item.BusinessLayer;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
 
@@ -27,12 +27,9 @@ ApplicationSettings appSettings = new(configuration);
 builder.Services.AddSingleton<IApplicationSettings>(appSettings);
 
 // Register WarehouseRepository
-builder.Services.AddScoped<IWorkCenterRepository, WorkCenterRepository>();
+builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
 // Register WarehouseServices
-builder.Services.AddScoped<IWorkCenterService, WorkCenterService>();
-builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
-builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
-// Add services to the container.
+builder.Services.AddScoped<IDataSyncService, DataSyncService>();
 builder.Services.AddControllers();
 
 // Configure Swagger/OpenAPI
@@ -41,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Shop Floor Service API",
+        Title = "Item Sync Service API",
         Version = "v1",
         Description = "API for managing shop floor operations in the Smart Factory system",
         Contact = new OpenApiContact

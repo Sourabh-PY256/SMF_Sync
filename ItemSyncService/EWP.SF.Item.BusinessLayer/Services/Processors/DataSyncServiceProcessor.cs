@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
-namespace EWP.SF.Item.BusinessLayer.Services
+namespace EWP.SF.Item.BusinessLayer;
 
 public class DataSyncServiceProcessor
 {

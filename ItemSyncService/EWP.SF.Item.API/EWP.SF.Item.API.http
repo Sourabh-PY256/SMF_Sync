@@ -1,0 +1,6 @@
+@EWP.SF.Item.API_HostAddress = http://localhost:5118
+
+GET {{EWP.SF.Item.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

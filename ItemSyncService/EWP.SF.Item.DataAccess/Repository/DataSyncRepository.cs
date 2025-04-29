@@ -23,6 +23,14 @@ namespace EWP.SF.Item.DataAccess;
 
 public class DataSyncRepository : IDataSyncRepository
 {
+	private readonly string ConnectionString;
+	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+
+
+	public DataSyncRepository(IApplicationSettings applicationSettings)
+	{
+		ConnectionString = applicationSettings.GetConnectionString();
+	}
 
 	public async Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "", CancellationToken cancellationToken = default)
 	{

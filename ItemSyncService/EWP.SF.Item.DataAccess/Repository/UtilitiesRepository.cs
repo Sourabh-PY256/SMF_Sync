@@ -5,7 +5,7 @@ using EWP.SF.Helper;
 
 using MySqlConnector;
 
-namespace EWP.SF.ShopFloor.DataAccess;
+namespace EWP.SF.Item.DataAccess;
 
 public class UtilitiesRepository : IUtilitiesRepository
 {

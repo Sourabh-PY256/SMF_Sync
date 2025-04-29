@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using NLog;
 using EWP.SF.Common.Models;
 
-namespace EWP.SF.ShopFloor.API;
+namespace EWP.SF.Item.API;
 
 public class BaseController : ControllerBase
 {

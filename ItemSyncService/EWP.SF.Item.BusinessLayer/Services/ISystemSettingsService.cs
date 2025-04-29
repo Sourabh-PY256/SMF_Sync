@@ -1,4 +1,4 @@
-namespace EWP.SF.ShopFloor.BusinessLayer;
+namespace EWP.SF.Item.BusinessLayer;
 
 /// <summary>
 /// Interface for system settings service that provides system-level functionality
