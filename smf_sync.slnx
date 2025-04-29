@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/InventoryService/">
+    <Project Path="InventoryService/EWP.SF.Inventory.API/EWP.SF.Inventory.API.csproj" />
+    <Project Path="InventoryService/EWP.SF.Inventory.BusinessEntities/EWP.SF.Inventory.BusinessEntities.csproj" />
+    <Project Path="InventoryService/EWP.SF.Inventory.BusinessLayer/EWP.SF.Inventory.BusinessLayer.csproj" />
+    <Project Path="InventoryService/EWP.SF.Inventory.DataAccess/EWP.SF.Inventory.DataAccess.csproj" />
+  </Folder>
+  <Folder Name="/SharedService/">
+    <Project Path="SharedService/EWP.SF.Common/EWP.SF.Common.csproj" />
+    <Project Path="SharedService/EWP.SF.Helper/EWP.SF.Helper.csproj" />
+  </Folder>
+  <Folder Name="/ShopFloorService/">
+    <Project Path="ShopFloorService/EWP.SF.ShopFloor.API/EWP.SF.ShopFloor.API.csproj" />
+    <Project Path="ShopFloorService/EWP.SF.ShopFloor.BusinessEntities/EWP.SF.ShopFloor.BusinessEntities.csproj" />
+    <Project Path="ShopFloorService/EWP.SF.ShopFloor.BusinessLayer/EWP.SF.ShopFloor.BusinessLayer.csproj" />
+    <Project Path="ShopFloorService/EWP.SF.ShopFloor.DataAccess/EWP.SF.ShopFloor.DataAccess.csproj" />
+  </Folder>
+</Solution>

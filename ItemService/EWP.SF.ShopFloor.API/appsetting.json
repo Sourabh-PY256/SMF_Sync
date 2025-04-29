@@ -1,0 +1,18 @@
+{
+    "ConnectionStrings": {
+      "DefaultConnection": "Server=your-server;Database=EWP_SF_Floor;Trusted_Connection=True;MultipleActiveResultSets=true",
+      "Redis": "your-redis-connection-string"
+    },
+    "Logging": {
+      "LogLevel": {
+        "Default": "Information",
+        "Microsoft.AspNetCore": "Warning"
+      }
+    },
+    "AllowedHosts": "*",
+    "JwtSettings": {
+      "Secret": "your-secret-key",
+      "Issuer": "ewp-sf-floor-api",
+      "Audience": "ewp-sf-clients"
+    }
+  }

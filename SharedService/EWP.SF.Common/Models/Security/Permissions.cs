@@ -1,0 +1,288 @@
+﻿namespace EWP.SF.Common.Models;
+
+public static class Permissions
+{
+	#region System
+
+	public const string SYSTEM_EMAIL_MANAGEMENT = "697EFC4D308C438F896B0FC2FAB50246";
+	public const string SYSTEM_CONTROL_PANEL = "B57E144B655ABD62EEC1645E2849D614";
+
+	#endregion System
+
+	#region Users
+
+	public const string USERS_LIST = "19F5908E62458EE4F483834565FA28D5";
+	public const string USERS_EDIT = "D7F50CB704FD47CA1CAC632CE40F036B";
+	public const string USERS_CREATE = "7D2338B5F73521F7F350148BCBC93A95";
+	public const string USERS_DELETE = "40F28EACBD80CDA409E03607342941A5";
+
+	public const string USERS_CHANGE_ROLE = "C1EFA79FF8CF2918C3FD2E2F85E7AE11";
+	public const string USERS_CHANGE_STATUS = "DB955710430B51F4BEAD9C69AEE7D451";
+
+	#endregion Users
+
+	#region Security
+
+	public const string ROLES_ADD = "76720096E14B14DF5A2E193CDB57D27C";
+	public const string ROLES_EDIT = "32758DAAE1ABE0ABEC0DC2045AB127B3";
+	public const string ROLES_DELETE = "1C3DB04D1C243A351C6E3D3D92BDD134";
+	public const string ROLES_LIST = "B6BB0EEAA6757E3D35558984FE47C424";
+
+	public const string RECEIVE_FEEDBACK_MESSAGES = "A9AB557E93EEB40CDF85316AF0B8B4D9";
+
+	#endregion Security
+
+	#region Live Screen
+
+	public const string CP_SHOPFLOOR_VIEW = "D8309CB61A50B15989AF23762BD7D367";
+	public const string CP_SHOPFLOOR_EDIT = "2C22C7C1515E4573EF8AD1B142F4D9C5";
+
+	public const string CP_LIVESCREEN_MANAGE = "2BB454B7C1E45250F99252EE24742E5E";
+
+	#endregion Live Screen
+
+	#region Machines and Sensors
+
+	public const string CP_MACHINE_CREATE = "AA1D014F4CDAA8D113A15B2C0E40C0A8";
+	public const string CP_MACHINE_EDIT = "8D0314E8270437A5BA16C3896BEDA27E";
+	public const string CP_MACHINE_DELETE = "5C429BC7CB55E8A4ECC15B4ADD175895";
+	public const string CP_MACHINE_MANAGE = "C08A6149381BADE65E4310876E17AC66";
+
+	public const string CP_SENSOR_EDIT = "6EFB54CB7FE75C086ACA8D9A39671DAC";
+	public const string CP_SENSOR_DELETE = "B8B55ECFA632282AEE55507323036D18";
+	public const string CP_SENSOR_CREATE = "C43518B4BDDF9FB3E97B3EDCED011C53";
+	public const string CP_SENSOR_MANAGE = "AF29AA178AE43211319E28F627E96590";
+
+	public const string CP_MACHINE_INPUT = "9A59DE78E863CAF15514DFC10CC6A239";
+	public const string CP_MGR_APPSETTINGS = "7C65248FD8F55051F6B79DA9CC5EEF94";
+
+	#endregion Machines and Sensors
+
+	#region Production Lines
+
+	public const string CP_PRODUCTIONLINE_MANAGE = "0A3BD6D185BEADED4AEFFD9B0CDCF0E8";
+	public const string CP_PRODUCTIONLINE_CREATE = "B86F66BCAEE75D14AEB3FE4614491294";
+	public const string CP_PRODUCTIONLINE_EDIT = "45B7AA9FB67574E81640C59776767456";
+	public const string CP_PRODUCTIONLINE_DELETE = "98557D44BF7253308CE401247F50DDD4";
+
+	#endregion Production Lines
+
+	#region Shifts
+
+	public const string CP_SHIFT_MANAGE = "655675C8BA2BC3BB7CDA27A960A80A9B";
+	public const string CP_SHIFT_CREATE = "A4DE3C609BF7C506F8110EDECF7A919B";
+	public const string CP_SHIFT_EDIT = "22F769ADAF15ACC304049C4EAC8A4D58";
+	public const string CP_SHIFT_DELETE = "A969F809E1A1D8FFD5494085F2D295EB";
+
+	#endregion Shifts
+
+	#region Alert Roles
+
+	public const string CP_ALERT_ROLE_MANAGE = "B5385AB52FE99808A0AB4CE42600A131";
+	public const string CP_ALERT_ROLE_CREATE = "7CD09F91156C374DFA8051EF2DFBC98C";
+	public const string CP_ALERT_ROLE_EDIT = "1F16712AFAA27C8D835CC95F8A41A24D";
+	public const string CP_ALERT_ROLE_DELETE = "680D5EAD15785A09299853BD2F9C02ED";
+
+	#endregion Alert Roles
+
+	#region Catalogs
+
+	public const string CAT_CATALOGS_MANAGE = "92859451E3843E4AF3DC83D712147078";
+	public const string CAT_LANGUAGE_MANAGE = "3860316C99826AA0E56546A56B268B4A";
+	public const string CAT_ROLES_MANAGE = "822795E6F1E29E4CCE845A99112E58ED";
+
+	#endregion Catalogs
+
+	#region Reports
+
+	public const string REPORTS_LIST = "F426990405FFA70B0F388E68A233BB3D";
+
+	#endregion Reports
+
+	#region Backup History
+
+	public const string CP_HISTORY_FILES_VIEW = "9429FB021558EEF01115A1B4C9DE7509";
+
+	public const string CP_USER_LOG_VIEW = "17252B3945F6F96158BAA1AA88352C6B";
+
+	#endregion Backup History
+
+	#region Manual downtime
+
+	public const string PRD_MANUALDOWNTIME_MANAGE = "2728BB6BA9DB5FA0BD06F9971DBC79D9";
+
+	#endregion Manual downtime
+
+	#region Measure Unit
+
+	public const string PRD_MEASUREUNIT_MANAGE = "43F499052F0FAE0666C375F74215FFC4";
+
+	#endregion Measure Unit
+
+	#region Process entry
+
+	public const string PRD_PROCESS_ENTRY_MANAGE = "E831235429B59F9724F1643440106997";
+
+	public const string PRD_ORDERPROGRESS_MANAGE = "3AA42354B92485EA4DD1D9C8AEB2AFE8";
+
+	public const string PRD_ORDERQUALITY_MANAGE = "562907AE774C3AF792C2E15F1C29E366";
+
+	#endregion Process entry
+
+	#region Human Resources
+
+	public const string HR_EMPLOYEE_MANAGE = "F72DB49F30170CF7574D1974D7BBC333";
+
+	#endregion Human Resources
+
+	#region Tool Type
+
+	public const string PRD_TOOLTYPE_MANAGE = "4ED4AF42801E73064B0EAA8661EDF6FA";
+
+	#endregion Tool Type
+
+	#region Tool
+
+	public const string PRD_TOOL_MANAGE = "DD70DCB55013EC4F6B0B4FF8D0BA8E2C";
+
+	#endregion Tool
+
+	#region Tool
+
+	public const string PRD_WORKORDER_MANAGE = "66858919588F38C5FD8CAFCF22D2FE9A";
+
+	#endregion Tool
+
+	#region Assets Facility
+
+	public const string ASS_FACILITY_MANAGE = "210687DD6F09777FA6D771AC4EF43D9E";
+
+	#endregion Assets Facility
+
+	#region Assets Floor
+
+	public const string ASS_FLOOR_MANAGE = "C468501A3F240D0552E44E37165B86EF";
+
+	#endregion Assets Floor
+
+	#region Assets Work Center
+
+	public const string ASS_WORKCENTER_MANAGE = "415CFBFC61814F7804A4181DFA31A5CE";
+
+	#endregion Assets Work Center
+
+	#region Master Data
+
+	public const string MSRD_PRODUCTION_ATTRIBUTE_MANAGE = "F0556FA418535D2B249FBCD2CF78F32C";
+
+	#endregion Master Data
+
+	#region Quality
+
+	public const string CP_MASTER_QUALITY_SAMPLE_MANAGE = "43BA4EA901A77B9DF4C26680378EF90A";
+
+	public const string CP_MASTER_QUALITY_TEST_MANAGE = "07C8C2AECE319FDDC229B95BFC4EC308";
+
+	#endregion Quality
+
+	#region Process Type
+
+	public const string CP_PROCESS_TYPE_MANAGE = "3D727B3EE9DAEFBF58392DC5D337CFD1";
+
+	#endregion Process Type
+
+	#region Connectivity
+
+	public const string CN_APIEVENTS_MANAGE = "5F8E682802FA6E29BC6D00B3727FEDFD";
+	public const string CN_APITOKENS_MANAGE = "95B08799E7019A7BD5E3E999AD699E7C";
+
+	#endregion Connectivity
+
+	public const string CN_QUERYMANAGER_EXEC = "030CCDD90F2011EC856900155D6F4317";
+
+	public const string RPT_MACHINEDETAILS_VW = "20294150232130097A2EF73C8218C3F6";
+
+	#region Production Scheduling
+
+	public const string CP_PRODUCTION_VIEWER_VW = "FB15C53F22336982A182B84AEB2F42EB";
+	public const string CP_PRODUCTION_SCHEDULING_VW = "DDFDC2A2B4C277158589A9F95FA2FBD8";
+
+	public const string CP_SCHEDULING_SHIFT_STATUS_MANAGE = "D28E9C53075904BABFD36F7B7EA33F02";
+	public const string CP_SCHEDULING_SHIFT_MANAGE = "D9309726FB3B0CA4F787ACE4C6E341DE";
+
+	#endregion Production Scheduling
+
+	#region Inventory
+
+	public const string INV_WAREHOUSE_MANAGE = "BAEFDC4C9C1553F5840D03A8D578C6D9";
+	public const string INV_INVENTORY_MANAGE = "0BBDCDDF7D9DB3322A48C41EE76F20ED";
+
+	#endregion Inventory
+
+	#region SalesOrder
+
+	public const string INV_SALESORDER_LST = "D9B5AAB07B3B540F791BA58667A18380";
+
+	#endregion SalesOrder
+
+	#region PurchaseOrder
+
+	public const string INV_PURCHASEORDER_LST = "56EA0EE77C2C6EFE0131DFEEA01705F5";
+
+	#endregion PurchaseOrder
+
+	#region Notifications
+
+	public const string CP_NOTIFICATIONS_PLATFORMS = "D7C40E96F7EC957CE309630538DF24F3";
+	public const string CP_NOTIFICATIONS_PLATFORMSDETAIL = "1F12930AE41D1F4DDDF551F713434FE6";
+	public const string CP_NOTIFICATIONS_GROUP = "ABC646B6ABD2333E0F79345AAD2CEABE";
+	public const string CP_NOTIFICATIONS_SMTPSETTINGS = "76D8F3C00672F61B39846B2112D356A8";
+	public const string CP_NOTIFICATIONS_TEMPLATES = "5334591454D2589487C3AC194249B3D7";
+
+	#endregion Notifications
+
+	#region Bold BI
+
+	public const string BOLDBI_DASHBOARD_VIEW = "40242798340912403DAC979F64F8FDA8";
+	public const string BOLDBI_DASHBOARD_EDIT = "D29A04BD683D94955ED0060A294FF237";
+
+	#endregion Bold BI
+
+	#region Moodle
+
+	public const string TN_MOODLE_MANAGE = "55562DB943CF11B7EBD053A663CE44D3";
+
+	#endregion Moodle
+
+	#region Training
+
+	public const string TN_TRAINING_MANAGE = "CF270E40D273F9E7FD7C3061729060C3";
+
+	#endregion Training
+
+	public const string NLOG_MANAGE = "B2D37AE1CEDF42FF874289B721860AF2";
+
+	#region TrainingEmployee
+
+	public const string TN_TRAININGEMPLOYEE_MANAGE = "B3A4A721AF87C77FD1BBBC4BE48471DD";
+
+	#endregion TrainingEmployee
+
+	#region DataSyncManager
+
+	public const string DATA_SYNC_MANAGER = "C47DF1EA1850E954BDF5CC63BE0CB89E";
+
+	#endregion DataSyncManager
+
+	#region FacilityExplosion
+
+	public const string FACILITYEXPLOSION = "B2D37AE1CEDF42FF874289B721860AF2";
+
+	#endregion FacilityExplosion
+
+	#region Scheduling SecondaryContrainstGroup
+
+	public const string SP_SECONDARY_CONTAINST_GROUP_MANAGE = "34831ABBFA33D6F99BA9E5D9713FB15B";
+
+	#endregion Scheduling SecondaryContrainstGroup
+}
