@@ -21,7 +21,6 @@
 
 	<!-- Project References -->
 	<ItemGroup>
-		<ProjectReference Include="..\..\InventoryService\EWP.SF.Inventory.BusinessEntities\EWP.SF.Inventory.BusinessEntities.csproj" />
 		<ProjectReference Include="..\EWP.SF.Common\EWP.SF.Common.csproj" />
 	</ItemGroup>
 

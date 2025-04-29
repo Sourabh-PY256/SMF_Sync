@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="12.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.4" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="NLog.Database" Version="5.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EWP.SF.Item.DataAccess\EWP.SF.Item.DataAccess.csproj" />
+    <ProjectReference Include="..\EWP.SF.Item.BusinessEntities\EWP.SF.Item.BusinessEntities.csproj" />
+    <ProjectReference Include="..\..\SharedService\EWP.SF.Common\EWP.SF.Common.csproj" />
+    <ProjectReference Include="..\..\SharedService\EWP.SF.Helper\EWP.SF.Helper.csproj" />
+  </ItemGroup>
+
+</Project>
