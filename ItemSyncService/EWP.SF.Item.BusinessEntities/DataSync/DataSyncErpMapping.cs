@@ -1,4 +1,5 @@
-﻿using EWP.SF.Common.Models;
+﻿using EWP.SF.Common.Enumerators;
+using EWP.SF.Common.Models;
 namespace EWP.SF.Item.BusinessEntities;
 
 public class DataSyncErpMapping

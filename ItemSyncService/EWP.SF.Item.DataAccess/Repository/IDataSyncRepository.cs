@@ -1,6 +1,9 @@
+using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
-using EWP.SF.Common.ResponseModels;
 using EWP.SF.Item.BusinessEntities;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace EWP.SF.Item.DataAccess;
 
@@ -9,30 +12,31 @@ namespace EWP.SF.Item.DataAccess;
 /// </summary>
 public interface IDataSyncRepository
 {
-    // /// <summary>
-    // /// Retrieves a list of work centers, optionally filtered by delta date
-    // /// </summary>
-    // /// <param name="deltaDate">Optional date filter for changes since this date</param>
-    // /// <returns>List of work centers</returns>
-    // Task<List<WorkCenter>> ListWorkCenter(DateTime? deltaDate = null);
-
-    // /// <summary>
-    // /// Retrieves a specific work center by its code
-    // /// </summary>
-    // /// <param name="workCenterCode">The unique code of the work center</param>
-    // /// <returns>Work center details if found, null otherwise</returns>
-    // Task<WorkCenter> GetWorkCenter(string workCenterCode);
-
-    // /// <summary>
-    // /// Creates a new work center
-    // /// </summary>
-    // /// <param name="workCenterInfo">Work center information to create</param>
-    // /// <param name="systemOperator">User performing the operation</param>
-    // /// <param name="validation">Whether to perform validation</param>
-    // /// <param name="level">Hierarchical level of the work center</param>
-    // /// <returns>Response indicating success or failure</returns>
-    // //Task<ResponseData> CreateWorkCenter(WorkCenter workCenterInfo, User systemOperator, bool validation, string level);
-
-    // Task<bool> UpdateWorkCenter(WorkCenter workCenterInfo, User systemOperator);
-    // Task<bool> DeleteWorkCenter(WorkCenter workCenterInfo, User systemOperator);
+    List<DataSyncCatalog> ListDataSyncErp(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncCatalog> ListDataSyncErpVersion(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncCatalog> ListDataSyncErpDatabase(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncCatalog> ListDataSyncErpDatabaseVersion(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncCatalog> ListDataSyncErpManufacturing(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncCatalog> ListDataSyncErpManufacturingVersion(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncCatalog> ListDataSyncInstanceCategory(DataSyncCatalogFilter SearchFilter);
+    List<DataSyncErp> ListDataSyncERP(string Id = "", EnableType GetInstances = EnableType.Yes);
+    Task SaveDatasyncLog(DataSyncErp DataSyncInfo, User SystemOperator, CancellationToken cancellationToken = default);
+    Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "", CancellationToken cancellationToken = default);
+    DataSyncErp MergeDataSyncERP(DataSyncErp DataSyncInfo, User SystemOperator);
+    List<DataSyncService> ListDisabledServices();
+    List<DataSyncService> ListDataSyncService(TriggerType Trigger, string Id = "");
+    DataSyncService MergeDataSyncService(DataSyncService DataSyncInfo, User SystemOperator);
+    bool UpdateDataSyncServiceStatus(string Id, ServiceStatus Status);
+    Task<bool> InsertDataSyncServiceLog(DataSyncServiceLog logInfo, CancellationToken cancellationToken = default);
+    Task<bool> InsertDataSyncServiceLogDetail(DataSyncServiceLogDetail logInfo, CancellationToken cancellationToken = default);
+    bool InsertDataSyncServiceLogDetailBulk(string LogInfo);
+    bool InsertDataSyncServiceErpToken(DataSyncErpAuth TokenInfo);
+    DataSyncErpAuth GetDataSyncServiceErpToken(string ErpCode);
+    List<DataSyncServiceLogDetail> GetDataSyncServiceFailRecords(string ErpId);
+    List<DataSyncService> GetServiceInstanceFullData(string ServiceInstance);
+    Task<DataSyncServiceLog> GetDataSyncServiceLogs(string LogId, int logType = 0, CancellationToken cancellationToken = default);
+    string GetDatasyncDynamicBody(string EntityCode);
+    List<TimeZoneCatalog> GetTimezones(bool currentValues);
+    Task<List<DataSyncService>> GetBackgroundService(string backgroundService, string httpMethod, CancellationToken cancellationToken = default);
+    bool UpdateDataSyncServiceExecution(string Id, DateTime ExecutionDate);
 }

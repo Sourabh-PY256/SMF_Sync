@@ -12,21 +12,21 @@ using Newtonsoft.Json;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public  class DataSyncService : IDataSyncService    
+public class DataSyncServiceOperation : IDataSyncServiceOperation
 {
-    private readonly IDataSyncRepository _dataSyncRepository;
+	private readonly IDataSyncRepository _dataSyncRepository;
 
-    public DataSyncService(IDataSyncRepository dataSyncRepository)
-    {
-        _dataSyncRepository = dataSyncRepository;
-    }
+	public DataSyncServiceOperation(IDataSyncRepository dataSyncRepository)
+	{
+		_dataSyncRepository = dataSyncRepository;
+	}
 	#region DataSync
 
 	public async Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "")
 	{
 		if (string.Equals(mode, "START", StringComparison.OrdinalIgnoreCase) || string.Equals(mode, "END", StringComparison.OrdinalIgnoreCase) || ApplicationSettings.Instance.GetAppSetting("LogTimedServices").ToBool())
 		{
-			await _dataSyncRepository.DatasyncTempServiceLogAsync(EntityCode, mode, Exception).ConfigureAwait(false);
+			await _dataSyncRepository.DatasyncTempServiceLogAsync(EntityCode, mode, Exception, default).ConfigureAwait(false);
 		}
 	}
 
@@ -200,21 +200,21 @@ public  class DataSyncService : IDataSyncService
 		return (await _dataSyncRepository.GetBackgroundService(backgroundService, HttpMethod.ToUpperInvariant()).ConfigureAwait(false)).FirstOrDefault();
 	}
 
-	public async Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo)
-	{
-		string returnValue = string.Empty;
-		TransactionOptions transactionOptions = new()
-		{
-			IsolationLevel = IsolationLevel.ReadCommitted // o cualquier nivel de aislamiento que necesites
-		};
+	// public async Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo)
+	// {
+	// 	string returnValue = string.Empty;
+	// 	TransactionOptions transactionOptions = new()
+	// 	{
+	// 		IsolationLevel = IsolationLevel.ReadCommitted // o cualquier nivel de aislamiento que necesites
+	// 	};
 
-		using (TransactionScope childScope = new(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
-		{
-			returnValue = await _dataSyncRepository.InsertDataSyncServiceLog(logInfo).ConfigureAwait(false);
-			childScope.Complete();
-		}
-		return returnValue;
-	}
+	// 	using (TransactionScope childScope = new(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
+	// 	{
+	// 		returnValue = await _dataSyncRepository.InsertDataSyncServiceLog(logInfo).ConfigureAwait(false);
+	// 		childScope.Complete();
+	// 	}
+	// 	return returnValue;
+	// }
 
 	public async Task<bool> InsertDataSyncServiceLogDetail(DataSyncServiceLogDetail logInfo)
 	{
@@ -286,21 +286,21 @@ public  class DataSyncService : IDataSyncService
 		return await _dataSyncRepository.GetDataSyncServiceLogs(logId, logType).ConfigureAwait(false);
 	}
 
-	public async Task<List<DataSyncServiceInstanceVisibility>> GetSyncServiceInstanceVisibility(User systemOperator, string services, TriggerType trigger)
-	{
-		#region Permission validation
+	// public async Task<List<DataSyncServiceInstanceVisibility>> GetSyncServiceInstanceVisibility(User systemOperator, string services, TriggerType trigger)
+	// {
+	// 	#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
-		{
-			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
-		}
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
+	// 	{
+	// 		throw new UnauthorizedAccessException(NotificationSettings.noPermission);
+	// 	}
 
-		#endregion Permission validation
+	// 	#endregion Permission validation
 
-		List<DataSyncServiceInstanceVisibility> returnValue = _dataSyncRepository.GetSyncServiceInstanceVisibility(services, trigger);
-		await Parallel.ForEachAsync(returnValue, (v, cancellationToken) => { v.Running = ContextCache.IsServiceRunning(v.ServiceInstanceId); return new ValueTask(); }).ConfigureAwait(false);
-		return returnValue;
-	}
+	// 	List<DataSyncServiceInstanceVisibility> returnValue = _dataSyncRepository.GetSyncServiceInstanceVisibility(services, trigger);
+	// 	await Parallel.ForEachAsync(returnValue, (v, cancellationToken) => { v.Running = ContextCache.IsServiceRunning(v.ServiceInstanceId); return new ValueTask(); }).ConfigureAwait(false);
+	// 	return returnValue;
+	// }
 
 	public List<DataSyncService> ListDisabledServices()
 	{
@@ -326,85 +326,85 @@ public  class DataSyncService : IDataSyncService
 		return returnValue;
 	}
 
-	public List<DataSyncServiceLog> GetDataSyncServiceHeaderLogs(User systemOperator, string serviceInstanceId = "")
-	{
-		#region Permission validation
+	// public List<DataSyncServiceLog> GetDataSyncServiceHeaderLogs(User systemOperator, string serviceInstanceId = "")
+	// {
+	// 	#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
-		{
-			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
-		}
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
+	// 	{
+	// 		throw new UnauthorizedAccessException(NotificationSettings.noPermission);
+	// 	}
 
-		#endregion Permission validation
+	// 	#endregion Permission validation
 
-		return _dataSyncRepository.GetDataSyncServiceHeaderLogs(serviceInstanceId);
-	}
+	// 	return _dataSyncRepository.GetDataSyncServiceHeaderLogs(serviceInstanceId);
+	// }
 
-	public List<DataSyncServiceLog> GetDataSyncServiceHeaderErrorLogs(User systemOperator, string serviceInstanceId = "")
-	{
-		#region Permission validation
+	// public List<DataSyncServiceLog> GetDataSyncServiceHeaderErrorLogs(User systemOperator, string serviceInstanceId = "")
+	// {
+	// 	#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
-		{
-			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
-		}
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
+	// 	{
+	// 		throw new UnauthorizedAccessException(NotificationSettings.noPermission);
+	// 	}
 
-		#endregion Permission validation
+	// 	#endregion Permission validation
 
-		return _dataSyncRepository.GetDataSyncServiceHeaderErrorLogs(serviceInstanceId);
-	}
+	// 	return _dataSyncRepository.GetDataSyncServiceHeaderErrorLogs(serviceInstanceId);
+	// }
 
-	public async Task<string> GetDataSyncServiceHeaderDataLogs(string logId, string type, User systemOperator)
-	{
-		#region Permission validation
+	// public async Task<string> GetDataSyncServiceHeaderDataLogs(string logId, string type, User systemOperator)
+	// {
+	// 	#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
-		{
-			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
-		}
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
+	// 	{
+	// 		throw new UnauthorizedAccessException(NotificationSettings.noPermission);
+	// 	}
 
-		#endregion Permission validation
+	// 	#endregion Permission validation
 
-		return await _dataSyncRepository.GetDataSyncServiceHeaderDataLogs(logId, type).ConfigureAwait(false);
-	}
+	// 	return await _dataSyncRepository.GetDataSyncServiceHeaderDataLogs(logId, type).ConfigureAwait(false);
+	// }
 
-	public async Task<List<DataSyncServiceLogDetail>> GetDataSyncServiceDetailLogs(User systemOperator, string logId)
-	{
-		#region Permission validation
+	// public async Task<List<DataSyncServiceLogDetail>> GetDataSyncServiceDetailLogs(User systemOperator, string logId)
+	// {
+	// 	#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
-		{
-			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
-		}
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
+	// 	{
+	// 		throw new UnauthorizedAccessException(NotificationSettings.noPermission);
+	// 	}
 
-		#endregion Permission validation
+	// 	#endregion Permission validation
 
-		return await _dataSyncRepository.GetDataSyncServiceDetailLogs(logId).ConfigureAwait(false);
-	}
+	// 	return await _dataSyncRepository.GetDataSyncServiceDetailLogs(logId).ConfigureAwait(false);
+	// }
 
-	public async Task<DataSyncServiceLogDetail> GetDataSyncServiceDetailLogsSingle(User systemOperator, string logId)
-	{
-		return await _dataSyncRepository.GetDataSyncServiceDetailLogsSingle(logId).ConfigureAwait(false);
-	}
+	// public async Task<DataSyncServiceLogDetail> GetDataSyncServiceDetailLogsSingle(User systemOperator, string logId)
+	// {
+	// 	return await _dataSyncRepository.GetDataSyncServiceDetailLogsSingle(logId).ConfigureAwait(false);
+	// }
 
-	public DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping)
-	{
-		#region Permission validation
+	// public DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping)
+	// {
+	// 	#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
-		{
-			throw new UnauthorizedAccessException(NotificationSettings.noPermission);
-		}
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.DATA_SYNC_MANAGER))
+	// 	{
+	// 		throw new UnauthorizedAccessException(NotificationSettings.noPermission);
+	// 	}
 
-		#endregion Permission validation
+	// 	#endregion Permission validation
 
-		DataSyncErpMapping returnValue = _dataSyncRepository.MergeDataSyncServiceInstanceMapping(instanceMapping, systemOperator);
-		if (returnValue is not null)
-		{
-			_ = _dataSyncRepository.SaveDatasyncMappingLog(instanceMapping, systemOperator).ConfigureAwait(false);
-		}
-		return returnValue;
-	}
+	// 	DataSyncErpMapping returnValue = _dataSyncRepository.MergeDataSyncServiceInstanceMapping(instanceMapping, systemOperator);
+	// 	if (returnValue is not null)
+	// 	{
+	// 		_ = _dataSyncRepository.SaveDatasyncMappingLog(instanceMapping, systemOperator).ConfigureAwait(false);
+	// 	}
+	// 	return returnValue;
+	// }
 
 	public static async Task<DataSyncResponse> TestErpConnection(User systemOperator, DataSyncErp erpData)
 	{
@@ -424,18 +424,95 @@ public  class DataSyncService : IDataSyncService
 		return await client.DataSyncDownload($"{erpData.BaseUrl}").ConfigureAwait(false);
 	}
 
-	public List<TimeZoneCatalog> GetTimezones(bool currentValues = false)
-	{
-		return _dataSyncRepository.GetTimezones(currentValues);
-	}
+	// public List<TimeZoneCatalog> GetTimezones(bool currentValues = false)
+	// {
+	// 	return _dataSyncRepository.GetTimezones(currentValues);
+	// }
 
 	public string GetDatasyncDynamicBody(string entityCode)
 	{
 		return _dataSyncRepository.GetDatasyncDynamicBody(entityCode);
 	}
-	public async Task<List<DataSyncIoTDataSimulator>> GetTagsSimulatorService(bool IsInitial)
+
+	public Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo)
 	{
-		return await _dataSyncRepository.GetTagsSimulatorService(IsInitial).ConfigureAwait(false);
+		throw new NotImplementedException();
 	}
-	#endregion DataSync
+
+	public bool InsertDataSyncServiceLogDetailBulk(string logInfo)
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task<List<DataSyncServiceInstanceVisibility>> GetSyncServiceInstanceVisibility(User systemOperator, string services, TriggerType trigger)
+	{
+		throw new NotImplementedException();
+	}
+
+	public DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping)
+	{
+		throw new NotImplementedException();
+	}
+
+	public List<TimeZoneCatalog> GetTimezones(bool currentValues = false)
+	{
+		throw new NotImplementedException();
+	}
+	// public async Task<List<DataSyncIoTDataSimulator>> GetTagsSimulatorService(bool IsInitial)
+	// {
+	// 	return await _dataSyncRepository.GetTagsSimulatorService(IsInitial).ConfigureAwait(false);
+	// }
+	
+	public double GetTimezoneOffset(string offSetName = "")
+	{
+		double offset = 0;
+		if (offSetName == "ERP")
+		{
+			if (!ContextCache.ERPOffset.HasValue)
+			{
+				try
+				{
+					List<TimeZoneCatalog> tz = _dataSyncRepository.GetTimezones(true);
+					TimeZoneCatalog erpOffset = tz.Find(t => t.Key == "ERP");
+					offset = erpOffset.Offset;
+					ContextCache.ERPOffset = offset;
+				}
+				catch { }
+			}
+			else
+			{
+				offset = ContextCache.ERPOffset.Value;
+			}
+		}
+		else
+		{
+			List<TimeZoneCatalog> tz = _dataSyncRepository.GetTimezones(true);
+			if (string.IsNullOrEmpty(offSetName))
+			{
+				TimeZoneCatalog SfOffset = tz.Find(t => t.Key == "SmartFactory");
+				TimeZoneCatalog erpOffset = tz.Find(t => t.Key == "ERP");
+				double baseOffset = 0;
+				double integrationOffset = 0;
+				if (SfOffset is not null)
+				{
+					baseOffset = SfOffset.Offset;
+				}
+				if (erpOffset is not null)
+				{
+					integrationOffset = erpOffset.Offset;
+				}
+				offset = baseOffset - integrationOffset;
+			}
+			else
+			{
+				TimeZoneCatalog namedOffset = tz.Find(t => t.Key == offSetName);
+				if (namedOffset is not null)
+				{
+					offset = namedOffset.Offset;
+				}
+			}
+		}
+		return offset;
+	}
+    #endregion DataSync
 }

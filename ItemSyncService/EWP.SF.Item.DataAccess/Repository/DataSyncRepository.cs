@@ -1,23 +1,15 @@
 ﻿using System.Data;
 using System.Globalization;
-using EWP.SF.Common.Attributes;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.EntityLogger;
-using EWP.SF.Common.Models;
 using EWP.SF.Helper;
 using MySqlConnector;
 using EWP.SF.Item.BusinessEntities;
 using EWP.SF.ConnectionModule;
 using System.Text;
-using EWP.SF.Common.ResponseModels;
-using System.Data;
-using System.Globalization;
-
-using EWP.SF.ConnectionModule;
-using EWP.SF.Helper;
-
 
 using Newtonsoft.Json;
+using EWP.SF.Common.Models;
 
 namespace EWP.SF.Item.DataAccess;
 
@@ -25,11 +17,17 @@ public class DataSyncRepository : IDataSyncRepository
 {
 	private readonly string ConnectionString;
 	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+	private readonly string ConnectionStringReports;
+	private readonly string ConnectionStringLogs;
 
+	private readonly string Database;
 
 	public DataSyncRepository(IApplicationSettings applicationSettings)
 	{
 		ConnectionString = applicationSettings.GetConnectionString();
+		ConnectionStringReports = ApplicationSettings.Instance.GetReportsConnectionString();
+		ConnectionStringLogs = ApplicationSettings.Instance.GetConnectionString("Logs");
+		Database = ApplicationSettings.Instance.GetDatabaseFromConnectionString();
 	}
 
 	public async Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "", CancellationToken cancellationToken = default)
@@ -1311,7 +1309,7 @@ public class DataSyncRepository : IDataSyncRepository
 				catch (Exception ex)
 				{
 					// Log the exception if a logger is available
-					logger?.Error(ex);
+					// logger?.Error(ex);
 					throw;
 				}
 				finally
@@ -1851,7 +1849,7 @@ public class DataSyncRepository : IDataSyncRepository
 				catch (Exception ex)
 				{
 					// Log the exception if a logger is available
-					logger?.Error(ex);
+					// logger?.Error(ex);
 					throw;
 				}
 			}
@@ -2052,7 +2050,7 @@ public class DataSyncRepository : IDataSyncRepository
 				catch (Exception ex)
 				{
 					// Log the exception if a logger is available
-					logger?.Error(ex, "Error while retrieving Data Sync Service Header Data Logs.");
+					// logger?.Error(ex, "Error while retrieving Data Sync Service Header Data Logs.");
 					throw;
 				}
 			}
@@ -2130,7 +2128,7 @@ public class DataSyncRepository : IDataSyncRepository
 				}
 				catch (Exception ex)
 				{
-					logger?.Error(ex, "Error while retrieving data sync service detail logs.");
+					// logger?.Error(ex, "Error while retrieving data sync service detail logs.");
 					throw;
 				}
 			}
@@ -2200,7 +2198,7 @@ public class DataSyncRepository : IDataSyncRepository
 				}
 				catch (Exception ex)
 				{
-					logger?.Error(ex, "Error while retrieving single data sync service detail log.");
+					// logger?.Error(ex, "Error while retrieving single data sync service detail log.");
 					throw;
 				}
 			}
@@ -2455,7 +2453,7 @@ public class DataSyncRepository : IDataSyncRepository
 				catch (Exception ex)
 				{
 					// Log the exception if a logger is available
-					logger?.Error(ex);
+					// logger?.Error(ex);
 					throw;
 				}
 				finally
@@ -2467,4 +2465,10 @@ public class DataSyncRepository : IDataSyncRepository
 			}
 		}
 	}
+
+	Task<bool> IDataSyncRepository.InsertDataSyncServiceLog(DataSyncServiceLog logInfo, CancellationToken cancellationToken)
+	{
+		throw new NotImplementedException();
+	}
+	
 }

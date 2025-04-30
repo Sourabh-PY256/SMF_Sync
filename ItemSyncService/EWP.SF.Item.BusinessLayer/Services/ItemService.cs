@@ -4,18 +4,27 @@ using EWP.SF.Helper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using EWP.SF.Common.Models;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public class ItemService(ILogger<ItemService> logger, IServiceScopeFactory serviceFactory, IApplicationSettings settings) : BackgroundService
+public class ItemService :BackgroundService,IItemService 
 {
-	private readonly ILogger<ItemService> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-	private readonly IServiceScopeFactory _serviceFactory = serviceFactory ?? throw new ArgumentNullException(nameof(serviceFactory));
-	private readonly Operations _operations = new();
-	private readonly bool _runSyncServicesOnInit = settings.GetAppSetting("RunSyncServicesOnInit").ToBool();
+	private readonly ILogger<ItemService> _logger;
+	private readonly IServiceScopeFactory _serviceFactory; 
+	private  IDataSyncServiceOperation _operations ;
+	private readonly bool _runSyncServicesOnInit ;
 	private DataSyncService _serviceData;
 	private PeriodicTimer _timer;
+	public ItemService(ILogger<ItemService> logger, IServiceScopeFactory serviceFactory, IApplicationSettings settings,
+	IDataSyncServiceOperation operations)
+	{
+		_logger = logger;
+		_serviceFactory = serviceFactory;
+		_operations = operations;
+		_runSyncServicesOnInit = settings.GetAppSetting("RunSyncServicesOnInit").ToBool();
 
+    }
 	public void SetServiceData(DataSyncService Data)
 	{
 		if (Data is null)
@@ -132,4 +141,5 @@ public class ItemService(ILogger<ItemService> logger, IServiceScopeFactory servi
 			await _operations.DatasyncTempServiceLogAsync(_serviceData.EntityId, BackgroundServiceExecType.End).ConfigureAwait(false);
 		}
 	}
+
 }

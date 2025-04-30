@@ -1,10 +1,9 @@
-﻿using EWP.SF.Item.BusinessEntities
+﻿using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Helper;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace EWP.SF.Item.BusinessLayer.Services
+namespace EWP.SF.Item.BusinessLayer;
 
 public static class DataSyncServiceUtil
 {

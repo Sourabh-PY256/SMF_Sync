@@ -1,5 +1,10 @@
-﻿namespace EWP.SF.Item.BusinessEntities;
+﻿
+
+
+using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
+
+namespace EWP.SF.Item.BusinessEntities;
 public class DataSyncBackgroundService
 {
 	public string Id { get; set; }
