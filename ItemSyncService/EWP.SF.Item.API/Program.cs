@@ -38,6 +38,9 @@ public class Program
         builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
         builder.Services.AddControllers();
 
+        // Register Kafka service
+        builder.Services.AddSingleton<IKafkaService, KafkaService>();
+
         // Configure Swagger/OpenAPI
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>

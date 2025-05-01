@@ -6,15 +6,15 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copy solution and project files
-COPY ["ShopFloorService/EWP.SF.ShopFloor.API/EWP.SF.ShopFloor.API.csproj", "ShopFloorService/EWP.SF.ShopFloor.API/"]
-COPY ["ShopFloorService/EWP.SF.ShopFloor.BusinessEntities/EWP.SF.ShopFloor.BusinessEntities.csproj", "ShopFloorService/EWP.SF.ShopFloor.BusinessEntities/"]
-COPY ["ShopFloorService/EWP.SF.ShopFloor.BusinessLayer/EWP.SF.ShopFloor.BusinessLayer.csproj", "ShopFloorService/EWP.SF.ShopFloor.BusinessLayer/"]
-COPY ["ShopFloorService/EWP.SF.ShopFloor.DataAccess/EWP.SF.ShopFloor.DataAccess.csproj", "ShopFloorService/EWP.SF.ShopFloor.DataAccess/"]
+COPY ["ItemSyncService/EWP.SF.Item.API/EWP.SF.Item.API.csproj", "ItemSyncService/EWP.SF.Item.API/"]
+COPY ["ItemSyncService/EWP.SF.Item.BusinessEntities/EWP.SF.Item.BusinessEntities.csproj", "ItemSyncService/EWP.SF.Item.BusinessEntities/"]
+COPY ["ItemSyncService/EWP.SF.Item.BusinessLayer/EWP.SF.Item.BusinessLayer.csproj", "ItemSyncService/EWP.SF.Item.BusinessLayer/"]
+COPY ["ItemSyncService/EWP.SF.Item.DataAccess/EWP.SF.Item.DataAccess.csproj", "ItemSyncService/EWP.SF.Item.DataAccess/"]
 COPY ["SharedService/EWP.SF.Common/EWP.SF.Common.csproj", "SharedService/EWP.SF.Common/"]
 COPY ["SharedService/EWP.SF.Helper/EWP.SF.Helper.csproj", "SharedService/EWP.SF.Helper/"]
 
 # Restore dependencies
-RUN dotnet restore "ShopFloorService/EWP.SF.ShopFloor.API/EWP.SF.ShopFloor.API.csproj"
+RUN dotnet restore "ItemSyncService/EWP.SF.Item.API/EWP.SF.Item.API.csproj"
 
 # Copy the entire solution
 COPY . .
@@ -25,18 +25,18 @@ COPY ["Lib/Windows/EWP.SF.ConnectionModule.dll", "/src/Lib/Windows/"]
 
 # Copy Settings directory
 RUN mkdir -p /src/Settings
-COPY ["ShopFloorService/Settings/", "/src/Settings/"]
+COPY ["ItemSyncService/Settings/", "/src/Settings/"]
 
 # Replace Program.cs with Docker-specific version
-WORKDIR "/src/ShopFloorService/EWP.SF.ShopFloor.API"
+WORKDIR "/src/ItemSyncService/EWP.SF.Item.API"
 RUN mv Program.Docker.cs Program.cs
 RUN mv appsettings.Docker.json appsettings.json
 
 # Build the project
-RUN dotnet build "EWP.SF.ShopFloor.API.csproj" -c Release -o /app/build
+RUN dotnet build "EWP.SF.Item.API.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "EWP.SF.ShopFloor.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "EWP.SF.Item.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
@@ -53,6 +53,6 @@ COPY --from=build /src/Lib/Windows/EWP.SF.ConnectionModule.dll /app/Lib/Windows/
 COPY --from=build /src/Settings/ /app/Settings/
 
 # Copy appsettings.json
-COPY --from=build /src/ShopFloorService/EWP.SF.ShopFloor.API/appsettings.json /app/appsettings.json
+COPY --from=build /src/ItemSyncService/EWP.SF.Item.API/appsettings.json /app/appsettings.json
 
-ENTRYPOINT ["dotnet", "EWP.SF.ShopFloor.API.dll"]
+ENTRYPOINT ["dotnet", "EWP.SF.Item.API.dll"]

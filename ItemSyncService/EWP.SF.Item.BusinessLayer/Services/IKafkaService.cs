@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace EWP.SF.Item.BusinessLayer.Services
+namespace EWP.SF.Item.BusinessLayer
 {
     public interface IKafkaService
     {
