@@ -36,6 +36,8 @@ public class Program
         builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
         // Register WarehouseServices
         builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
+        builder.Services.AddScoped<DataSyncServiceManager>();
+        builder.Services.AddScoped<IItemService, ItemService>();
         builder.Services.AddControllers();
 
         // Register Kafka service
