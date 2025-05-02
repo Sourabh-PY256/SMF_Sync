@@ -25,9 +25,9 @@ public class DataSyncRepository : IDataSyncRepository
 	public DataSyncRepository(IApplicationSettings applicationSettings)
 	{
 		ConnectionString = applicationSettings.GetConnectionString();
-		ConnectionStringReports = ApplicationSettings.Instance.GetReportsConnectionString();
-		ConnectionStringLogs = ApplicationSettings.Instance.GetConnectionString("Logs");
-		Database = ApplicationSettings.Instance.GetDatabaseFromConnectionString();
+		ConnectionStringReports = applicationSettings.GetReportsConnectionString();
+		ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
+		Database = applicationSettings.GetDatabaseFromConnectionString();
 	}
 
 	public async Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "", CancellationToken cancellationToken = default)

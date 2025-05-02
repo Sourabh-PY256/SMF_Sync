@@ -55,4 +55,10 @@ COPY --from=build /src/Settings/ /app/Settings/
 # Copy appsettings.json
 COPY --from=build /src/ItemSyncService/EWP.SF.Item.API/appsettings.json /app/appsettings.json
 
+# Install the VS remote debugger
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip procps curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /vsdbg
+
 ENTRYPOINT ["dotnet", "EWP.SF.Item.API.dll"]

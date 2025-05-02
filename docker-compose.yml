@@ -30,8 +30,10 @@ services:
     build:
       context: .
       dockerfile: ItemSyncService/Dockerfile
+    container_name: item-sync-service  # This forces the exact name
     ports:
       - "8080:8080"
+      - "5000:5000"  # Remote debugging port
     depends_on:
       - kafka
     environment:
@@ -39,11 +41,18 @@ services:
       - KafkaSettings__GroupId=ewp-sf-item-group
       - KafkaSettings__Topics__ItemSync=item-sync-topic
       - KafkaSettings__Topics__ItemUpdates=item-updates-topic
+      - ENABLE_REMOTE_DEBUG=true
+      - VSTEST_HOST_DEBUG=1
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
     networks:
       - kafka-net
 
 networks:
   kafka-net:
     driver: bridge
+
+
 
 

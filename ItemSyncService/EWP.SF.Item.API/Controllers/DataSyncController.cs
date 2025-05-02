@@ -193,7 +193,7 @@ public partial class DataSyncController : BaseController
 		RequestContext context = GetContext();
 
 		BusinessEntities.DataSyncService responseData = _dataSyncService.MergeDataSyncService(context.User, DataSyncInfo);
-		ServiceManager.UpdateServiceData(responseData.Entity.Name, responseData);
+		//ServiceManager.UpdateServiceData(responseData.Entity.Name, responseData);
 		returnValue.Data = responseData;
 
 		return returnValue;
@@ -416,10 +416,10 @@ public partial class DataSyncController : BaseController
 		DataSyncErp responseData = _dataSyncService.MergeFullData(context.User, DataInfo);
 		if (responseData.Instances.Count > 0)
 		{
-			responseData.Instances.ForEach(instance => ServiceManager.UpdateServiceData(instance.Entity.Name, instance));
+			//responseData.Instances.ForEach(instance => ServiceManager.UpdateServiceData(instance.Entity.Name, instance));
 		}
 		List<DataSyncService> disabledServices = _dataSyncService.ListDisabledServices();
-		disabledServices?.ForEach(service => ServiceManager.UpdateServiceData(service.EntityId, null));
+		//disabledServices?.ForEach(service => ServiceManager.UpdateServiceData(service.EntityId, null));
 		//ErpFailedRecordReprocessService scopedService = (ErpFailedRecordReprocessService)StaticServiceProvider.Provider.GetService(typeof(ErpFailedRecordReprocessService));
 		//scopedService?.SetServiceData(responseData);
 		ContextCache.ERPOffset = null;

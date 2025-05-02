@@ -4,6 +4,18 @@ using EWP.SF.Item.BusinessLayer;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
 
+if (Environment.GetEnvironmentVariable("ENABLE_REMOTE_DEBUG") == "true")
+{
+    Console.WriteLine("Waiting for debugger to attach...");
+    Console.WriteLine($"Process ID: {System.Diagnostics.Process.GetCurrentProcess().Id}");
+    while (!System.Diagnostics.Debugger.IsAttached)
+    {
+        System.Threading.Thread.Sleep(1000);
+        Console.WriteLine("Still waiting for debugger...");
+    }
+    Console.WriteLine("Debugger attached!");
+}
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     ContentRootPath = Directory.GetCurrentDirectory(),

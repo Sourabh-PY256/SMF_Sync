@@ -4,13 +4,13 @@ using Microsoft.Extensions.Hosting;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public interface IItemService : IHostedService
+public interface IItemService 
 {
     /// <summary>
     /// Sets the service data for the item service
     /// </summary>
     /// <param name="Data">The data sync service configuration</param>
-    void SetServiceData(DataSyncService Data);
+    //void SetServiceData(DataSyncService Data);
 
     /// <summary>
     /// Executes the service manually based on trigger type and execution origin

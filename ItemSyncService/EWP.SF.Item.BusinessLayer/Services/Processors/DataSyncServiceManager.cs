@@ -95,15 +95,15 @@ public class DataSyncServiceManager
 		return response;
 	}
 
-	public void UpdateServiceData(string ServiceType, DataSyncService Data)
-	{
-		switch (ServiceType)
-		{
+	// public void UpdateServiceData(string ServiceType, DataSyncService Data)
+	// {
+	// 	switch (ServiceType)
+	// 	{
 			
-			case BackgroundServices.ITEM_SERVICE:
-				_itemService.SetServiceData(Data);
-				break;
+	// 		case BackgroundServices.ITEM_SERVICE:
+	// 			_itemService.SetServiceData(Data);
+	// 			break;
 			
-		}
-	}
+	// 	}
+	// }
 }
