@@ -320,7 +320,7 @@ public partial class DataSyncController : BaseController
 	public async Task<ResponseModel> DataSyncServiceWebhook([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest)
 	{
 		ResponseModel returnValue = new();
-
+      _logger.LogInformation("DataSyncServiceWebhookTest");
 		List<DataSyncExecuteResponse> ServicesResponse = [];
 		foreach (string service in ServiceRequest.Services)
 		{

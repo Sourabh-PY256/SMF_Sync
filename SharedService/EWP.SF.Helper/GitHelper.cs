@@ -14,7 +14,8 @@ public static class GitHelper
     public static async Task<string> GetCurrentGitUser()
     {
 #if DEBUG
-        return await GitCommand().ConfigureAwait(false);
+        //return await GitCommand().ConfigureAwait(false);
+        return await Task.FromResult(string.Empty).ConfigureAwait(false);
 #else
         return await Task.FromResult(string.Empty).ConfigureAwait(false);
 #endif

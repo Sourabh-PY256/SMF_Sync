@@ -22,7 +22,7 @@ public class ItemService :IItemService
 		_logger = logger;
 		_serviceFactory = serviceFactory;
 		_operations = operations;
-		_runSyncServicesOnInit = settings.GetAppSetting("RunSyncServicesOnInit").ToBool();
+		// _runSyncServicesOnInit = settings.GetAppSetting("RunSyncServicesOnInit").ToBool();
 
     }
 	// public void SetServiceData(DataSyncService Data)

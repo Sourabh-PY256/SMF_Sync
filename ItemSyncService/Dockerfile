@@ -33,10 +33,11 @@ RUN mv Program.Docker.cs Program.cs
 RUN mv appsettings.Docker.json appsettings.json
 
 # Build the project
-RUN dotnet build "EWP.SF.Item.API.csproj" -c Release -o /app/build
+RUN dotnet build "EWP.SF.Item.API.csproj" -c Debug -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "EWP.SF.Item.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# Add this to preserve source info for debugging
+RUN dotnet publish "EWP.SF.Item.API.csproj" -c Debug -o /app/publish /p:UseAppHost=false /p:DebugType=portable /p:DebugSymbols=true
 
 FROM base AS final
 WORKDIR /app
