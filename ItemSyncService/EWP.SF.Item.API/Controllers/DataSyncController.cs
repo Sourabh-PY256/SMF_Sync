@@ -238,7 +238,7 @@ public partial class DataSyncController : BaseController
 	//[PermissionsValidator]
 	public async Task<ResponseModel> DataSyncServiceExecuteSingle(
 		[FromServices] DataSyncServiceManager ServiceManager, 
-		[FromServices] IKafkaService kafkaService,
+		// [FromServices] IKafkaService kafkaService,
 		[FromBody] DataSyncExecuteRequest ServiceRequest, 
 		[FromRoute] int ExecType, 
 		[FromRoute] TriggerType Trigger = TriggerType.SmartFactory)
@@ -252,17 +252,17 @@ public partial class DataSyncController : BaseController
 			DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, Trigger, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "GET", ServiceRequest.EntityCode).ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
 
 			// Publish to Kafka
-			await kafkaService.ProduceMessageAsync(
-				"item-sync-topic", 
-				$"sync-{service}", 
-				new { 
-					Service = service, 
-					Trigger = Trigger.ToString(),
-					ExecutionType = ExecType,
-					Timestamp = DateTime.UtcNow,
-					User = context.User,
-					Response = requestResponse
-				});
+			// await kafkaService.ProduceMessageAsync(
+			// 	"item-sync-topic", 
+			// 	$"sync-{service}", 
+			// 	new { 
+			// 		Service = service, 
+			// 		Trigger = Trigger.ToString(),
+			// 		ExecutionType = ExecType,
+			// 		Timestamp = DateTime.UtcNow,
+			// 		User = context.User,
+			// 		Response = requestResponse
+			// 	});
 
 			DataSyncExecuteResponse ServiceResponse = new()
 			{
