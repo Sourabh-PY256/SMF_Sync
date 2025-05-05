@@ -1,9 +1,14 @@
 
 
-using Microsoft.AspNetCore.Mvc;
-using  EWP.SF.Item.BusinessLayer;
-using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Models;
+using EWP.SF.Item.BusinessEntities;
+using EWP.SF.Item.BusinessEntities.Kafka;
+using EWP.SF.Item.BusinessLayer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 namespace EWP.SF.Item.API;
 
 public partial class DataSyncController : BaseController
@@ -249,11 +254,19 @@ public partial class DataSyncController : BaseController
 		List<DataSyncExecuteResponse> ServicesResponse = [];
 		foreach (string service in ServiceRequest.Services)
 		{
-			DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, Trigger, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "GET", ServiceRequest.EntityCode).ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
+			// Execute the service and get response
+			DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(
+				service, 
+				Trigger, 
+				ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, 
+				context.User, 
+				"GET", 
+				ServiceRequest.EntityCode
+			).ConfigureAwait(false);
 
 			// Publish to Kafka
 			await kafkaService.ProduceMessageAsync(
-				"item-sync-topic", 
+				"sync-topic", 
 				$"sync-{service}", 
 				new { 
 					Service = service, 
@@ -261,9 +274,12 @@ public partial class DataSyncController : BaseController
 					ExecutionType = ExecType,
 					Timestamp = DateTime.UtcNow,
 					User = context.User,
+					EntityCode = ServiceRequest.EntityCode,
 					Response = requestResponse
-				});
+				}
+			).ConfigureAwait(false);
 
+			// Create response object
 			DataSyncExecuteResponse ServiceResponse = new()
 			{
 				Service = service,
@@ -317,23 +333,22 @@ public partial class DataSyncController : BaseController
 	[Consumes("application/json")]
 	[HttpPost("DataSyncService/Webhook")]
 	[Tags("Integrators")]
-	public async Task<ResponseModel> DataSyncServiceWebhook([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest)
+	public async Task<ResponseModel> DataSyncServiceWebhook(
+		[FromServices] DataSyncServiceManager ServiceManager, 
+		[FromServices] IKafkaService kafkaService,
+		[FromBody] DataSyncExecuteRequest ServiceRequest)
 	{
 		ResponseModel returnValue = new();
-      _logger.LogInformation("DataSyncServiceWebhookTest");
+		_logger.LogInformation("DataSyncServiceWebhook received request for services: {Services}", 
+			string.Join(", ", ServiceRequest.Services));
+		
 		List<DataSyncExecuteResponse> ServicesResponse = [];
 		foreach (string service in ServiceRequest.Services)
 		{
+			// Validate if service can be executed
 			int runStatus = await ServiceManager.ValidateExecuteService(service, TriggerType.Erp, ServiceExecOrigin.Webhook, "GET").ConfigureAwait(false);
-			if (runStatus > 0)
-			{
-				_ = ServiceManager.ExecuteService(service, TriggerType.Erp, ServiceExecOrigin.Webhook, null, "GET", ServiceRequest.EntityCode);
-			}
-			else if (runStatus == 0)
-			{
-				//_ = DataSyncServiceManager.InsertDataSyncServiceLog(service, "Service is disabled", new User(-1));
-			}
-
+			
+			// Determine response message based on status
 			string responseMessage = runStatus switch
 			{
 				1 => "Service executed successfully",
@@ -341,16 +356,42 @@ public partial class DataSyncController : BaseController
 				0 => "Service is disabled",
 				_ => "Service does not exist!",
 			};
+			
+			// Create response object
 			DataSyncExecuteResponse ServiceResponse = new()
 			{
 				Service = service,
 				IsSuccess = runStatus > 0,
 				Response = responseMessage
 			};
+			
+			// If service can be executed (status 1), execute it asynchronously
+			if (runStatus > 0)
+			{
+				// Execute service without waiting for completion
+				await kafkaService.ProduceMessageAsync(
+					"sync-topic", 
+					$"webhook-{service}", 
+					new SyncMessage { 
+						Service = service, 
+						Trigger = TriggerType.Erp.ToString(),
+						ExecutionType = (int)ServiceExecOrigin.Webhook,
+						EntityCode = ServiceRequest.EntityCode,
+						BodyData = ServiceRequest.BodyData
+					}
+				).ConfigureAwait(false);
+				
+				_logger.LogInformation("Published Kafka message for service {Service} triggered by webhook", service);
+			}
+			else if (runStatus == 0)
+			{
+				_logger.LogWarning("Service {Service} is disabled, not executing", service);
+			}
+			
 			ServicesResponse.Add(ServiceResponse);
 		}
+		
 		returnValue.Data = ServicesResponse;
-
 		return returnValue;
 	}
 

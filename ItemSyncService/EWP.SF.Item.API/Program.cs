@@ -3,6 +3,7 @@ using EWP.SF.Item.DataAccess;
 using EWP.SF.Item.BusinessLayer;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
+using EWP.SF.Item.API.Extensions;
 
 namespace EWP.SF.Item.API;
 
@@ -33,20 +34,23 @@ public class Program
         builder.Services.AddSingleton<IApplicationSettings>(appSettings);
 
         // Register repositories
+        builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
+        builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
 
-builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
-builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
+        // Register services
+        builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+        builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
+        builder.Services.AddScoped<DataSyncServiceProcessor>();
+        builder.Services.AddScoped<DataSyncServiceManager>();
+        builder.Services.AddScoped<IItemService, ItemService>();
 
-// Register services
-builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
-builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
-builder.Services.AddScoped<DataSyncServiceProcessor>();
-builder.Services.AddScoped<DataSyncServiceManager>();
-builder.Services.AddScoped<IItemService, ItemService>();
-        builder.Services.AddControllers();
-
-        // Register Kafka service
+        // Register Kafka services
         builder.Services.AddSingleton<IKafkaService, KafkaService>();
+
+        // Register service consumer manager as a singleton
+        builder.Services.AddSingleton<IServiceConsumerManager, ServiceConsumerManager>();
+
+        builder.Services.AddControllers();
 
         // Configure Swagger/OpenAPI
         builder.Services.AddEndpointsApiExplorer();
@@ -90,6 +94,9 @@ builder.Services.AddScoped<IItemService, ItemService>();
         app.UseStaticFiles();
 
         //app.UseHttpsRedirection();
+
+        // Start the service consumer
+        app.UseServiceConsumer();
 
         app.MapControllers();
 
