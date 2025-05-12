@@ -69,7 +69,7 @@ public class APIWebClient : HttpClient
 		using HttpRequestMessage requestGet = new()
 		{
 			Method = HttpMethod.Get,
-			RequestUri = new Uri(uri),
+			RequestUri = new Uri("http://host.docker.internal:8030/api/Item?Id=string&Timeout=85"),
 			Content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Application.Json),
 		};
 		using (HttpResponseMessage httpResponse = await SendAsync(requestGet).ConfigureAwait(false))
