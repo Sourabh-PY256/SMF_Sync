@@ -5,12 +5,6 @@ using System.Reflection;
 using Microsoft.OpenApi.Models;
 using EWP.SF.Item.API.Extensions;
 
-namespace EWP.SF.Item.API;
-
-public class Program
-{
-    public static void Main(string[] args)
-    {
         var builder = WebApplication.CreateBuilder(args);
 
         // Load AppSettings manually for use within the builder
@@ -101,5 +95,3 @@ public class Program
         app.MapControllers();
 
         app.Run();
-    }
-}
