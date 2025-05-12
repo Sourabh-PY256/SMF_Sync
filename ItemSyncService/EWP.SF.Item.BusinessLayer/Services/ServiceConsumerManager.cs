@@ -32,110 +32,115 @@ namespace EWP.SF.Item.BusinessLayer
         {
             _logger.LogInformation("Starting ServiceConsumerManager");
             
-            // Start Kafka consumer for the sync-topic
-            _kafkaService.StartConsumer("sync-topic", async (key, value) => 
+            // Start Kafka consumers for all sync entities
+            foreach (var entityType in GetSyncEntityTypes())
             {
-                try 
+                string topic = $"producer-sync-{entityType.ToLower()}";
+                _logger.LogInformation("Starting consumer for topic: {Topic}", topic);
+                _kafkaService.StartConsumer(topic, async (key, value) => 
                 {
-                    _logger.LogInformation("Received Kafka message: {Key}", key);
-                    
-                    // Parse the message
-                    var message = JsonSerializer.Deserialize<SyncMessage>(value);
-                    if (message == null)
+                    try 
                     {
-                        _logger.LogWarning("Failed to deserialize Kafka message");
-                        return;
-                    }
-                    
-                    // Create a scope to resolve scoped services
-                    using (var scope = _serviceScopeFactory.CreateScope())
-                    {
-                        // Get the operations service from the scope
-                        var operations = scope.ServiceProvider.GetRequiredService<IDataSyncServiceOperation>();
+                        _logger.LogInformation("Received Kafka message: {Key}", key);
                         
-                        // Get the service data
-                        var serviceData = await operations.GetBackgroundService(message.Service).ConfigureAwait(false);
-                        if (serviceData == null)
+                        // Parse the message
+                        var message = JsonSerializer.Deserialize<SyncMessage>(value);
+                        if (message == null)
                         {
-                            _logger.LogWarning("Service not found: {Service}", message.Service);
+                            _logger.LogWarning("Failed to deserialize Kafka message");
                             return;
                         }
                         
-                        // Parse trigger type
-                        if (!Enum.TryParse<TriggerType>(message.Trigger, out var triggerType))
+                        // Create a scope to resolve scoped services
+                        using (var scope = _serviceScopeFactory.CreateScope())
                         {
-                            triggerType = TriggerType.SmartFactory;
-                        }
-                        
-                        // Parse execution origin
-                        var execOrigin = message.ExecutionType == 1 ? 
-                            ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton;
-                        
-                        // Check if service is already running
-                        if (ContextCache.IsServiceRunning(serviceData.Id))
-                        {
-                            _logger.LogWarning("Service {Service} is already running", message.Service);
+                            // Get the operations service from the scope
+                            var operations = scope.ServiceProvider.GetRequiredService<IDataSyncServiceOperation>();
                             
-                            // Publish execution result to Kafka
-                            await _kafkaService.ProduceMessageAsync(
-                                "sync-results-topic",
-                                $"result-{serviceData.Id}",
-                                new {
-                                    ServiceId = serviceData.Id,
-                                    ServiceName = serviceData.Entity?.Name ?? "Unknown",
-                                    ExecutionTime = DateTime.UtcNow,
-                                    Status = "Conflict",
-                                    Message = $"Service {message.Service} is already running",
-                                    Trigger = triggerType.ToString(),
-                                    Origin = execOrigin.ToString()
-                                }
-                            ).ConfigureAwait(false);
+                            // Get the service data
+                            var serviceData = await operations.GetBackgroundService(message.Service).ConfigureAwait(false);
+                            if (serviceData == null)
+                            {
+                                _logger.LogWarning("Service not found: {Service}", message.Service);
+                                return;
+                            }
                             
-                            return;
-                        }
-                        
-                        
-                        
-                        try
-                        {
-                            // Execute the service
-                            _logger.LogInformation("Executing service {Service} from Kafka message", message.Service);
-                            var response = await ManualExecution(
-                                serviceData, 
-                                triggerType, 
-                                execOrigin, 
-                                message.User, 
-                                message.EntityCode ?? string.Empty, 
-                                message.BodyData ?? string.Empty
-                            ).ConfigureAwait(false);
+                            // Parse trigger type
+                            if (!Enum.TryParse<TriggerType>(message.Trigger, out var triggerType))
+                            {
+                                triggerType = TriggerType.SmartFactory;
+                            }
                             
-                            // Publish execution result to Kafka
-                            await _kafkaService.ProduceMessageAsync(
-                                "sync-results-topic",
-                                $"result-{serviceData.Id}",
-                                new {
-                                    ServiceId = serviceData.Id,
-                                    ServiceName = serviceData.Entity?.Name ?? "Unknown",
-                                    ExecutionTime = DateTime.UtcNow,
-                                    Status = response.StatusCode.ToString(),
-                                    Message = response.Message,
-                                    Trigger = triggerType.ToString(),
-                                    Origin = execOrigin.ToString()
-                                }
-                            ).ConfigureAwait(false);
-                        }
-                        finally
-                        {
-                            // Mark service as not running
-                            ContextCache.SetRunningService(serviceData.Id, false);
+                            // Parse execution origin
+                            var execOrigin = message.ExecutionType == 1 ? 
+                                ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton;
+                            
+                            // Check if service is already running
+                            if (ContextCache.IsServiceRunning(serviceData.Id))
+                            {
+                                _logger.LogWarning("Service {Service} is already running", message.Service);
+                                
+                                // Publish execution result to Kafka
+                                await _kafkaService.ProduceMessageAsync(
+                                    "sync-results-topic",
+                                    $"result-{serviceData.Id}",
+                                    new {
+                                        ServiceId = serviceData.Id,
+                                        ServiceName = serviceData.Entity?.Name ?? "Unknown",
+                                        ExecutionTime = DateTime.UtcNow,
+                                        Status = "Conflict",
+                                        Message = $"Service {message.Service} is already running",
+                                        Trigger = triggerType.ToString(),
+                                        Origin = execOrigin.ToString()
+                                    }
+                                ).ConfigureAwait(false);
+                                
+                                return;
+                            }
+                            
+                            
+                            
+                            try
+                            {
+                                // Execute the service
+                                _logger.LogInformation("Executing service {Service} from Kafka message", message.Service);
+                                var response = await ManualExecution(
+                                    serviceData, 
+                                    triggerType, 
+                                    execOrigin, 
+                                    message.User, 
+                                    message.EntityCode ?? string.Empty, 
+                                    message.BodyData ?? string.Empty
+                                ).ConfigureAwait(false);
+                                
+                                // Publish execution result to Kafka
+                                await _kafkaService.ProduceMessageAsync(
+                                    "sync-results-topic",
+                                    $"result-{serviceData.Id}",
+                                    new {
+                                        ServiceId = serviceData.Id,
+                                        ServiceName = serviceData.Entity?.Name ?? "Unknown",
+                                        ExecutionTime = DateTime.UtcNow,
+                                        Status = response.StatusCode.ToString(),
+                                        Message = response.Message,
+                                        Trigger = triggerType.ToString(),
+                                        Origin = execOrigin.ToString()
+                                    }
+                                ).ConfigureAwait(false);
+                            }
+                            finally
+                            {
+                                // Mark service as not running
+                                ContextCache.SetRunningService(serviceData.Id, false);
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing Kafka message");
-                }
-            });
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing Kafka message");
+                    }
+                });
+            }
         }
 
         /// <summary>
@@ -291,6 +296,19 @@ namespace EWP.SF.Item.BusinessLayer
                     Message = $"Error publishing service execution request: {ex.Message}"
                 };
             }
+        }
+
+        /// <summary>
+        /// Gets all sync entity types from SyncERPEntity constants
+        /// </summary>
+        private IEnumerable<string> GetSyncEntityTypes()
+        {
+            // Get all public constant string fields from SyncERPEntity
+            return typeof(SyncERPEntity)
+                .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.FlattenHierarchy)
+                .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
+                .Select(fi => fi.GetValue(null).ToString())
+                .ToList();
         }
     }
 
