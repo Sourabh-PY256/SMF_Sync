@@ -1,20 +1,23 @@
 ﻿using EWP.SF.Common.Models;
 using EWP.SF.Item.BusinessEntities;
+using Microsoft.Extensions.Logging;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class DataSyncServiceManager
 {
-	private readonly IItemService _itemService;
-	private  IDataSyncServiceOperation _operations;
-	//	private readonly IoTDataSimulatorService _ioTDataSimulatorService;
-	public DataSyncServiceManager(IItemService itemService,
-	IDataSyncServiceOperation dataSyncService)
-	//IoTDataSimulatorService ioTDataSimulatorService)
+	private readonly ILogger<DataSyncServiceManager> _logger;
+	private readonly IDataSyncServiceOperation _operations;
+	private readonly IServiceConsumerManager _serviceConsumerManager;
+
+	public DataSyncServiceManager(
+		ILogger<DataSyncServiceManager> logger,
+		IDataSyncServiceOperation operations,
+		IServiceConsumerManager serviceConsumerManager)
 	{
-		_operations = dataSyncService;
-		_itemService = itemService;
-		//_ioTDataSimulatorService = ioTDataSimulatorService;
+		_logger = logger;
+		_operations = operations;
+		_serviceConsumerManager = serviceConsumerManager;
 	}
 
 	public  async Task InsertDataSyncServiceLog(string serviceName, string ErrorMessage, User systemOperator)
@@ -71,28 +74,15 @@ public class DataSyncServiceManager
 
 	public async Task<DataSyncHttpResponse> ExecuteService(string ServiceType, TriggerType Trigger, ServiceExecOrigin ExecOrigin, User SystemOperator = null, string HttpMethod = "GET", string EntityCode = "", string BodyData = "")
 	{
-		DataSyncHttpResponse response = new();
-		DataSyncService Data = await _operations.GetBackgroundService(ServiceType, HttpMethod.ToUpperInvariant()).ConfigureAwait(false);
-		if (Data is null)
-		{
-			response.StatusCode = System.Net.HttpStatusCode.NotFound;
-			response.Message = "No service instance found";
-		}
-		else
-		{
-			response = ServiceType switch
-			{
-				
-				BackgroundServices.ITEM_SERVICE => await _itemService.ManualExecution(Data, Trigger, ExecOrigin, SystemOperator, EntityCode, BodyData).ConfigureAwait(false),
-				
-				_ => new DataSyncHttpResponse
-				{
-					StatusCode = System.Net.HttpStatusCode.NotImplemented,
-					Message = "Service is not implemented",
-				},
-			};
-		}
-		return response;
+		// Update to use ServiceConsumerManager directly instead of ServiceExecutionPublisher
+		return await _serviceConsumerManager.PublishServiceExecution(
+			ServiceType,
+			Trigger,
+			ExecOrigin,
+			SystemOperator,
+			EntityCode,
+			BodyData
+		).ConfigureAwait(false);
 	}
 
 	// public void UpdateServiceData(string ServiceType, DataSyncService Data)

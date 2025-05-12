@@ -1,6 +1,6 @@
 ﻿namespace EWP.SF.Item.BusinessEntities;
 
-public static class BackgroundServices
+public static class SyncERPEntity
 {
 	// Asset
 	public const string FACILITY_SERVICE = "Facility";
@@ -105,7 +105,7 @@ public static class BackgroundServices
 	public const string IOT_DATA_SIMULATOR_SERVICE = "IoTDataSimulator";
 }
 
-public static class BackgroundServiceExecType
+public static class SyncServiceExecType
 {
 	public const string Start = "Start";
 	public const string Process = "Process";

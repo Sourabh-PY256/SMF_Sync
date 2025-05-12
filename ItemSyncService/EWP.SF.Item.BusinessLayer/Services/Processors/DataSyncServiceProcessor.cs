@@ -286,10 +286,7 @@ public class DataSyncServiceProcessor
 				{
 					
 
-					case BackgroundServices.ITEM_SERVICE:
-						
-
-					
+					case SyncERPEntity.ITEM_SERVICE:
 								
 						
 						List<LaborIssueExternal> listLaborIssues = JsonConvert.DeserializeObject<List<LaborIssueExternal>>(dataJson);
@@ -556,7 +553,7 @@ public class DataSyncServiceProcessor
 		LogInfo.ExecutionOrigin = ServiceExecOrigin.Timer;
 		switch (ServiceData.Entity.Name)
 		{
-			case BackgroundServices.ITEM_SERVICE:
+			case SyncERPEntity.ITEM_SERVICE:
 				break;
 		}
 		// Log

@@ -1,9 +1,15 @@
 
 
-using Microsoft.AspNetCore.Mvc;
-using  EWP.SF.Item.BusinessLayer;
-using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Models;
+using EWP.SF.Item.BusinessEntities;
+using EWP.SF.Item.BusinessEntities.Kafka;
+using EWP.SF.Item.BusinessLayer;
+using EWP.SF.Item.BusinessLayer.Consumers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 namespace EWP.SF.Item.API;
 
 public partial class DataSyncController : BaseController
@@ -18,292 +24,303 @@ public partial class DataSyncController : BaseController
     }
 	#region DataSync
 
-	/// <summary>
-	/// Data Sync ERP Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Erp")]
-	public async Task<ResponseModel> ListDataSyncErp([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Erp")]
+	// public async Task<ResponseModel> ListDataSyncErp([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncErp(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncErp(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Data Sync ERP Version Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Erp/Version")]
-	public async Task<ResponseModel> ListDataSyncErpVersion([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Version Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Erp/Version")]
+	// public async Task<ResponseModel> ListDataSyncErpVersion([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncErpVersion(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncErpVersion(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Data Sync ERP Database Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Erp/Database")]
-	public async Task<ResponseModel> ListDataSyncErpDatabase([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Database Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Erp/Database")]
+	// public async Task<ResponseModel> ListDataSyncErpDatabase([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncErpDatabase(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncErpDatabase(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Data Sync ERP Database Version Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Erp/Database/Version")]
-	public async Task<ResponseModel> ListDataSyncErpDatabaseVersion([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Database Version Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Erp/Database/Version")]
+	// public async Task<ResponseModel> ListDataSyncErpDatabaseVersion([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncErpDatabaseVersion(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncErpDatabaseVersion(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Data Sync ERP Manufacturing Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Erp/Manufacturing")]
-	public async Task<ResponseModel> ListDataSyncErpManufacturing([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Manufacturing Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Erp/Manufacturing")]
+	// public async Task<ResponseModel> ListDataSyncErpManufacturing([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncErpManufacturing(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncErpManufacturing(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Data Sync ERP Manufacturing Version Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Erp/Manufacturing/Version")]
-	public async Task<ResponseModel> ListDataSyncErpManufacturingVersion([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Manufacturing Version Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Erp/Manufacturing/Version")]
+	// public async Task<ResponseModel> ListDataSyncErpManufacturingVersion([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncErpManufacturingVersion(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncErpManufacturingVersion(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Data Sync ERP Instance Category Catalog info in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Catalog/Instance/Category")]
-	public async Task<ResponseModel> ListDataSyncInstanceCategory([FromQuery] DataSyncCatalogFilter SearchFilter)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Data Sync ERP Instance Category Catalog info in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Catalog/Instance/Category")]
+	// public async Task<ResponseModel> ListDataSyncInstanceCategory([FromQuery] DataSyncCatalogFilter SearchFilter)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncInstanceCategory(context.User, SearchFilter);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncInstanceCategory(context.User, SearchFilter);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// One/List Data Sync ERP(s) in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Erp/{Id?}")]
-	public async Task<ResponseModel> ListDataSyncERP([FromRoute] string Id = "")
-	{
-		ResponseModel returnValue = new()
-		{
-			Data = _dataSyncService.ListDataSyncERP(Id, EnableType.Yes)
-		};
+	// /// <summary>
+	// /// One/List Data Sync ERP(s) in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Erp/{Id?}")]
+	// public async Task<ResponseModel> ListDataSyncERP([FromRoute] string Id = "")
+	// {
+	// 	ResponseModel returnValue = new()
+	// 	{
+	// 		Data = _dataSyncService.ListDataSyncERP(Id, EnableType.Yes)
+	// 	};
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// One/List Data Sync Instance(s) in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/Instance/{Id?}")]	public async Task<ResponseModel> GetServiceInstanceFullData([FromRoute] string Id)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// One/List Data Sync Instance(s) in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/Instance/{Id?}")]	public async Task<ResponseModel> GetServiceInstanceFullData([FromRoute] string Id)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.GetServiceInstancesFullData(context.User, Id);
+	// 	returnValue.Data = _dataSyncService.GetServiceInstancesFullData(context.User, Id);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Create/Update a Data Sync ERP
-	/// </summary>
-	/// <returns></returns>
-	[HttpPost("DataSyncService/Erp")]
-	public async Task<ResponseModel> MergeDataSyncERP([FromBody] DataSyncErp Request)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Create/Update a Data Sync ERP
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpPost("DataSyncService/Erp")]
+	// public async Task<ResponseModel> MergeDataSyncERP([FromBody] DataSyncErp Request)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.MergeDataSyncERP(context.User, Request);
+	// 	returnValue.Data = _dataSyncService.MergeDataSyncERP(context.User, Request);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// One/List Data Sync Service(s) in application
-	/// </summary>
-	/// <returns></returns>
-	[HttpGet("DataSyncService/{Trigger?}/{Id?}")]
-	public async Task<ResponseModel> ListDataSyncService([FromRoute] int Trigger, [FromRoute] string Id)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// One/List Data Sync Service(s) in application
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpGet("DataSyncService/{Trigger?}/{Id?}")]
+	// public async Task<ResponseModel> ListDataSyncService([FromRoute] int Trigger, [FromRoute] string Id)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		returnValue.Data = _dataSyncService.ListDataSyncService(context.User, Id, (TriggerType)Trigger);
+	// 	returnValue.Data = _dataSyncService.ListDataSyncService(context.User, Id, (TriggerType)Trigger);
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Update a Data Sync Service Instance
-	/// </summary>
-	/// <returns></returns>
-	[HttpPost("DataSyncService/Instance")]
-	public async Task<ResponseModel> MergeDataSyncService([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncService DataSyncInfo)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Update a Data Sync Service Instance
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpPost("DataSyncService/Instance")]
+	// public async Task<ResponseModel> MergeDataSyncService([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncService DataSyncInfo)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		BusinessEntities.DataSyncService responseData = _dataSyncService.MergeDataSyncService(context.User, DataSyncInfo);
-		//ServiceManager.UpdateServiceData(responseData.Entity.Name, responseData);
-		returnValue.Data = responseData;
+	// 	BusinessEntities.DataSyncService responseData = _dataSyncService.MergeDataSyncService(context.User, DataSyncInfo);
+	// 	//ServiceManager.UpdateServiceData(responseData.Entity.Name, responseData);
+	// 	returnValue.Data = responseData;
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Executes a Data Sync Service (GET)
-	/// </summary>
-	/// <returns></returns>
-	[HttpPost("DataSyncService/Execute/Get/{ExecType}")]
-	//[PermissionsTypeRequired("Sync")]
-	//[PermissionsValidator]
-	public async Task<ResponseModel> DataSyncServiceExecuteGet([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest, [FromRoute] int ExecType)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Executes a Data Sync Service (GET)
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpPost("DataSyncService/Execute/Get/{ExecType}")]
+	// //[PermissionsTypeRequired("Sync")]
+	// //[PermissionsValidator]
+	// public async Task<ResponseModel> DataSyncServiceExecuteGet([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest, [FromRoute] int ExecType)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		List<DataSyncExecuteResponse> ServicesResponse = [];
-		foreach (string service in ServiceRequest.Services)
-		{
-			DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, TriggerType.SmartFactory, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "GET").ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
+	// 	List<DataSyncExecuteResponse> ServicesResponse = [];
+	// 	foreach (string service in ServiceRequest.Services)
+	// 	{
+	// 		DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, TriggerType.SmartFactory, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "GET").ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
 
-			DataSyncExecuteResponse ServiceResponse = new()
-			{
-				Service = service,
-				Response = "Service Executed",
-				ResponseHttp = requestResponse
-			};
-			ServicesResponse.Add(ServiceResponse);
-		}
-		returnValue.Data = ServicesResponse;
+	// 		DataSyncExecuteResponse ServiceResponse = new()
+	// 		{
+	// 			Service = service,
+	// 			Response = "Service Executed",
+	// 			ResponseHttp = requestResponse
+	// 		};
+	// 		ServicesResponse.Add(ServiceResponse);
+	// 	}
+	// 	returnValue.Data = ServicesResponse;
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Executes a Data Sync Service
-	/// </summary>
-	/// <returns></returns>
-	[HttpPost("DataSyncService/Execute/Single/{ExecType}/{Trigger?}")]
-	//[PermissionsTypeRequired("Sync")]
-	//[PermissionsValidator]
-	public async Task<ResponseModel> DataSyncServiceExecuteSingle(
-		[FromServices] DataSyncServiceManager ServiceManager, 
-		[FromServices] IKafkaService kafkaService,
-		[FromBody] DataSyncExecuteRequest ServiceRequest, 
-		[FromRoute] int ExecType, 
-		[FromRoute] TriggerType Trigger = TriggerType.SmartFactory)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Executes a Data Sync Service
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpPost("DataSyncService/Execute/Single/{ExecType}/{Trigger?}")]
+	// //[PermissionsTypeRequired("Sync")]
+	// //[PermissionsValidator]
+	// public async Task<ResponseModel> DataSyncServiceExecuteSingle(
+	// 	[FromServices] DataSyncServiceManager ServiceManager, 
+	// 	[FromServices] IKafkaService kafkaService,
+	// 	[FromBody] DataSyncExecuteRequest ServiceRequest, 
+	// 	[FromRoute] int ExecType, 
+	// 	[FromRoute] TriggerType Trigger = TriggerType.SmartFactory)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		List<DataSyncExecuteResponse> ServicesResponse = [];
-		foreach (string service in ServiceRequest.Services)
-		{
-			DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, Trigger, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "GET", ServiceRequest.EntityCode).ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
+	// 	List<DataSyncExecuteResponse> ServicesResponse = [];
+	// 	foreach (string service in ServiceRequest.Services)
+	// 	{
+	// 		// Execute the service and get response
+	// 		DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(
+	// 			service, 
+	// 			Trigger, 
+	// 			ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, 
+	// 			context.User, 
+	// 			"GET", 
+	// 			ServiceRequest.EntityCode
+	// 		).ConfigureAwait(false);
 
-			// Publish to Kafka
-			await kafkaService.ProduceMessageAsync(
-				"item-sync-topic", 
-				$"sync-{service}", 
-				new { 
-					Service = service, 
-					Trigger = Trigger.ToString(),
-					ExecutionType = ExecType,
-					Timestamp = DateTime.UtcNow,
-					User = context.User,
-					Response = requestResponse
-				});
+	// 		// Publish to Kafka
+	// 		await kafkaService.ProduceMessageAsync(
+	// 			"sync-topic", 
+	// 			$"sync-{service}", 
+	// 			new { 
+	// 				Service = service, 
+	// 				Trigger = Trigger.ToString(),
+	// 				ExecutionType = ExecType,
+	// 				Timestamp = DateTime.UtcNow,
+	// 				User = context.User,
+	// 				EntityCode = ServiceRequest.EntityCode,
+	// 				Response = requestResponse
+	// 			}
+	// 		).ConfigureAwait(false);
 
-			DataSyncExecuteResponse ServiceResponse = new()
-			{
-				Service = service,
-				Response = "Service Executed",
-				ResponseHttp = requestResponse
-			};
-			ServicesResponse.Add(ServiceResponse);
-		}
-		returnValue.Data = ServicesResponse;
+	// 		// Create response object
+	// 		DataSyncExecuteResponse ServiceResponse = new()
+	// 		{
+	// 			Service = service,
+	// 			Response = "Service Executed",
+	// 			ResponseHttp = requestResponse
+	// 		};
+	// 		ServicesResponse.Add(ServiceResponse);
+	// 	}
+	// 	returnValue.Data = ServicesResponse;
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
-	/// <summary>
-	/// Executes a Data Sync Service (POST)
-	/// </summary>
-	/// <returns></returns>
-	[HttpPost("DataSyncService/Execute/Post/{ExecType}")]
-	public async Task<ResponseModel> DataSyncServiceExecutePost([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest, [FromRoute] int ExecType)
-	{
-		ResponseModel returnValue = new();
-		RequestContext context = GetContext();
+	// /// <summary>
+	// /// Executes a Data Sync Service (POST)
+	// /// </summary>
+	// /// <returns></returns>
+	// [HttpPost("DataSyncService/Execute/Post/{ExecType}")]
+	// public async Task<ResponseModel> DataSyncServiceExecutePost([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest, [FromRoute] int ExecType)
+	// {
+	// 	ResponseModel returnValue = new();
+	// 	RequestContext context = GetContext();
 
-		List<DataSyncExecuteResponse> ServicesResponse = [];
-		foreach (string service in ServiceRequest.Services)
-		{
-			DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, TriggerType.SmartFactory, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "POST", "", ServiceRequest.BodyData).ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
+	// 	List<DataSyncExecuteResponse> ServicesResponse = [];
+	// 	foreach (string service in ServiceRequest.Services)
+	// 	{
+	// 		DataSyncHttpResponse requestResponse = await ServiceManager.ExecuteService(service, TriggerType.SmartFactory, ExecType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton, context.User, "POST", "", ServiceRequest.BodyData).ConfigureAwait(false); // ExecType 1 = Event | ExecType 2 = SyncButton
 
-			DataSyncExecuteResponse ServiceResponse = new()
-			{
-				Service = service,
-				Response = "Service Executed",
-				ResponseHttp = requestResponse
-			};
-			ServicesResponse.Add(ServiceResponse);
-		}
-		returnValue.Data = ServicesResponse;
+	// 		DataSyncExecuteResponse ServiceResponse = new()
+	// 		{
+	// 			Service = service,
+	// 			Response = "Service Executed",
+	// 			ResponseHttp = requestResponse
+	// 		};
+	// 		ServicesResponse.Add(ServiceResponse);
+	// 	}
+	// 	returnValue.Data = ServicesResponse;
 
-		return returnValue;
-	}
+	// 	return returnValue;
+	// }
 
 	/// <summary>
 	/// Webhook Data Sync
@@ -315,42 +332,73 @@ public partial class DataSyncController : BaseController
 	/// <returns></returns>
 	[Produces("application/json")]
 	[Consumes("application/json")]
-	[HttpPost("DataSyncService/Webhook")]
+	[HttpPost("DataSyncService/Producer")]
 	[Tags("Integrators")]
-	public async Task<ResponseModel> DataSyncServiceWebhook([FromServices] DataSyncServiceManager ServiceManager, [FromBody] DataSyncExecuteRequest ServiceRequest)
+	public async Task<ResponseModel> DataSyncServiceWebhook(
+		[FromServices] DataSyncServiceManager ServiceManager, 
+		[FromServices] IKafkaService kafkaService,
+		[FromBody] DataSyncExecuteRequest ServiceRequest)
 	{
 		ResponseModel returnValue = new();
-      _logger.LogInformation("DataSyncServiceWebhookTest");
+		_logger.LogInformation("DataSyncServiceWebhook received request for services: {Services}", 
+			string.Join(", ", ServiceRequest.Services));
+		
 		List<DataSyncExecuteResponse> ServicesResponse = [];
 		foreach (string service in ServiceRequest.Services)
 		{
+			// Ensure a consumer exists for this service
+			//consumerManager.EnsureConsumerExists(service);
+			
+			// Validate if service can be executed
 			int runStatus = await ServiceManager.ValidateExecuteService(service, TriggerType.Erp, ServiceExecOrigin.Webhook, "GET").ConfigureAwait(false);
-			if (runStatus > 0)
-			{
-				_ = ServiceManager.ExecuteService(service, TriggerType.Erp, ServiceExecOrigin.Webhook, null, "GET", ServiceRequest.EntityCode);
-			}
-			else if (runStatus == 0)
-			{
-				//_ = DataSyncServiceManager.InsertDataSyncServiceLog(service, "Service is disabled", new User(-1));
-			}
-
+			
+			// Determine response message based on status
 			string responseMessage = runStatus switch
 			{
-				1 => "Service executed successfully",
+				1 => "Service execution request accepted",
 				2 => "Service is already running",
 				0 => "Service is disabled",
 				_ => "Service does not exist!",
 			};
+			
+			// Create response object
 			DataSyncExecuteResponse ServiceResponse = new()
 			{
 				Service = service,
 				IsSuccess = runStatus > 0,
 				Response = responseMessage
 			};
+			
+			// If service can be executed (status 1), publish message to Kafka
+			if (runStatus > 0)
+			{
+				// Create a unique topic name for this service
+				string topic = $"producer-sync-{service.ToLower()}";
+				
+				// Publish message to Kafka
+				await kafkaService.ProduceMessageAsync(
+					topic, 
+					$"producer-{service}-{Guid.NewGuid()}", 
+					new SyncMessage { 
+						Service = service, 
+						Trigger = TriggerType.Erp.ToString(),
+						ExecutionType = (int)ServiceExecOrigin.Webhook,
+						EntityCode = ServiceRequest.EntityCode,
+						BodyData = ServiceRequest.BodyData
+					}
+				).ConfigureAwait(false);
+				
+				_logger.LogInformation("Published Kafka message for service {Service} triggered by webhook", service);
+			}
+			else if (runStatus == 0)
+			{
+				_logger.LogWarning("Service {Service} is disabled, not executing", service);
+			}
+			
 			ServicesResponse.Add(ServiceResponse);
 		}
+		
 		returnValue.Data = ServicesResponse;
-
 		return returnValue;
 	}
 

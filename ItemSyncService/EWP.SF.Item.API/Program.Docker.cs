@@ -3,6 +3,7 @@ using EWP.SF.Item.DataAccess;
 using EWP.SF.Item.BusinessLayer;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
+using EWP.SF.Item.API.Extensions;
 
 if (Environment.GetEnvironmentVariable("ENABLE_REMOTE_DEBUG") == "true")
 {
@@ -43,18 +44,22 @@ IConfiguration configuration = new ConfigurationBuilder()
 // Register AppSettings for DI to use later in the app
 ApplicationSettings appSettings = new(configuration);
 builder.Services.AddSingleton<IApplicationSettings>(appSettings);
-
 // Register repositories
+        builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
+        builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
 
-builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
-builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
+        // Register services
+        builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+        builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
+        builder.Services.AddScoped<DataSyncServiceProcessor>();
+        builder.Services.AddScoped<DataSyncServiceManager>();
+        //uilder.Services.AddScoped<IItemService, ItemService>();
 
-// Register services
-builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
-builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
-builder.Services.AddScoped<DataSyncServiceProcessor>();
-builder.Services.AddScoped<DataSyncServiceManager>();
-builder.Services.AddScoped<IItemService, ItemService>();
+        // Register Kafka services
+        builder.Services.AddSingleton<IKafkaService, KafkaService>();
+
+        // Register service consumer manager as a singleton
+        builder.Services.AddSingleton<IServiceConsumerManager, ServiceConsumerManager>();
 
 builder.Services.AddControllers();
 
@@ -99,6 +104,7 @@ app.UseSwaggerUI(options =>
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapControllers();
+app.UseServiceConsumer();
 
+app.MapControllers();
 app.Run();
