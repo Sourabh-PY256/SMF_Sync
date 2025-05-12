@@ -42,7 +42,7 @@ public class Program
         builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
         builder.Services.AddScoped<DataSyncServiceProcessor>();
         builder.Services.AddScoped<DataSyncServiceManager>();
-        builder.Services.AddScoped<IItemService, ItemService>();
+        //builder.Services.AddScoped<IItemService, ItemService>();
 
         // Register Kafka services
         builder.Services.AddSingleton<IKafkaService, KafkaService>();

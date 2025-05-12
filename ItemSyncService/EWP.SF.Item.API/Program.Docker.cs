@@ -53,7 +53,7 @@ builder.Services.AddSingleton<IApplicationSettings>(appSettings);
         builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
         builder.Services.AddScoped<DataSyncServiceProcessor>();
         builder.Services.AddScoped<DataSyncServiceManager>();
-        builder.Services.AddScoped<IItemService, ItemService>();
+        //uilder.Services.AddScoped<IItemService, ItemService>();
 
         // Register Kafka services
         builder.Services.AddSingleton<IKafkaService, KafkaService>();
