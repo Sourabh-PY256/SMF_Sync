@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
+using EWP.SF.Common.Enumerators;
 
 namespace EWP.SF.Item.BusinessLayer;
 
@@ -284,41 +285,52 @@ public class DataSyncServiceProcessor
 				int successRecords = 0;
 				switch (ServiceData.Entity.Name)
 				{
-					
-
-					case SyncERPEntity.ITEM_SERVICE:
-								
+					case SyncERPEntity.ATTACHMENT_SERVICE:
 						
-						List<LaborIssueExternal> listLaborIssues = JsonConvert.DeserializeObject<List<LaborIssueExternal>>(dataJson);
-						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listLaborIssues);
+						break;
+
+					case SyncERPEntity.ALLOCATION_SERVICE:
+					case SyncERPEntity.FULL_ALLOCATION_SERVICE:
+						
+					break;
+					case SyncERPEntity.FACILITY_SERVICE:
+					case SyncERPEntity.IOT_DATA_SIMULATOR_SERVICE:
+						string test = "test";
+						break;
+
+					case SyncERPEntity.FLOOR_SERVICE:
+					case SyncERPEntity.WORKCENTER_SERVICE:
+					case SyncERPEntity.PRODUCTION_LINE_SERVICE:
+						List<AssetExternal> listAssets = JsonConvert.DeserializeObject<List<AssetExternal>>(dataJson);
+						List<AssetExternal> listAssetsOrig = JsonConvert.DeserializeObject<List<AssetExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listAssets);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
 						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
-						if (listLaborIssues.Count > 0)
+						if (listAssets.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
-							foreach (LaborIssueExternal elem in listLaborIssues)
+							foreach (AssetExternal elem in listAssets)
 							{
-								List<LaborIssueExternal> listElem = [elem];
-								ResponseData sfResponse = null;
+								List<AssetExternal> listElem = [];
 								DataSyncServiceLogDetail LogSingleInfo = new()
 								{
 									LogId = LogInfo.Id,
-									RowKey = elem.DocCode,
+									RowKey = elem.AssetCode,
 									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
-									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "docCode", elem.DocCode),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "assetCode", elem.AssetCode),
 									SfMappedJson = JsonConvert.SerializeObject(elem)
 								};
+								ResponseData sfResponse = null;
 								try
 								{
-									//TODO: Implementar el metodo de sincronización de LaborIssue GET
-									/*
-                                    sfResponse = (await _operations.ListUpdateMaterialIssue(
-                                    listElem,
-                                    SystemOperator,
-                                    false,
-                                    LevelMessage.Success
-                                    ).ConfigureAwait(false)).FirstOrDefault();
-                                    */
+									listElem.Add(elem);
+									sfResponse = (await _operations.CreateAssetsExternal(
+										listElem,
+										listAssetsOrig,
+										SystemOperator,
+										false,
+										"Success"
+									).ConfigureAwait(false)).FirstOrDefault();
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
 								}
 								catch (Exception ex)
@@ -338,6 +350,526 @@ public class DataSyncServiceProcessor
 							}
 							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
 						}
+						break;
+
+					case SyncERPEntity.BIN_LOCATION_SERVICE:
+						List<BinLocationExternal> listBinLocations = JsonConvert.DeserializeObject<List<BinLocationExternal>>(dataJson);
+						List<BinLocationExternal> listBinLocationsOriginal = JsonConvert.DeserializeObject<List<BinLocationExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listBinLocations);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listBinLocations.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (BinLocationExternal elem in listBinLocations)
+							{
+								List<BinLocationExternal> listElem = [elem];
+
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.LocationCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "locationCode", elem.LocationCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								ResponseData sfResponse = null;
+								try
+								{
+									sfResponse = (await _operations.ListUpdateBinLocation(
+									listElem,
+									listBinLocationsOriginal,
+									SystemOperator,
+									false,
+									LevelMessage.Success
+								).ConfigureAwait(false)).FirstOrDefault();
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.DEMAND_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.EMPLOYEE_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.INVENTORY_SERVICE:
+						List<InventoryExternal> listInventories = JsonConvert.DeserializeObject<List<InventoryExternal>>(dataJson);
+						List<InventoryExternal> listInventoryOriginal = JsonConvert.DeserializeObject<List<InventoryExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listInventories);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listInventories.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (InventoryExternal elem in listInventories)
+							{
+								List<InventoryExternal> listElem = [elem];
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.ItemGroupCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "itemGroupCode", elem.ItemGroupCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								ResponseData sfResponse = null;
+								try
+								{
+									sfResponse = (await _operations.ListUpdateInventoryGroup(
+									listElem,
+									listInventoryOriginal,
+									SystemOperator,
+									false,
+									LevelMessage.Success
+								).ConfigureAwait(false)).FirstOrDefault();
+
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.INVENTORY_STATUS_SERVICE:
+						List<InventoryStatusExternal> listInventoryStatus = JsonConvert.DeserializeObject<List<InventoryStatusExternal>>(dataJson);
+						List<InventoryStatusExternal> listInventoryStatusOriginal = JsonConvert.DeserializeObject<List<InventoryStatusExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listInventoryStatus);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listInventoryStatus.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (InventoryStatusExternal elem in listInventoryStatus)
+							{
+								List<InventoryStatusExternal> listElem = [elem];
+								ResponseData sfResponse = null;
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.InventoryStatusCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "inventoryStatusCode", elem.InventoryStatusCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								try
+								{
+									sfResponse = (await _operations.ListUpdateInventoryStatus(
+									listElem,
+									listInventoryStatusOriginal,
+									SystemOperator,
+									false,
+									LevelMessage.Success
+								).ConfigureAwait(false)).FirstOrDefault();
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.ITEM_SERVICE:
+						List<ComponentExternal> listItems = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJson);
+						List<ComponentExternal> listItemsOriginal = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listItems);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						List<DataSyncServiceLogDetail> returnDetailListItem = [];
+						if (listItems.Count > 0)
+						{
+							List<ResponseData> sfListResponse = await _operations.ListUpdateComponentBulk(listItems, listItemsOriginal, SystemOperator, false, LevelMessage.Success).ConfigureAwait(false);
+							if (sfListResponse is not null)
+							{
+								foreach (ResponseData rsp in sfListResponse)
+								{
+									object entity = rsp.Entity;
+									object entityAlt = rsp.EntityAlt;
+									rsp.Entity = null;
+									DataSyncServiceLogDetail LogSingleInfo = new()
+									{
+										LogId = LogInfo.Id,
+										RowKey = rsp.Code,
+										ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+										ErpReceivedJson = JsonConvert.SerializeObject(entity, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }).Replace("\"", "\\\"", StringComparison.Ordinal),
+										SfMappedJson = JsonConvert.SerializeObject(entityAlt).Replace("\"", "\\\"", StringComparison.Ordinal),
+										ResponseJson = JsonConvert.SerializeObject(rsp).Replace("\"", "\\\"", StringComparison.Ordinal)
+									};
+									try
+									{
+										if (rsp.IsSuccess)
+										{
+											successRecords++;
+											LogSingleInfo.LogType = DataSyncLogType.Success;
+										}
+										else
+										{
+											throw new Exception(rsp.Message);
+										}
+										returnDetailListItem.Add(LogSingleInfo);
+									}
+									catch (Exception ex)
+									{
+										failedRecords++;
+										LogSingleInfo.LogType = DataSyncLogType.Error;
+										LogSingleInfo.MessageException = ex.Message;
+										returnDetailListItem.Add(LogSingleInfo);
+									}
+								}
+								_ = _operations.InsertDataSyncServiceLogDetailBulk(returnDetailListItem);
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
+						}
+						break;
+
+					case SyncERPEntity.CLOCKINOUT_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.LOT_SERIAL_STATUS_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.MACHINE_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.MATERIAL_ISSUE_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.MATERIAL_RETURN_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.POSITION_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.PRODUCT_SERVICE:
+						List<ProductExternal> listProducts = JsonConvert.DeserializeObject<List<ProductExternal>>(dataJson);
+						List<ProductExternal> listProductsOriginal = JsonConvert.DeserializeObject<List<ProductExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listProducts);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listProducts.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (ProductExternal elem in listProducts)
+							{
+								List<ProductExternal> listElem = [elem];
+								ResponseData sfResponse = null;
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.ProductCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "productCode", elem.ProductCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								try
+								{
+									sfResponse = (await _operations.ListUpdateProduct(
+									listElem,
+									listProductsOriginal,
+									SystemOperator,
+									false,
+									LevelMessage.Success
+								).ConfigureAwait(false)).FirstOrDefault();
+
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.PRODUCTION_ORDER_CHANGE_STATUS_SERVICE:
+						List<ProductionOrderChangeStatusExternal> listWorkOrderChangeStatus = JsonConvert.DeserializeObject<List<ProductionOrderChangeStatusExternal>>(dataJson);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWorkOrderChangeStatus);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listWorkOrderChangeStatus.Count > 0)
+						{
+							List<WorkOrderResponse> sfListResponse = [];
+							foreach (ProductionOrderChangeStatusExternal elem in listWorkOrderChangeStatus)
+							{
+								List<ProductionOrderChangeStatusExternal> listElem = [elem];
+								WorkOrderResponse sfResponse = null;
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.OrderCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "orderCode", elem.OrderCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								try
+								{
+									sfResponse = _operations.ListUpdateWorkOrderChangeStatus(
+									listElem,
+									SystemOperator,
+									false,
+									LevelMessage.Success
+								).FirstOrDefault();
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new WorkOrderResponse
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.PRODUCTION_ORDER_SERVICE:
+						List<WorkOrderExternal> listWorkOrders = JsonConvert.DeserializeObject<List<WorkOrderExternal>>(dataJson);
+						double offset = _operations.GetTimezoneOffset("ERP") * -1;
+						listWorkOrders.ForEach(elem => Operations.AddWorkOrderDatesOffset(elem, offset));
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWorkOrders);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listWorkOrders.Count > 0)
+						{
+							List<WorkOrderResponse> sfListResponse = [];
+							foreach (WorkOrderExternal elem in listWorkOrders)
+							{
+								List<WorkOrderExternal> listElem = [elem];
+
+								//Procesar Elemento Order para Fechas UTC
+
+								//FIN Procesamiento
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.OrderCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "orderCode", elem.OrderCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								WorkOrderResponse sfResponse = null;
+								try
+								{
+									sfResponse = (await _operations.ListUpdateWorkOrder(
+									listElem,
+									SystemOperator,
+									false,
+									LevelMessage.Success,
+									true
+								).ConfigureAwait(false)).FirstOrDefault();
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new WorkOrderResponse
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.PRODUCT_RECEIPT_SERVICE:
+						List<ProductReceiptExternal> listProductReceipts = JsonConvert.DeserializeObject<List<ProductReceiptExternal>>(dataJson);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listProductReceipts);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listProductReceipts.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (ProductReceiptExternal elem in listProductReceipts)
+							{
+								List<ProductReceiptExternal> listElem = [elem];
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.DocCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "docCode", elem.DocCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								ResponseData sfResponse = null;
+								try
+								{
+									sfResponse = (await _operations.ListUpdateProductReceipt(
+									listElem,
+									SystemOperator,
+									false,
+									LevelMessage.Success
+								).ConfigureAwait(false)).FirstOrDefault();
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+							string orderId = string.Join(",", listProductReceipts.Select(x => x.OrderCode).Distinct().ToArray());
+							//_ = ServiceManager.SendMessage(MessageBrokerType.WorkOrder, new { Type = "U", Id = orderId });
+						}
+						break;
+
+					case SyncERPEntity.PRODUCT_RETURN_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.STOCK_SERVICE:
+					case SyncERPEntity.FULL_STOCK_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.SUPPLY_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.UNIT_MEASURE_SERVICE:
+						
+						break;
+
+					case SyncERPEntity.WAREHOUSE_SERVICE:
+						List<WarehouseExternal> listWarehouses = JsonConvert.DeserializeObject<List<WarehouseExternal>>(dataJson);
+						List<WarehouseExternal> listWarehousesOriginal = JsonConvert.DeserializeObject<List<WarehouseExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWarehouses);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listWarehouses.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (WarehouseExternal elem in listWarehouses)
+							{
+								List<WarehouseExternal> listElem = [elem];
+								ResponseData sfResponse = null;
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.WarehouseCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "warehouseCode", elem.WarehouseCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem)
+								};
+								try
+								{
+									sfResponse = (await _operations.ListUpdateWarehouseGroup(
+										listElem,
+										listWarehousesOriginal,
+										SystemOperator,
+										false,
+										LevelMessage.Success
+									).ConfigureAwait(false)).FirstOrDefault();
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
+						break;
+
+					case SyncERPEntity.PROCESS_TYPE_SERVICE:
+						
 						break;
 					default: throw new Exception("No instance configured to receive data from ERP");
 				}
