@@ -11,7 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 namespace EWP.SF.Item.API;
-
+[ApiController]
+[Route("API/V1")]
 public partial class DataSyncController : BaseController
 {
 	private readonly ILogger<DataSyncController> _logger;
