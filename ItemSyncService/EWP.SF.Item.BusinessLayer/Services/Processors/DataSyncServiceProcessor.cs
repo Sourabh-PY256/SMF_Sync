@@ -48,16 +48,17 @@ public class DataSyncServiceProcessor
 			ServiceInstanceId = ServiceData.Id,
 			ExecutionInitDate = initDate,
 			ExecutionOrigin = ExecOrigin,
-			LogUser = requestUser.Id,
-			LogEmployee = requestUser.EmployeeId
+			
+			// LogUser = requestUser.Id,
+			// LogEmployee = requestUser.EmployeeId
 		};
 		if (!string.IsNullOrEmpty(loggerId))
 		{
 			LogInfo.Id = loggerId;
 		}
-		string logId = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
-		LogInfo.Id = logId;
-		response.LogId = logId;
+		// string logId = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+		// LogInfo.Id = logId;
+		// response.LogId = logId;
 		try
 		{
 			ContextCache.SetRunningService(ServiceData.Id, true);
@@ -197,7 +198,7 @@ public class DataSyncServiceProcessor
 		//Status code es importante no quitarlo.
 		HttpResponse.StatusCode = erpResult.StatusCode;
 		LogInfo.ErpReceivedJson = erpResult.Response;
-		await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+		// await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 
 		if (erpResult.StatusCode == HttpStatusCode.NoContent || erpResult.StatusCode == HttpStatusCode.OK)
 		{
@@ -1076,7 +1077,7 @@ public class DataSyncServiceProcessor
 		}
 
 		_ = new DataSyncResponse();
-		bool syncAllData = Config.Configuration["DataSyncService-SyncAll"].ToBool();
+		bool syncAllData = false;  //Config.Configuration["DataSyncService-SyncAll"].ToBool();
 		using APIWebClient client = new()
 		{
 			TimeoutSeconds = ServiceData.RequestTimeoutSecs // Required Timeout
@@ -1126,7 +1127,7 @@ public class DataSyncServiceProcessor
 		if (LogInfo is not null)
 		{
 			LogInfo.EndpointUrl = endpointUrl;
-			_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+			// _ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);  // this method not imlemented
 		}
 		string dynamicBody = string.Empty;
 		if (ServiceData.EnableDynamicBody == 1)
