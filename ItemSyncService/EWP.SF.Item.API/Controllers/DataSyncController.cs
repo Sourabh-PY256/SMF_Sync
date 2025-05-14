@@ -4,7 +4,6 @@ using EWP.SF.Common.Models;
 using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Item.BusinessEntities.Kafka;
 using EWP.SF.Item.BusinessLayer;
-using EWP.SF.Item.BusinessLayer.Consumers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
