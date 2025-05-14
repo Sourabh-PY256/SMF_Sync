@@ -72,28 +72,6 @@ public class DataSyncServiceManager
 		return returnValue;
 	}
 
-	// public async Task<DataSyncHttpResponse> ExecuteService(string ServiceType, TriggerType Trigger, ServiceExecOrigin ExecOrigin, User SystemOperator = null, string HttpMethod = "GET", string EntityCode = "", string BodyData = "")
-	// {
-	// 	// Update to use ServiceConsumerManager directly instead of ServiceExecutionPublisher
-	// 	return await _serviceConsumerManager.PublishServiceExecution(
-	// 		ServiceType,
-	// 		Trigger,
-	// 		ExecOrigin,
-	// 		SystemOperator,
-	// 		EntityCode,
-	// 		BodyData
-	// 	).ConfigureAwait(false);
-	// }
-
-	// public void UpdateServiceData(string ServiceType, DataSyncService Data)
-	// {
-	// 	switch (ServiceType)
-	// 	{
-			
-	// 		case BackgroundServices.ITEM_SERVICE:
-	// 			_itemService.SetServiceData(Data);
-	// 			break;
-			
-	// 	}
+	
 	// }
 }
