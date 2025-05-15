@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 using NLog;
 
-namespace EWP.SF.Common.MesModels;
+namespace EWP.SF.Common.Models;
 
 public enum ProductType
 {

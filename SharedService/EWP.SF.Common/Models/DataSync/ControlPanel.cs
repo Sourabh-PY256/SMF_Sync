@@ -9,7 +9,7 @@ using EWP.SF.Common.Enumerators;
 
 using Newtonsoft.Json.Converters;
 
-namespace EWP.SF.Common.MesModels;
+namespace EWP.SF.Common.Models;
 
 public class ControlPanel;
 

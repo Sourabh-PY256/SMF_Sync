@@ -139,56 +139,56 @@ public class DataSyncServiceProcessor
 	/// <param name="ListFailedRecords"></param>
 	/// <param name="User"></param>
 	/// <returns></returns>
-	public async Task ProcessErrors(DataSyncErp ErpData, List<DataSyncServiceLogDetail> ListFailedRecords, User User = null)
-	{
-		_logger.LogInformation($"DataSync Error Processor initializing execution...");
-		User requestUser = User ?? _systemOperator;
-		foreach (DataSyncServiceLogDetail log in ListFailedRecords)
-		{
-			_logger.LogInformation("Log Error {LogId} initializing...", log.Id);
-			DataSyncService serviceData = _operations.GetServiceInstanceFullData(log.ServiceInstanceId);
-			if (serviceData.RevalidationEnable == EnableType.Yes)
-			{
-				DateTime limitDateToProcessErrors = (DateTime)(log.ProcessDate?.AddSeconds(ErpData.MaxReprocessingTime));
-				DateTime currentDate = DataSyncServiceUtil.ConvertDate(serviceData.ErpData.DateTimeFormat, DateTime.Now, serviceData.ErpData.TimeZone);
-				dynamic dataMapped = DataSyncServiceUtil.MapEntity(serviceData.ErpMapping.ResponseMapSchema, log.ErpReceivedJson, serviceData.ErpMapping.ResultProperty);
-				DataSyncServiceLog logInfo = new()
-				{
-					Id = log.LogId,
-					ServiceInstanceId = serviceData.Id
-				};
-				try
-				{
-					if (dataMapped is not null)
-					{
-						string dataMappedJson = JsonConvert.SerializeObject(dataMapped);
-						await ReprocessError(log.ErpReceivedJson, dataMappedJson, serviceData, logInfo, log, requestUser).ConfigureAwait(false);
-					}
-					else
-					{
-						throw new Exception("No data to process");
-					}
-				}
-				catch (Exception ex)
-				{
-					string serviceErrors = $"DataSync Error Processor exception: {ex.Message}";
-					if (!string.IsNullOrEmpty(logInfo.ErpReceivedJson))
-					{
-						string serviceError = DataSyncServiceUtil.GetErpErrors(logInfo.ErpReceivedJson, serviceData.ErpMapping.ErrorProperty);
-						serviceErrors += $" | Exception: {serviceError}";
-					}
+	// public async Task ProcessErrors(DataSyncErp ErpData, List<DataSyncServiceLogDetail> ListFailedRecords, User User = null)
+	// {
+	// 	_logger.LogInformation($"DataSync Error Processor initializing execution...");
+	// 	User requestUser = User ?? _systemOperator;
+	// 	foreach (DataSyncServiceLogDetail log in ListFailedRecords)
+	// 	{
+	// 		_logger.LogInformation("Log Error {LogId} initializing...", log.Id);
+	// 		DataSyncService serviceData = _operations.GetServiceInstanceFullData(log.ServiceInstanceId);
+	// 		if (serviceData.RevalidationEnable == EnableType.Yes)
+	// 		{
+	// 			DateTime limitDateToProcessErrors = (DateTime)(log.ProcessDate?.AddSeconds(ErpData.MaxReprocessingTime));
+	// 			DateTime currentDate = DataSyncServiceUtil.ConvertDate(serviceData.ErpData.DateTimeFormat, DateTime.Now, serviceData.ErpData.TimeZone);
+	// 			dynamic dataMapped = DataSyncServiceUtil.MapEntity(serviceData.ErpMapping.ResponseMapSchema, log.ErpReceivedJson, serviceData.ErpMapping.ResultProperty);
+	// 			DataSyncServiceLog logInfo = new()
+	// 			{
+	// 				Id = log.LogId,
+	// 				ServiceInstanceId = serviceData.Id
+	// 			};
+	// 			try
+	// 			{
+	// 				if (dataMapped is not null)
+	// 				{
+	// 					string dataMappedJson = JsonConvert.SerializeObject(dataMapped);
+	// 					await ReprocessError(log.ErpReceivedJson, dataMappedJson, serviceData, logInfo, log, requestUser).ConfigureAwait(false);
+	// 				}
+	// 				else
+	// 				{
+	// 					throw new Exception("No data to process");
+	// 				}
+	// 			}
+	// 			catch (Exception ex)
+	// 			{
+	// 				string serviceErrors = $"DataSync Error Processor exception: {ex.Message}";
+	// 				if (!string.IsNullOrEmpty(logInfo.ErpReceivedJson))
+	// 				{
+	// 					string serviceError = DataSyncServiceUtil.GetErpErrors(logInfo.ErpReceivedJson, serviceData.ErpMapping.ErrorProperty);
+	// 					serviceErrors += $" | Exception: {serviceError}";
+	// 				}
 
-					_ = await _operations.InsertDataSyncServiceLog(logInfo).ConfigureAwait(false);
-					_logger.LogInformation(serviceErrors);
-				}
-				finally
-				{
-					_logger.LogInformation("Log Error {LogId} finishing...", log.Id);
-				}
-			}
-		}
-		_logger.LogInformation($"DataSync Error Processor finishing execution...");
-	}
+	// 				_ = await _operations.InsertDataSyncServiceLog(logInfo).ConfigureAwait(false);
+	// 				_logger.LogInformation(serviceErrors);
+	// 			}
+	// 			finally
+	// 			{
+	// 				_logger.LogInformation("Log Error {LogId} finishing...", log.Id);
+	// 			}
+	// 		}
+	// 	}
+	// 	_logger.LogInformation($"DataSync Error Processor finishing execution...");
+	// }
 
 	[RequiresUnreferencedCode("Calls System.String.IsNullOrEmpty(String)")]
 	private async Task<DataSyncHttpResponse> SendErpDataToSf(DataSyncServiceLog LogInfo, DataSyncService ServiceData, User SystemOperator, ServiceExecOrigin ExecOrigin, string EntityCode, DataSyncHttpResponse HttpResponse, Action onResponse)
@@ -459,56 +459,56 @@ public class DataSyncServiceProcessor
 						break;
 
 					case SyncERPEntity.ITEM_SERVICE:
-						// List<ComponentExternal> listItems = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJson);
-						// List<ComponentExternal> listItemsOriginal = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJsonOriginal);
-						// LogInfo.SfMappedJson = JsonConvert.SerializeObject(listItems);
-						// LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						// _ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
-						// List<DataSyncServiceLogDetail> returnDetailListItem = [];
-						// if (listItems.Count > 0)
-						// {
-						// 	List<ResponseData> sfListResponse = await _operations.ListUpdateComponentBulk(listItems, listItemsOriginal, SystemOperator, false, LevelMessage.Success).ConfigureAwait(false);
-						// 	if (sfListResponse is not null)
-						// 	{
-						// 		foreach (ResponseData rsp in sfListResponse)
-						// 		{
-						// 			object entity = rsp.Entity;
-						// 			object entityAlt = rsp.EntityAlt;
-						// 			rsp.Entity = null;
-						// 			DataSyncServiceLogDetail LogSingleInfo = new()
-						// 			{
-						// 				LogId = LogInfo.Id,
-						// 				RowKey = rsp.Code,
-						// 				ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
-						// 				ErpReceivedJson = JsonConvert.SerializeObject(entity, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }).Replace("\"", "\\\"", StringComparison.Ordinal),
-						// 				SfMappedJson = JsonConvert.SerializeObject(entityAlt).Replace("\"", "\\\"", StringComparison.Ordinal),
-						// 				ResponseJson = JsonConvert.SerializeObject(rsp).Replace("\"", "\\\"", StringComparison.Ordinal)
-						// 			};
-						// 			try
-						// 			{
-						// 				if (rsp.IsSuccess)
-						// 				{
-						// 					successRecords++;
-						// 					LogSingleInfo.LogType = DataSyncLogType.Success;
-						// 				}
-						// 				else
-						// 				{
-						// 					throw new Exception(rsp.Message);
-						// 				}
-						// 				returnDetailListItem.Add(LogSingleInfo);
-						// 			}
-						// 			catch (Exception ex)
-						// 			{
-						// 				failedRecords++;
-						// 				LogSingleInfo.LogType = DataSyncLogType.Error;
-						// 				LogSingleInfo.MessageException = ex.Message;
-						// 				returnDetailListItem.Add(LogSingleInfo);
-						// 			}
-						// 		}
-						// 		_ = _operations.InsertDataSyncServiceLogDetailBulk(returnDetailListItem);
-						// 	}
-						// 	LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
-						// }
+						List<ComponentExternal> listItems = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJson);
+						List<ComponentExternal> listItemsOriginal = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listItems);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						List<DataSyncServiceLogDetail> returnDetailListItem = [];
+						if (listItems.Count > 0)
+						{
+							List<ResponseData> sfListResponse = await _operations.ListUpdateComponentBulk(listItems, listItemsOriginal, SystemOperator, false, LevelMessage.Success).ConfigureAwait(false);
+							if (sfListResponse is not null)
+							{
+								foreach (ResponseData rsp in sfListResponse)
+								{
+									object entity = rsp.Entity;
+									object entityAlt = rsp.EntityAlt;
+									rsp.Entity = null;
+									DataSyncServiceLogDetail LogSingleInfo = new()
+									{
+										LogId = LogInfo.Id,
+										RowKey = rsp.Code,
+										ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+										ErpReceivedJson = JsonConvert.SerializeObject(entity, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() }).Replace("\"", "\\\"", StringComparison.Ordinal),
+										SfMappedJson = JsonConvert.SerializeObject(entityAlt).Replace("\"", "\\\"", StringComparison.Ordinal),
+										ResponseJson = JsonConvert.SerializeObject(rsp).Replace("\"", "\\\"", StringComparison.Ordinal)
+									};
+									try
+									{
+										if (rsp.IsSuccess)
+										{
+											successRecords++;
+											LogSingleInfo.LogType = DataSyncLogType.Success;
+										}
+										else
+										{
+											throw new Exception(rsp.Message);
+										}
+										returnDetailListItem.Add(LogSingleInfo);
+									}
+									catch (Exception ex)
+									{
+										failedRecords++;
+										LogSingleInfo.LogType = DataSyncLogType.Error;
+										LogSingleInfo.MessageException = ex.Message;
+										returnDetailListItem.Add(LogSingleInfo);
+									}
+								}
+						//		_ = _operations.InsertDataSyncServiceLogDetailBulk(returnDetailListItem);
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
+						}
 						break;
 
 					case SyncERPEntity.CLOCKINOUT_SERVICE:

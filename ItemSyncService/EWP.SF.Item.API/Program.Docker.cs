@@ -45,11 +45,11 @@ IConfiguration configuration = new ConfigurationBuilder()
 ApplicationSettings appSettings = new(configuration);
 builder.Services.AddSingleton<IApplicationSettings>(appSettings);
 // Register repositories
-        builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
+        //builder.Services.AddScoped<IUtilitiesRepository, UtilitiesRepository>();
         builder.Services.AddScoped<IDataSyncRepository, DataSyncRepository>();
 
         // Register services
-        builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
+        //builder.Services.AddScoped<ISystemSettingsService, SystemSettingsService>();
         builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
         builder.Services.AddScoped<DataSyncServiceProcessor>();
         builder.Services.AddScoped<DataSyncServiceManager>();

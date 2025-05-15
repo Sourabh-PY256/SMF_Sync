@@ -55,13 +55,13 @@ public class ActivityDescription
 	public string Description { get; set; }
 	public string Duration { get; set; }
 	public string RawMaterials { get; set; }
-	public Procedure CurrentProcessMaster { get; set; }
+	//public Procedure CurrentProcessMaster { get; set; }
 	public List<ActivityRequirement> Requirements { get; set; }
 
 	//public List<ActivityInstruction> Instructions { get; set; }
 	//public List<ProcedureSection> Sections { get; set; }
 
-	public ResponseInstruction ResponseInstructions { get; set; }
+	//public ResponseInstruction ResponseInstructions { get; set; }
 }
 
 public class Activity : ICloneable, ILoggableEntity
@@ -102,9 +102,9 @@ public class Activity : ICloneable, ILoggableEntity
 	public string RawMaterials { get; set; }
 	public bool ManualDelete { get; set; }
 	public ActivitySchedule Schedule { get; set; }
-	public Procedure CurrentProcessMaster { get; set; }
+	//public Procedure CurrentProcessMaster { get; set; }
 	public List<ActivityRequirement> Requirements { get; set; }
-	public List<ProcedureSection> Sections { get; set; }
+	//public List<ProcedureSection> Sections { get; set; }
 	public List<ActivityInstruction> Instructions { get; set; }
 	public List<ActivityNotification> Notifications { get; set; }
 	public List<string> AttachmentIds { get; set; }
@@ -235,9 +235,9 @@ public class ActivityTypeInstructions
 {
 	public int Id { get; set; }
 	public int IdType { get; set; }
-	public TypeData TypeDataSelected { get; set; }
+	//public TypeData TypeDataSelected { get; set; }
 	public ActivityQuestionType TypeQuestionSelected { get; set; }
-	public TypesDataR TypesDataReading { get; set; }
+	//public TypesDataR TypesDataReading { get; set; }
 }
 
 public class ActivityQuestionType

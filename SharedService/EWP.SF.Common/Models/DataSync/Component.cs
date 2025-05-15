@@ -7,10 +7,9 @@ using EWP.SF.Common.Enumerators;
 
 using Newtonsoft.Json;
 using EWP.SF.Common.EntityLogger;
-using EWP.SF.Common.Models;
 
 
-namespace EWP.SF.Common.MesModels;
+namespace EWP.SF.Common.Models;
 
 [GridBDEntityName("Item", "Item")]
 [GridBDEntityName("Products", "Product")]
