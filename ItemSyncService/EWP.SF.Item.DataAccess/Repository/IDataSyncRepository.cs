@@ -29,4 +29,6 @@ public interface IDataSyncRepository
 
     List<MeasureUnit> GetMeasureUnits(UnitType? unitType = null, string unitId = null, DateTime? DeltaDate = null);
     Task<List<Component>> ListComponents(string componentId, bool ignoreImages = false, string filter = "", DateTime? DeltaDate = null, CancellationToken cancellationToken = default);
+    Warehouse GetWarehouse(string Code);
+    ResponseData MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validation);
 }

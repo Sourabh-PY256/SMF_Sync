@@ -66,10 +66,24 @@ public class APIWebClient : HttpClient
 	public async Task<DataSyncResponse> DataSyncDownload(string uri, string body = "")
 	{
 		DataSyncResponse response = new();
+		
+		// Parse the original URI
+		Uri originalUri = new Uri(uri);
+		
+		// Construct new URI with host.docker.internal
+		UriBuilder uriBuilder = new UriBuilder
+		{
+			Scheme = "http",
+			Host = "host.docker.internal",
+			Port = 8030,
+			Path = originalUri.AbsolutePath,
+			Query = originalUri.Query
+		};
+		
 		using HttpRequestMessage requestGet = new()
 		{
 			Method = HttpMethod.Get,
-			RequestUri = new Uri("http://host.docker.internal:8030/api/Item?Id=string&Timeout=85"),
+			RequestUri = uriBuilder.Uri,
 			Content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Application.Json),
 		};
 		using (HttpResponseMessage httpResponse = await SendAsync(requestGet).ConfigureAwait(false))

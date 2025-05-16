@@ -823,5 +823,351 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 		}
 		return returnValue?.ToArray();
 	}
+	// public async Task<List<ResponseData>> CreateAssetsExternal(List<AssetExternal> AssetsList, List<AssetExternal> AssetListOriginal, User user, bool Validate, string Level)
+	// {
+	// 	List<ResponseData> returntValue = [];
+	// 	bool NotifyOnce = false;
+	// 	//Validación para saber si se notifica 1 registro desde la funcionalidad de creación
+	// 	AssetsList.ForEach(x =>
+	// 	{
+	// 		switch (x.AssetType.ToUpperInvariant())
+	// 		{
+	// 			case "FACILITY":
+	// 				{
+	// 					x.AssetType = Entities.Facility.ToStr();
+	// 					break;
+	// 				}
+	// 			case "FLOOR":
+	// 				{
+	// 					x.AssetType = Entities.Floor.ToStr();
+	// 					break;
+	// 				}
+	// 			case "WORKCENTER":
+	// 				{
+	// 					x.AssetType = Entities.Workcenter.ToStr();
+	// 					break;
+	// 				}
+	// 			case "PRODUCTIONLINE":
+	// 				{
+	// 					x.AssetType = Entities.ProductionLine.ToStr();
+	// 					break;
+	// 				}
+	// 		}
+	// 	});
+	// 	AssetsList = [.. AssetsList.OrderBy(x => Enum.Parse<Entities>(x.AssetType))];
+	// 	if (AssetsList.Count > 0 && AssetsList.Count == 1)
+	// 	{
+	// 		NotifyOnce = true;
+	// 	}
+	// 	foreach (AssetExternal asset in AssetsList)
+	// 	{
+	// 		AssetExternal currentAsset = asset;
+	// 		try
+	// 		{
+	// 			switch (asset.AssetType.ToUpperInvariant())
+	// 			{
+	// 				case "FACILITY":
+	// 					Facility existingFacility = GetFacility(asset.AssetCode);
+	// 					if (existingFacility is not null && AssetListOriginal is not null)
+	// 					{
+	// 						currentAsset = AssetListOriginal.Find(a => a.AssetCode == asset.AssetCode);
+	// 						currentAsset ??= asset;
+	// 					}
+	// 					if (existingFacility is null && !string.Equals(asset.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase))
+	// 					{
+	// 						throw new InvalidOperationException("Cannot import a Disabled Facility record");
+	// 					}
+	// 					ResponseData resultFacility = await CreateFacility(currentAsset, user, Validate, Level, NotifyOnce).ConfigureAwait(false);
+	// 					if (resultFacility is not null)
+	// 					{
+	// 						resultFacility.Entity = Entities.Facility.ToStr();
+	// 						returntValue.Add(resultFacility);
+	// 					}
+	// 					break;
+
+	// 				case "FLOOR":
+	// 					Floor existingFloor = GetFloor(asset.AssetCode);
+	// 					if (existingFloor is not null && AssetListOriginal is not null)
+	// 					{
+	// 						currentAsset = AssetListOriginal.Find(a => a.AssetCode == asset.AssetCode);
+	// 						currentAsset ??= asset;
+	// 					}
+	// 					if (existingFloor is null && !string.Equals(asset.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase))
+	// 					{
+	// 						throw new Exception("Cannot import a Disabled Floor record");
+	// 					}
+	// 					ResponseData resultFloor = await CreateFloor(currentAsset, user, Validate, Level, NotifyOnce).ConfigureAwait(false);
+	// 					if (resultFloor is not null)
+	// 					{
+	// 						resultFloor.Entity = Entities.Floor.ToStr();
+	// 						returntValue.Add(resultFloor);
+	// 					}
+	// 					break;
+
+	// 				case "WORKCENTER":
+	// 					WorkCenter existingWorkcenter = GetWorkCenter(asset.AssetCode);
+	// 					if (existingWorkcenter is not null && AssetListOriginal is not null)
+	// 					{
+	// 						currentAsset = AssetListOriginal.Find(a => a.AssetCode == asset.AssetCode);
+	// 						currentAsset ??= asset;
+	// 					}
+	// 					if (existingWorkcenter is null && !string.Equals(asset.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase))
+	// 					{
+	// 						throw new Exception("Cannot import a Disabled Floor record");
+	// 					}
+	// 					ResponseData resultWorkCenter = await CreateWorkCenter(currentAsset, user, Validate, Level, NotifyOnce).ConfigureAwait(false);
+	// 					if (resultWorkCenter is not null)
+	// 					{
+	// 						resultWorkCenter.Entity = Entities.Workcenter.ToStr();
+	// 						returntValue.Add(resultWorkCenter);
+	// 					}
+	// 					break;
+
+	// 				case "PRODUCTIONLINE":
+	// 					ProductionLine existingProductionLine = GetProductionLine(asset.AssetCode, user);
+	// 					if (existingProductionLine is not null && AssetListOriginal is not null)
+	// 					{
+	// 						currentAsset = AssetListOriginal.Find(a => a.AssetCode == asset.AssetCode);
+	// 						currentAsset ??= asset;
+	// 					}
+	// 					if (existingProductionLine is null && !string.Equals(asset.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase))
+	// 					{
+	// 						throw new Exception("Cannot import a Disabled Floor record");
+	// 					}
+	// 					ResponseData resultProductLine = await CreateUpdateProductionLine(currentAsset, user, Validate, Level, NotifyOnce).ConfigureAwait(false);
+	// 					if (resultProductLine is not null)
+	// 					{
+	// 						resultProductLine.Entity = Entities.ProductionLine.ToStr();
+	// 						returntValue.Add(resultProductLine);
+	// 					}
+	// 					break;
+	// 			}
+	// 		}
+	// 		catch (Exception ex)
+	// 		{
+	// 			returntValue.Add(new ResponseData
+	// 			{
+	// 				Entity = Entities.ProductionLine.ToStr(),
+	// 				Action = ActionDB.Create,
+	// 				IsSuccess = false,
+	// 				Message = ex.Message,
+	// 				Code = asset.AssetCode
+	// 			});
+	// 		}
+	// 	}
+	// 	if (!NotifyOnce && !Validate)
+	// 	{
+	// 		// Se crea notificación de toda la entidad Facility
+	// 		ResponseData[] tmpListFacility = [.. returntValue.Where(p => p.Entity.ToStr() == Entities.Facility.ToStr())];
+	// 		if (tmpListFacility.Length > 1)
+	// 		{
+	// 			_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Facility, Action = ActionDB.IntegrateAll.ToStr() });
+	// 		}
+	// 		ResponseData[] tmpListFloor = [.. returntValue.Where(p => p.Entity.ToStr() == Entities.Floor.ToStr())];
+	// 		if (tmpListFloor.Length > 1)
+	// 		{
+	// 			_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Floor, Action = ActionDB.IntegrateAll.ToStr() });
+	// 		}
+	// 		ResponseData[] tmpListWorkcenter = [.. returntValue.Where(p => p.Entity.ToStr() == Entities.Workcenter.ToStr())];
+	// 		if (tmpListWorkcenter.Length > 1)
+	// 		{
+	// 			_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Workcenter, Action = ActionDB.IntegrateAll.ToStr() });
+	// 		}
+	// 		ResponseData[] tmpListProductionLine = [.. returntValue.Where(p => p.Entity.ToStr() == Entities.ProductionLine.ToStr())];
+	// 		if (tmpListProductionLine.Length > 1)
+	// 		{
+	// 			_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.ProductionLine, Action = ActionDB.IntegrateAll.ToStr() });
+	// 		}
+	// 	}
+	// 	return returntValue;
+	// }
+	#region Warehouse
+
+	// public List<Warehouse> ListWarehouse(User systemOperator, string WarehouseCode = "", DateTime? DeltaDate = null)
+	// {
+	// 	#region Permission validation
+
+	// 	// if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+	// 	// {
+	// 	// 	throw new UnauthorizedAccessException(noPermission);
+	// 	// }discuss mario
+
+	// 	#endregion Permission validation
+
+	// 	return _dataSyncRepository.ListWarehouse(WarehouseCode, DeltaDate);
+	// }
+
+	// public facilityBin GetFacilityBinLocations(string Code)
+	// {
+	// 	return _dataSyncRepository.GetFacilityBinLocations(Code);
+	// }
+
+	public Warehouse GetWarehouse(string Code)
+	{
+		return _dataSyncRepository.GetWarehouse(Code);
+	}
+
+	public async Task<ResponseData> MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+	{
+		ResponseData returnValue = null;
+
+		#region Permission validation
+
+		// if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }discuss mario
+
+		#endregion Permission validation
+
+		// Warehouse returnValue = _dataSyncRepository.CreateWarehouse(WarehouseInfo, systemOperator);
+		returnValue = _dataSyncRepository.MergeWarehouse(WarehouseInfo, systemOperator, Validate);
+		// if (!Validate && returnValue is not null)
+		// {
+		// 	Warehouse ObjWarehouse = ListWarehouse(systemOperator, returnValue.Code).Find(x => x.Status != Status.Failed);
+		// 	await ObjWarehouse.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+		// 	if (NotifyOnce)
+		// 	{
+		// 		_ = await SaveImageEntity("Warehouse", WarehouseInfo.Image, WarehouseInfo.Code, systemOperator).ConfigureAwait(false);
+		// 		_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Warehouse, returnValue.Action, Data = ObjWarehouse }, returnValue.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
+		// 		if (WarehouseInfo.AttachmentIds is not null)
+		// 		{
+		// 			foreach (string attachment in WarehouseInfo.AttachmentIds)
+		// 			{
+		// 				await AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+		// 			}
+		// 		}
+		// 		returnValue.Entity = ObjWarehouse;
+		// 	}
+		// }discussmario
+		return returnValue;
+	}
+
+
+
+
+	public async Task<List<ResponseData>> ListUpdateWarehouseGroup(List<WarehouseExternal> warehouseGroupList, List<WarehouseExternal> warehouseGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+	{
+		List<ResponseData> returntValue = [];
+		ResponseData MessageError;
+		bool NotifyOnce = true;
+		if (warehouseGroupList?.Count > 0)
+		{
+			NotifyOnce = warehouseGroupList.Count == 1;
+			int Line = 0;
+			string BaseId = string.Empty;
+			foreach (WarehouseExternal cycleWarehouse in warehouseGroupList)
+			{
+				Line++;
+				WarehouseExternal warehouse = cycleWarehouse;
+				Warehouse originalWarehouse = GetWarehouse(cycleWarehouse.WarehouseCode);
+				bool editMode = originalWarehouse is not null;
+				if (editMode && warehouseGroupListOriginal is not null)
+				{
+					warehouse = warehouseGroupListOriginal.Find(x => x.WarehouseCode == cycleWarehouse.WarehouseCode);
+					warehouse ??= cycleWarehouse;
+				}
+				try
+				{
+					BaseId = warehouse.WarehouseName;
+					List<ValidationResult> results = [];
+					ValidationContext context = new(warehouse, null, null);
+					if (!Validator.TryValidateObject(warehouse, context, results))
+					{
+						if (editMode)
+						{
+							_ = results.RemoveAll(result => result.ErrorMessage.Contains("is required", StringComparison.OrdinalIgnoreCase));
+						}
+						if (results.Count > 0)
+						{
+							throw new Exception($"{results[0]}");
+						}
+					}
+					Status status = (Status)Status.Active.ToInt32();
+					if (!editMode || !string.IsNullOrEmpty(warehouse.Status))
+					{
+						if (string.Equals(warehouse.Status.Trim(), "DISABLE", StringComparison.OrdinalIgnoreCase))
+						{
+							status = (Status)Status.Disabled.ToInt32();
+						}
+					}
+					if (!editMode && status == Status.Disabled)
+					{
+						throw new Exception("Cannot import a new disabled warehouse");
+					}
+					Warehouse warehouseInfo;
+					if (!editMode)
+					{
+						warehouseInfo = new Warehouse
+						{
+							Code = warehouse.WarehouseCode,
+							Name = !string.IsNullOrEmpty(warehouse.WarehouseName) ? warehouse.WarehouseName : warehouse.WarehouseCode,
+							Status = status,
+							FacilityCode = warehouse.FacilityCode,
+							Schedule = warehouse.Schedule.ToStr().Equals("Yes", StringComparison.OrdinalIgnoreCase),
+						};
+					}
+					else
+					{
+						warehouseInfo = originalWarehouse;
+						if (!string.IsNullOrEmpty(warehouse.WarehouseName))
+						{
+							warehouseInfo.Name = warehouse.WarehouseName;
+						}
+						if (!string.IsNullOrEmpty(warehouse.FacilityCode))
+						{
+							warehouseInfo.FacilityCode = warehouse.FacilityCode;
+						}
+						warehouseInfo.Status = status;
+					}
+
+					if (!editMode || (warehouse.Locations?.Count > 0))
+					{
+						//List<ResponseData> binLocationsResponse = await ListUpdateBinLocation(warehouse.Locations, null, systemOperator, Validate, Level).ConfigureAwait(false);discuss mario
+						warehouseInfo.Details = null;
+					}
+					if (editMode && string.IsNullOrEmpty(warehouse.FacilityCode))
+					{
+						warehouseInfo.FacilityCode = originalWarehouse.FacilityCode;
+					}
+					ResponseData response = await MergeWarehouse(warehouseInfo, systemOperator, Validate).ConfigureAwait(false);
+					returntValue.Add(response);
+				}
+				catch (Exception ex)
+				{
+					MessageError = new ResponseData
+					{
+						Id = BaseId,
+						Message = ex.Message,
+						Code = "Line:" + Line.ToStr()
+					};
+					returntValue.Add(MessageError);
+				}
+			}
+		}
+		// if (!Validate)
+		// {
+		// 	if (!NotifyOnce)
+		// 	{
+		// 		_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Warehouse, Action = ActionDB.IntegrateAll.ToStr() });
+		// 	}
+		// 	switch (Level)
+		// 	{
+		// 		case LevelMessage.Warning:
+		// 			returntValue = [.. returntValue.Where(p => !string.IsNullOrEmpty(p.Message))];
+		// 			break;
+
+		// 		case LevelMessage.Error:
+		// 			returntValue = [.. returntValue.Where(p => !p.IsSuccess)];
+		// 			break;
+		// 		case LevelMessage.Success:
+		// 			break;
+		// 	}
+		// }  discuss mario
+		return returntValue;
+	}
+
+	#endregion Warehouse
+	
     #endregion DataSync
 }
