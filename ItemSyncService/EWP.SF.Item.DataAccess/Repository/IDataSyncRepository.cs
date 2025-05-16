@@ -31,4 +31,5 @@ public interface IDataSyncRepository
     Task<List<Component>> ListComponents(string componentId, bool ignoreImages = false, string filter = "", DateTime? DeltaDate = null, CancellationToken cancellationToken = default);
     Warehouse GetWarehouse(string Code);
     ResponseData MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validation);
+    Task<User> GetUser(int userId, string userHash, User systemOperator, CancellationToken cancellationToken = default);
 }

@@ -30,7 +30,7 @@ public class DataSyncServiceProcessor
 	{
 		_logger = logger;
 		_operations = operations;
-		//_systemOperator = _operations.GetUserWithoutValidations(new User(-1)).ConfigureAwait(false).GetAwaiter().GetResult();
+		_systemOperator = _operations.GetUserWithoutValidations(new User(-1)).ConfigureAwait(false).GetAwaiter().GetResult();
 		ContextCache.ERPOffset = null;
 	}
 
@@ -49,8 +49,8 @@ public class DataSyncServiceProcessor
 			ExecutionInitDate = initDate,
 			ExecutionOrigin = ExecOrigin,
 
-			// LogUser = requestUser.Id,
-			// LogEmployee = requestUser.EmployeeId
+			LogUser = requestUser.Id,
+			LogEmployee = requestUser.EmployeeId
 		};
 		if (!string.IsNullOrEmpty(loggerId))
 		{
@@ -463,7 +463,7 @@ public class DataSyncServiceProcessor
 						List<ComponentExternal> listItemsOriginal = JsonConvert.DeserializeObject<List<ComponentExternal>>(dataJsonOriginal);
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listItems);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						// _ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false); comment for debugging method not implemented.
 						List<DataSyncServiceLogDetail> returnDetailListItem = [];
 						if (listItems.Count > 0)
 						{
@@ -765,7 +765,7 @@ public class DataSyncServiceProcessor
 						List<WarehouseExternal> listWarehousesOriginal = JsonConvert.DeserializeObject<List<WarehouseExternal>>(dataJsonOriginal);
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWarehouses);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						// _ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listWarehouses.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
@@ -824,7 +824,7 @@ public class DataSyncServiceProcessor
 				LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
 
 				//Encender Servicio nuevamente
-				_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+				// _ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 			}
 			else
 			{
