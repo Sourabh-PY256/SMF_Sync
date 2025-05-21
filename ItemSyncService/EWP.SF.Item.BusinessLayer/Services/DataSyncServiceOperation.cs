@@ -627,8 +627,13 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 		// }  discuss mario
 		return returntValue;
 	}
+	
+	public Task<User> GetUserWithoutValidations(User user)
+	{
+		return _dataSyncRepository.GetUser(user.Id, null, new User(0));
+	}
 
 	#endregion Warehouse
-	
-    #endregion DataSync
+
+	#endregion DataSync
 }
