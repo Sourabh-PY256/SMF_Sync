@@ -38,7 +38,8 @@ public enum TokenRenewOrigin
 public enum ServiceExecOrigin
 {
 	Timer = 1,
-	Webhook = 2,
+	//Webhook = 2,
+	KafkaProducer = 2,
 	Event = 3,
 	SyncButton = 4
 }

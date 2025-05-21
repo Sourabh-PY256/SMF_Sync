@@ -31,7 +31,7 @@ public class DataSyncServiceManager
 			LogUser = systemOperator.Id,
 			LogEmployee = systemOperator.EmployeeId,
 			ServiceInstanceId = servicedata.Id,
-			ExecutionOrigin = ServiceExecOrigin.Webhook,
+			ExecutionOrigin = ServiceExecOrigin.KafkaProducer,
 			SuccessRecords = 0,
 			FailedRecords = 0
 		}).ConfigureAwait(false);
@@ -65,10 +65,7 @@ public class DataSyncServiceManager
 		{
 			returnValue = 1;
 		}
-		if (ContextCache.IsServiceRunning(_dataService.Id))
-		{
-			returnValue = 2;
-		}
+		
 		return returnValue;
 	}
 

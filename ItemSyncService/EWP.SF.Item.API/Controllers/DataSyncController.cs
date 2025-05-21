@@ -14,12 +14,10 @@ namespace EWP.SF.Item.API;
 public  class DataSyncController : BaseController
 {
 	private readonly ILogger<DataSyncController> _logger;
-	private  IDataSyncServiceOperation _dataSyncService;
 
-    public DataSyncController(ILogger<DataSyncController> logger, IDataSyncServiceOperation dataSyncService)
+    public DataSyncController(ILogger<DataSyncController> logger)
     {
         _logger = logger;
-		_dataSyncService = dataSyncService;
     }
 	#region DataSync
 
@@ -28,13 +26,13 @@ public  class DataSyncController : BaseController
 	[Consumes("application/json")]
 	[HttpPost("DataSyncService/Producer")]
 	[Tags("Integrators")]
-	public async Task<ResponseModel> DataSyncServiceWebhook(
+	public async Task<ResponseModel> SyncProducer(
 		[FromServices] DataSyncServiceManager ServiceManager, 
 		[FromServices] IKafkaService kafkaService,
 		[FromBody] DataSyncExecuteRequest ServiceRequest)
 	{
 		ResponseModel returnValue = new();
-		_logger.LogInformation("DataSyncServiceWebhook received request for services: {Services}", 
+		_logger.LogInformation("SyncProducer received request for services: {Services}", 
 			string.Join(", ", ServiceRequest.Services));
 		
 		List<DataSyncExecuteResponse> ServicesResponse = [];
@@ -44,7 +42,7 @@ public  class DataSyncController : BaseController
 			//consumerManager.EnsureConsumerExists(service);
 			
 			// Validate if service can be executed
-			int runStatus = await ServiceManager.ValidateExecuteService(service, TriggerType.Erp, ServiceExecOrigin.Webhook, "GET").ConfigureAwait(false);
+			int runStatus = await ServiceManager.ValidateExecuteService(service, TriggerType.Erp, ServiceExecOrigin.KafkaProducer, "GET").ConfigureAwait(false);
 			
 			// Determine response message based on status
 			string responseMessage = runStatus switch
@@ -76,13 +74,13 @@ public  class DataSyncController : BaseController
 					new SyncMessage { 
 						Service = service, 
 						Trigger = TriggerType.Erp.ToString(),
-						ExecutionType = (int)ServiceExecOrigin.Webhook,
+						ExecutionType = (int)ServiceExecOrigin.KafkaProducer,
 						EntityCode = ServiceRequest.EntityCode,
 						BodyData = ServiceRequest.BodyData
 					}
 				).ConfigureAwait(false);
 				
-				_logger.LogInformation("Published Kafka message for service {Service} triggered by webhook", service);
+				_logger.LogInformation("Published Kafka message for service {Service} triggered by producer", service);
 			}
 			else if (runStatus == 0)
 			{

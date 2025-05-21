@@ -104,7 +104,7 @@ namespace EWP.SF.Item.BusinessLayer
                             {
                                 // Execute the service
                                 _logger.LogInformation("Executing service {Service} from Kafka message", message.Service);
-                                var response = await ManualExecution(
+                                var response = await SyncERPData(
                                     serviceData, 
                                     triggerType, 
                                     execOrigin, 
@@ -146,7 +146,7 @@ namespace EWP.SF.Item.BusinessLayer
         /// <summary>
         /// Executes a service manually
         /// </summary>
-        public async Task<DataSyncHttpResponse> ManualExecution(
+        public async Task<DataSyncHttpResponse> SyncERPData(
             DataSyncService Data, 
             TriggerType Trigger, 
             ServiceExecOrigin ExecOrigin, 
@@ -189,7 +189,7 @@ namespace EWP.SF.Item.BusinessLayer
                             var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
                             //ContextCache.SetRunningService(Data.Id, true);
                             // Execute the service
-                            response = await processor.ExecuteService(
+                            response = await processor.SyncExecution(
                                 Data, 
                                 ExecOrigin, 
                                 Trigger, 
@@ -221,84 +221,6 @@ namespace EWP.SF.Item.BusinessLayer
         }
 
         /// <summary>
-        /// Publishes a service execution request to Kafka or executes it directly
-        /// </summary>
-        public async Task<DataSyncHttpResponse> PublishServiceExecution(
-            string serviceType, 
-            TriggerType trigger, 
-            ServiceExecOrigin execOrigin, 
-            User user = null, 
-            string entityCode = "", 
-            string bodyData = "")
-        {
-            try
-            {
-                // Create a scope to resolve scoped services
-                using (var scope = _serviceScopeFactory.CreateScope())
-                {
-                    // Get the operations service from the scope
-                    var operations = scope.ServiceProvider.GetRequiredService<IDataSyncServiceOperation>();
-                    
-                    // Validate service exists
-                    var serviceData = await operations.GetBackgroundService(serviceType).ConfigureAwait(false);
-                    if (serviceData == null)
-                    {
-                        _logger.LogWarning("Service not found: {Service}", serviceType);
-                        return new DataSyncHttpResponse
-                        {
-                            StatusCode = System.Net.HttpStatusCode.NotFound,
-                            Message = $"Service not found: {serviceType}"
-                        };
-                    }
-                    
-                    // Option 1: Execute directly for synchronous execution
-                    if (execOrigin == ServiceExecOrigin.SyncButton)
-                    {
-                        return await ManualExecution(
-                            serviceData,
-                            trigger,
-                            execOrigin,
-                            user,
-                            entityCode,
-                            bodyData
-                        ).ConfigureAwait(false);
-                    }
-                    
-                    // Option 2: Publish to Kafka for asynchronous execution
-                    var messageKey = $"exec-{serviceType}-{Guid.NewGuid()}";
-                    
-                    var message = new SyncMessage
-                    {
-                        Service = serviceType,
-                        Trigger = trigger.ToString(),
-                        ExecutionType = execOrigin == ServiceExecOrigin.Event ? 1 : 0,
-                        User = user,
-                        EntityCode = entityCode,
-                        BodyData = bodyData
-                    };
-                    
-                    _logger.LogInformation("Publishing service execution request: {Key}", messageKey);
-                    await _kafkaService.ProduceMessageAsync("sync-topic", messageKey, message).ConfigureAwait(false);
-                    
-                    return new DataSyncHttpResponse
-                    {
-                        StatusCode = System.Net.HttpStatusCode.Accepted,
-                        Message = $"Service execution request for {serviceType} has been queued"
-                    };
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error publishing service execution request");
-                return new DataSyncHttpResponse
-                {
-                    StatusCode = System.Net.HttpStatusCode.InternalServerError,
-                    Message = $"Error publishing service execution request: {ex.Message}"
-                };
-            }
-        }
-
-        /// <summary>
         /// Gets all sync entity types from SyncERPEntity constants
         /// </summary>
         private IEnumerable<string> GetSyncEntityTypes()
@@ -315,7 +237,7 @@ namespace EWP.SF.Item.BusinessLayer
     public interface IServiceConsumerManager
     {
         void StartConsumer();
-        Task<DataSyncHttpResponse> ManualExecution(
+        Task<DataSyncHttpResponse> SyncERPData(
             DataSyncService Data, 
             TriggerType Trigger, 
             ServiceExecOrigin ExecOrigin, 
@@ -323,13 +245,6 @@ namespace EWP.SF.Item.BusinessLayer
             string EntityCode, 
             string BodyData);
         
-        Task<DataSyncHttpResponse> PublishServiceExecution(
-            string serviceType, 
-            TriggerType trigger, 
-            ServiceExecOrigin execOrigin, 
-            User user = null, 
-            string entityCode = "", 
-            string bodyData = "");
     }
 }
 
