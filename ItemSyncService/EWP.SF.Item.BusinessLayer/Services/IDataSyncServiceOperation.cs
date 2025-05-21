@@ -11,18 +11,7 @@ namespace EWP.SF.Item.BusinessLayer;
 
 public interface IDataSyncServiceOperation
 {
-    // Task DatasyncTempServiceLogAsync(string EntityCode, string mode, string Exception = "");
-    // List<DataSyncCatalog> ListDataSyncErp(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncCatalog> ListDataSyncErpVersion(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncCatalog> ListDataSyncErpDatabase(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncCatalog> ListDataSyncErpDatabaseVersion(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncCatalog> ListDataSyncErpManufacturing(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncCatalog> ListDataSyncErpManufacturingVersion(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncCatalog> ListDataSyncInstanceCategory(User systemOperator, DataSyncCatalogFilter searchFilter);
-    // List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);
-    // DataSyncErp MergeDataSyncERP(User systemOperator, DataSyncErp dataSyncInfo);
-    // List<DataSyncService> ListDataSyncService(User systemOperator, string id, TriggerType trigger);
-    // DataSyncService MergeDataSyncService(User systemOperator, DataSyncService dataSyncInfo);
+    
     bool UpdateDataSyncServiceExecution(string id, DateTime executionDate);
     // bool UpdateDataSyncServiceStatus(string id, ServiceStatus status);
     // List<DataSyncService> ListDataSyncServiceInternal(TriggerType trigger);
