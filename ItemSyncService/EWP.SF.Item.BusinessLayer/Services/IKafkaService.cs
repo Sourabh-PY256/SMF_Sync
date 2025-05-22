@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Confluent.Kafka;
 
 namespace EWP.SF.Item.BusinessLayer
 {
@@ -13,12 +14,16 @@ namespace EWP.SF.Item.BusinessLayer
         /// <param name="message">Message content</param>
         /// <returns>Task representing the asynchronous operation</returns>
         Task ProduceMessageAsync<T>(string topic, string key, T message);
-        
+
         /// <summary>
         /// Starts a Kafka consumer for the specified topic
         /// </summary>
         /// <param name="topic">Kafka topic to consume</param>
         /// <param name="messageHandler">Action to handle received messages</param>
-        void StartConsumer(string topic, Action<string, string> messageHandler);
+        //void StartConsumer(string topic, Action<string, string> messageHandler);
+
+        void StartConsumer(string topic, Func<string, string, Task> messageHandler, int maxRetries = 3, int retryDelayMs = 1000);
+       
+       Task<T> ConsumeMessageAsync<T>(string topic, string groupId, TimeSpan timeout, Func<ConsumeResult<string, string>, bool> predicate = null);
     }
 }

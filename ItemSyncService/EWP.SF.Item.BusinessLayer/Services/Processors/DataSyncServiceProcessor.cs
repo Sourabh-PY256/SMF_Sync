@@ -120,8 +120,9 @@ public class DataSyncServiceProcessor
 			}
 			LogInfo.ServiceException = serviceErrors;
 			LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-			_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+			//_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 			_logger.LogInformation(serviceErrors);
+			throw;
 		}
 		finally
 		{
@@ -248,7 +249,7 @@ public class DataSyncServiceProcessor
 						List<AssetExternal> listAssetsOrig = JsonConvert.DeserializeObject<List<AssetExternal>>(dataJsonOriginal);
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listAssets);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listAssets.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
@@ -300,7 +301,7 @@ public class DataSyncServiceProcessor
 						List<BinLocationExternal> listBinLocationsOriginal = JsonConvert.DeserializeObject<List<BinLocationExternal>>(dataJsonOriginal);
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listBinLocations);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listBinLocations.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
@@ -360,7 +361,7 @@ public class DataSyncServiceProcessor
 						List<InventoryExternal> listInventoryOriginal = JsonConvert.DeserializeObject<List<InventoryExternal>>(dataJsonOriginal);
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listInventories);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listInventories.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
@@ -395,6 +396,7 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									throw;
 								}
 								finally
 								{
@@ -503,6 +505,7 @@ public class DataSyncServiceProcessor
 										LogSingleInfo.LogType = DataSyncLogType.Error;
 										LogSingleInfo.MessageException = ex.Message;
 										returnDetailListItem.Add(LogSingleInfo);
+										throw;
 									}
 								}
 								//		_ = _operations.InsertDataSyncServiceLogDetailBulk(returnDetailListItem);
@@ -511,7 +514,7 @@ public class DataSyncServiceProcessor
 						}
 						break;
 
-					case SyncERPEntity. :
+					case SyncERPEntity.CLOCKINOUT_SERVICE :
 
 						break;
 
@@ -844,6 +847,7 @@ public class DataSyncServiceProcessor
 						}
 						catch
 						{
+							throw;
 						}
 					}
 					HttpResponse.StatusCode = HttpStatusCode.InternalServerError;
@@ -854,6 +858,8 @@ public class DataSyncServiceProcessor
 					string message = "Error fetching data from ERP";
 					HttpResponse.StatusCode = HttpStatusCode.NotFound;
 					HttpResponse.Message = message;
+					throw;
+
 				}
 
 				throw new Exception(HttpResponse.Message);
@@ -894,6 +900,7 @@ public class DataSyncServiceProcessor
 			}
 			catch
 			{
+				throw;
 			}
 			if (erpResult.StatusCode == HttpStatusCode.RequestTimeout || string.Equals(temporaryResponse, "PENDING", StringComparison.OrdinalIgnoreCase))
 			{
@@ -1019,23 +1026,6 @@ public class DataSyncServiceProcessor
 		//_ = await _operations.InsertDataSyncServiceLogDetail(LogSingleInfoFinish).ConfigureAwait(false);
 
 		return HttpResponse;
-	}
-
-	private static async Task ReprocessError(string ErpJson, string DataJson, DataSyncService ServiceData, DataSyncServiceLog LogInfo, DataSyncServiceLogDetail LogDetail, User SystemOperator)
-	{
-		int failedRecords = 0;
-		int successRecords = 0;
-		LogInfo.ExecutionOrigin = ServiceExecOrigin.Timer;
-		switch (ServiceData.Entity.Name)
-		{
-			case SyncERPEntity.ITEM_SERVICE:
-				break;
-		}
-		// Log
-		LogInfo.FailedRecords += failedRecords;
-		LogInfo.SuccessRecords += successRecords;
-		// LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-		// await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 	}
 
 	private async Task SetRequestHeaders(DataSyncService ServiceData, APIWebClient client)
@@ -1187,6 +1177,7 @@ public class DataSyncServiceProcessor
 			if (isTimeout && ServiceData.RevalidationEnable == EnableType.Yes)
 			{
 				erpResponse = new DataSyncResponse { StatusCode = HttpStatusCode.RequestTimeout, Response = JsonConvert.SerializeObject(new { status = "Pending", message = "a timeout has occurred" }), StatusMessage = "Request Timeout" };
+				throw;
 			}
 			else if (isTimeout)
 			{
@@ -1365,6 +1356,7 @@ public class DataSyncServiceProcessor
 			failedRecords++;
 			LogSingleInfo.LogType = DataSyncLogType.Error;
 			LogSingleInfo.MessageException = ex.Message;
+			throw;
 		}
 		finally
 		{

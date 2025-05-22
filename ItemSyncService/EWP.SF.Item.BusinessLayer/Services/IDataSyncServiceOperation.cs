@@ -11,7 +11,7 @@ namespace EWP.SF.Item.BusinessLayer;
 
 public interface IDataSyncServiceOperation
 {
-    
+
     bool UpdateDataSyncServiceExecution(string id, DateTime executionDate);
     // bool UpdateDataSyncServiceStatus(string id, ServiceStatus status);
     // List<DataSyncService> ListDataSyncServiceInternal(TriggerType trigger);
@@ -37,4 +37,16 @@ public interface IDataSyncServiceOperation
 
     Task<List<ResponseData>> ListUpdateWarehouseGroup(List<WarehouseExternal> warehouseGroupList, List<WarehouseExternal> warehouseGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level);
     Task<User> GetUserWithoutValidations(User user);
+
+    Task<List<ResponseData>> CreateAssetsExternal(List<AssetExternal> AssetsList, List<AssetExternal> AssetListOriginal, User user, bool Validate, string Level);
+
+    Task<List<ResponseData>> CreateUpdateProductionLine(List<AssetExternal> productionLineList, List<AssetExternal> productionLineListOriginal, User user, bool Validate, string Level);
+
+    Task<List<ResponseData>> CreateUpdateFloor(List<AssetExternal> floorList, List<AssetExternal> floorListOriginal, User user, bool Validate, string Level);
+
+    Task<List<ResponseData>> CreateUpdateWorkCenter(List<AssetExternal> workCenterList, List<AssetExternal> workCenterListOriginal, User user, bool Validate, string Level);
+
+    Task<List<ResponseData>> ListUpdateInventoryGroup(List<InventoryExternal> inventoryGroupList, List<InventoryExternal> inventoryGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level);
+
+    Task<List<ResponseData>> ListUpdateBinLocation(List<BinLocationExternal> binLocationList, List<BinLocationExternal> binLocationListOriginal, User systemOperator, bool Validate, LevelMessage Level);
 }
