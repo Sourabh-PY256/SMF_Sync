@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    
+    "configurations": [
+        {
+            "name": "Docker: Attach to .NET Core",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickRemoteProcess}",
+            "pipeTransport": {
+                "pipeProgram": "docker",
+                "pipeArgs": ["exec", "-i", "item-sync-service"],
+                "debuggerPath": "/vsdbg/vsdbg",
+                "pipeCwd": "${workspaceRoot}",
+                "quoteArgs": false
+            },
+            "sourceFileMap": {
+                "/src": "${workspaceFolder}"
+            }
+        }
+    ]
+}
+
