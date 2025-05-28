@@ -102,9 +102,10 @@ public class Activity : ICloneable, ILoggableEntity
 	public string RawMaterials { get; set; }
 	public bool ManualDelete { get; set; }
 	public ActivitySchedule Schedule { get; set; }
-	//public Procedure CurrentProcessMaster { get; set; }
+	public Procedure CurrentProcessMaster { get; set; }
 	public List<ActivityRequirement> Requirements { get; set; }
-	//public List<ProcedureSection> Sections { get; set; }
+	
+	public List<ProcedureSection> Sections { get; set; }
 	public List<ActivityInstruction> Instructions { get; set; }
 	public List<ActivityNotification> Notifications { get; set; }
 	public List<string> AttachmentIds { get; set; }

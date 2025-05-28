@@ -353,6 +353,61 @@ public class DataSyncServiceProcessor
 						break;
 
 					case SyncERPEntity.EMPLOYEE_SERVICE:
+					List<EmployeeExternal> listEmployees = JsonConvert.DeserializeObject<List<EmployeeExternal>>(dataJson);
+						List<EmployeeExternal> listEmployeesOriginal = JsonConvert.DeserializeObject<List<EmployeeExternal>>(dataJsonOriginal);
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listEmployees);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						_ = await _operations.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listEmployees.Count > 0)
+						{
+							List<ResponseData> sfListResponse = [];
+							foreach (EmployeeExternal elem in listEmployees)
+							{
+								DataSyncServiceLogDetail LogSingleInfo = new()
+								{
+									LogId = LogInfo.Id,
+									RowKey = elem.EmployeeCode,
+									ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "employeeCode", elem.EmployeeCode),
+									SfMappedJson = JsonConvert.SerializeObject(elem),
+									ResponseJson = ""
+								};
+								ResponseData sfResponse = null;
+
+								try
+								{
+									List<EmployeeExternal> listElem = [elem];
+									sfResponse = (await _operations.ImportEmployeesAsync(
+										listElem,
+										listEmployeesOriginal,
+										SystemOperator,
+										false,
+										LevelMessage.Success,
+										true,
+										true
+									).ConfigureAwait(false))[0];
+									// Se escribe la respuesta del procesamiento
+									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+								}
+								catch (Exception ex)
+								{
+									sfResponse = new ResponseData
+									{
+										IsSuccess = false,
+										Message = ex.Message
+									};
+								}
+								finally
+								{
+									(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+
+									sfListResponse.Add(sfResponse);
+								}
+							}
+							// Asignar fecha de sincronización en configuración a 1900 para que corra consolidación global
+							Config.Configuration.UpdateConfiguration("WFM-LastIntervalConsolidated", "1900-01-01 00:00:00");
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+						}
 
 						break;
 

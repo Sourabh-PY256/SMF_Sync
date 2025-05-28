@@ -38,7 +38,7 @@ namespace EWP.SF.Item.BusinessLayer
                 string topic = $"producer-sync-{entityType.ToLower()}";
                 _logger.LogInformation("Starting consumer for topic: {Topic}", topic);
                 
-                // Start consumer with retry logic (5 retries, starting with 2 second delay)
+                // No need to specify retries and delay - will use values from configuration
                 _kafkaService.StartConsumer(topic, async (key, value) => 
                 {
                     _logger.LogInformation("Received Kafka message: {Key}", key);
@@ -89,7 +89,7 @@ namespace EWP.SF.Item.BusinessLayer
                         // Publish execution result to Kafka if needed
                         // ...
                     }
-                }, 5, 2000); // 5 retries with 2 second initial delay (will use exponential backoff)
+                });
             }
         }
 

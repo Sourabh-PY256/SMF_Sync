@@ -1,17 +1,17 @@
 version: '3'
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: zookeeper:3.9.1
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
     ports:
       - "2181:2181"
     networks:
       - kafka-net
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: apache/kafka:3.7.0
     depends_on:
       - zookeeper
     ports:
@@ -41,6 +41,9 @@ services:
       - KafkaSettings__GroupId=ewp-sf-item-group
       - KafkaSettings__Topics__ItemSync=item-sync-topic
       - KafkaSettings__Topics__ItemUpdates=item-updates-topic
+      - KafkaSettings__Consumer__MaxRetries=5
+      - KafkaSettings__Consumer__InitialRetryDelayMs=2000
+      - KafkaSettings__Consumer__AutoCreateTopics=true
       - ENABLE_REMOTE_DEBUG=true
       - VSTEST_HOST_DEBUG=1
       # Add this to make debugging more reliable

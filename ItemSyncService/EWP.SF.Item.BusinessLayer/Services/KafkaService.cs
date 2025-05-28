@@ -18,6 +18,9 @@ namespace EWP.SF.Item.BusinessLayer
         private readonly ConsumerConfig _consumerConfig;
         private readonly ILogger<KafkaService> _logger;
         private readonly List<IConsumer<string, string>> _activeConsumers = new();
+        private readonly int _defaultMaxRetries;
+        private readonly int _defaultRetryDelayMs;
+        private readonly bool _autoCreateTopics;
 
         public KafkaService(IConfiguration configuration, ILogger<KafkaService> logger)
         {
@@ -25,6 +28,25 @@ namespace EWP.SF.Item.BusinessLayer
             
             var bootstrapServers = configuration["KafkaSettings:BootstrapServers"] ?? "localhost:9092";
             var groupId = configuration["KafkaSettings:GroupId"] ?? "ewp-sf-item-group";
+            
+            // Read retry settings from configuration
+            if (!int.TryParse(configuration["KafkaSettings:Consumer:MaxRetries"], out _defaultMaxRetries))
+            {
+                _defaultMaxRetries = 3; // Default if not specified
+            }
+            
+            if (!int.TryParse(configuration["KafkaSettings:Consumer:InitialRetryDelayMs"], out _defaultRetryDelayMs))
+            {
+                _defaultRetryDelayMs = 1000; // Default if not specified
+            }
+            
+            if (!bool.TryParse(configuration["KafkaSettings:Consumer:AutoCreateTopics"], out _autoCreateTopics))
+            {
+                _autoCreateTopics = false; // Default if not specified
+            }
+            
+            _logger.LogInformation("Kafka consumer configured with MaxRetries: {MaxRetries}, InitialRetryDelayMs: {RetryDelay}", 
+                _defaultMaxRetries, _defaultRetryDelayMs);
             
             _producerConfig = new ProducerConfig
             {
@@ -42,7 +64,9 @@ namespace EWP.SF.Item.BusinessLayer
                 GroupId = groupId,
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoCommit = false,
-                EnableAutoOffsetStore = false
+                EnableAutoOffsetStore = false,
+                // Add this if you want to enable auto topic creation at the client level
+                AllowAutoCreateTopics = _autoCreateTopics
             };
             
             _logger.LogInformation("KafkaService initialized with bootstrap servers: {Servers}", bootstrapServers);
@@ -73,8 +97,15 @@ namespace EWP.SF.Item.BusinessLayer
             }
         }
 
-        public void StartConsumer(string topic, Func<string, string, Task> messageHandler, int maxRetries = 3, int retryDelayMs = 1000)
+        public void StartConsumer(string topic, Func<string, string, Task> messageHandler, int? maxRetries = null, int? retryDelayMs = null)
         {
+            // Use provided values or fall back to defaults from configuration
+            int retries = maxRetries ?? _defaultMaxRetries;
+            int delay = retryDelayMs ?? _defaultRetryDelayMs;
+            
+            _logger.LogInformation("Starting consumer for topic {Topic} with {Retries} retries and {Delay}ms initial delay", 
+                topic, retries, delay);
+            
             var cts = new CancellationTokenSource();
             var consumer = new ConsumerBuilder<string, string>(_consumerConfig)
                 .SetErrorHandler((_, e) => _logger.LogError("Kafka consumer error: {Error}", e.Reason))
@@ -82,82 +113,89 @@ namespace EWP.SF.Item.BusinessLayer
             
             _activeConsumers.Add(consumer);
             
-            consumer.Subscribe(topic);
-            _logger.LogInformation("Consumer subscribed to topic {Topic}", topic);
-
-            Task.Run(async () =>
+            try
             {
-                try
+                consumer.Subscribe(topic);
+                _logger.LogInformation("Consumer subscribed to topic {Topic}", topic);
+
+                Task.Run(async () =>
                 {
-                    while (!cts.Token.IsCancellationRequested)
+                    try
                     {
-                        try
+                        while (!cts.Token.IsCancellationRequested)
                         {
-                            var consumeResult = consumer.Consume(cts.Token);
-                            if (consumeResult != null)
+                            try
                             {
-                                _logger.LogInformation("Consumed message from {Topic} with key {Key}", 
-                                    consumeResult.Topic, consumeResult.Message.Key);
-                                
-                                bool processedSuccessfully = false;
-                                try
+                                var consumeResult = consumer.Consume(cts.Token);
+                                if (consumeResult != null)
                                 {
-                                    // Process message with retry logic and await the async operation
-                                    await ProcessMessageWithRetryAsync(
-                                        consumeResult.Message.Key, 
-                                        consumeResult.Message.Value, 
-                                        messageHandler, 
-                                        maxRetries, 
-                                        retryDelayMs);
+                                    _logger.LogInformation("Consumed message from {Topic} with key {Key}", 
+                                        consumeResult.Topic, consumeResult.Message.Key);
                                     
-                                    processedSuccessfully = true;
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Failed to process message after all retries. Message will be reprocessed on next consumer start.");
-                                    // Don't store or commit offset - let the message be reprocessed
-                                    continue; // Skip to the next message
-                                }
-                                
-                                // Only store and commit offset if processing was successful
-                                if (processedSuccessfully)
-                                {
+                                    bool processedSuccessfully = false;
                                     try
                                     {
-                                        // Store offset after successful processing
-                                        consumer.StoreOffset(consumeResult);
+                                        // Process message with retry logic and await the async operation
+                                        await ProcessMessageWithRetryAsync(
+                                            consumeResult.Message.Key, 
+                                            consumeResult.Message.Value, 
+                                            messageHandler, 
+                                            retries, 
+                                            delay);
                                         
-                                        // Manually commit the offset
-                                        consumer.Commit();
-                                        _logger.LogDebug("Successfully committed offset for message with key {Key}", consumeResult.Message.Key);
+                                        processedSuccessfully = true;
                                     }
-                                    catch (KafkaException ex)
+                                    catch (Exception ex)
                                     {
-                                        _logger.LogWarning(ex, "Error storing/committing offset. Message might be reprocessed.");
+                                        _logger.LogError(ex, "Failed to process message after all retries. Message will be reprocessed on next consumer start.");
+                                        // Don't store or commit offset - let the message be reprocessed
+                                        continue; // Skip to the next message
+                                    }
+                                    
+                                    // Only store and commit offset if processing was successful
+                                    if (processedSuccessfully)
+                                    {
+                                        try
+                                        {
+                                            // Store offset after successful processing
+                                            consumer.StoreOffset(consumeResult);
+                                            
+                                            // Manually commit the offset
+                                            consumer.Commit();
+                                            _logger.LogDebug("Successfully committed offset for message with key {Key}", consumeResult.Message.Key);
+                                        }
+                                        catch (KafkaException ex)
+                                        {
+                                            _logger.LogWarning(ex, "Error storing/committing offset. Message might be reprocessed.");
+                                        }
                                     }
                                 }
                             }
-                        }
-                        catch (ConsumeException ex)
-                        {
-                            _logger.LogError(ex, "Error consuming message");
+                            catch (ConsumeException ex)
+                            {
+                                _logger.LogError(ex, "Error consuming message");
+                            }
                         }
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                    _logger.LogInformation("Consumer for topic {Topic} shutting down", topic);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Unexpected error in Kafka consumer for topic {Topic}", topic);
-                }
-                finally
-                {
-                    consumer.Close();
-                    _activeConsumers.Remove(consumer);
-                }
-            }, cts.Token);
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Consumer for topic {Topic} shutting down", topic);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Unexpected error in Kafka consumer for topic {Topic}", topic);
+                    }
+                    finally
+                    {
+                        consumer.Close();
+                        _activeConsumers.Remove(consumer);
+                    }
+                }, cts.Token);
+            }
+            catch (KafkaException ex)
+            {
+                _logger.LogError(ex, "Failed to subscribe to topic {Topic}. Please ensure the topic exists.", topic);
+            }
         }
 
         private async Task ProcessMessageWithRetryAsync(string key, string value, Func<string, string, Task> messageHandler, int maxRetries, int retryDelayMs)

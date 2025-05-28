@@ -40,13 +40,8 @@ public interface IDataSyncServiceOperation
 
     Task<List<ResponseData>> CreateAssetsExternal(List<AssetExternal> AssetsList, List<AssetExternal> AssetListOriginal, User user, bool Validate, string Level);
 
-    Task<List<ResponseData>> CreateUpdateProductionLine(List<AssetExternal> productionLineList, List<AssetExternal> productionLineListOriginal, User user, bool Validate, string Level);
-
-    Task<List<ResponseData>> CreateUpdateFloor(List<AssetExternal> floorList, List<AssetExternal> floorListOriginal, User user, bool Validate, string Level);
-
-    Task<List<ResponseData>> CreateUpdateWorkCenter(List<AssetExternal> workCenterList, List<AssetExternal> workCenterListOriginal, User user, bool Validate, string Level);
-
     Task<List<ResponseData>> ListUpdateInventoryGroup(List<InventoryExternal> inventoryGroupList, List<InventoryExternal> inventoryGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level);
 
     Task<List<ResponseData>> ListUpdateBinLocation(List<BinLocationExternal> binLocationList, List<BinLocationExternal> binLocationListOriginal, User systemOperator, bool Validate, LevelMessage Level);
+    Task<List<ResponseData>> ImportEmployeesAsync(List<EmployeeExternal> requestValue, List<EmployeeExternal> originalValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true, bool isDataSync = false);
 }
