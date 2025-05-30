@@ -18,249 +18,112 @@ using EWP.SF.Common.Models.Catalogs;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public class SchedulingCalendarShiftsOperation : ISchedulingCalendarShiftsOperation
+public class SchedulingShiftStatusOperation : ISchedulingShiftStatusOperation
 {
     private readonly ISchedulingShiftStatusRepo _schedulingShiftStatusRepo;
     private readonly IApplicationSettings _applicationSettings;
+    private readonly IAttachmentOperation _attachmentOperation;
 
-    public SchedulingCalendarShiftsOperation(IschedulingShiftStatusRepo schedulingShiftStatusRepo, IApplicationSettings applicationSettings)
+    public SchedulingShiftStatusOperation(ISchedulingShiftStatusRepo schedulingShiftStatusRepo, IApplicationSettings applicationSettings,
+     IAttachmentOperation attachmentOperation)
     {
         _schedulingShiftStatusRepo = schedulingShiftStatusRepo;
         _applicationSettings = applicationSettings;
+        _attachmentOperation = attachmentOperation;
     }
 
-    #region SchedulingCalendarShifts
+   #region SchedulingShiftStatus
+
+
     /// <summary>
     /// Method put
     /// </summary>
     /// <param name="requestValue"></param>
     /// <param name="systemOperator"></param>
+    /// <param name="Validate"></param>
+    /// <param name="Level"></param>
+    /// <param name="NotifyOnce"></param>
     /// <returns></returns>
-    public SchedulingCalendarShifts UpdateSchedulingCalendarShifts(SchedulingCalendarShifts requestValue, User systemOperator)
+    public async Task<List<ResponseData>> UpdateSchedulingShiftStatus(List<SchedulingShiftStatus> requestValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true)
     {
+        List<ResponseData> returnValue = [];
+        ResponseData responseMessage;
+        ResponseData responseError;
+        //List<User> users = new List<User>();
+        SchedulingShiftStatus scheduleLog = null;
+        int Line = 0;
+
         #region Permission validation
 
-        string errores = string.Empty;
-        bool esNuevo = true;
-        //if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
-        //{
-        //    throw new UnauthorizedAccessException(noPermission);
-        //}
+        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
+        // {
+        //     throw new UnauthorizedAccessException(noPermission);
+        // }
 
         #endregion Permission validation
 
-        //New Calendar Shift
-        ValidatePostSchedulingCalendarShift(requestValue);
-        requestValue.UserId = systemOperator.Id;
-        if (requestValue.IsParent)
+        NotifyOnce = requestValue.Count == 1;
+        foreach (SchedulingShiftStatus item in requestValue)
         {
-            SchedulingCalendarShifts UpdateCalendarShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(string.IsNullOrEmpty(requestValue.Id) ? "0x0x0x0x0" : requestValue.Id, null, null, requestValue.AssetLevel, null).FirstOrDefault();
-            if (UpdateCalendarShift is not null)
+            try
             {
-                esNuevo = false;
-                if (UpdateCalendarShift.IsParent)
+                Line++;
+                item.UserId = systemOperator.Id;
+                responseMessage = _schedulingShiftStatusRepo.PutSchedulingShiftStatus(item, systemOperator, Validate);
+                returnValue.Add(responseMessage);
+                if (!responseMessage.IsSuccess)
                 {
-                    foreach (SchedulingCalendarShifts item in _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(null, null, UpdateCalendarShift.IdParent, 0, null))
+                    continue;
+                }
+
+                if (!Validate)
+                {
+                    scheduleLog = _schedulingShiftStatusRepo.GetSchedulingShiftStatus(item.Code, item.Type).FirstOrDefault();
+                    //await scheduleLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+                }
+
+                if (NotifyOnce && !Validate)
+                {
+                    if (item.AttachmentIds is not null)
                     {
-                        //Se valida si deselecciono algun item para borrarlo.
-                        if (item.AssetLevel > UpdateCalendarShift.AssetLevel && !requestValue.listChildren.Any(q => q.Id == item.Id))
+                        foreach (string attachment in item.AttachmentIds)
                         {
-                            ValidateDeleteSchedulingCalendarShift(item);
-                            _ = _schedulingShiftStatusRepo.DeleteSchedulingCalendarShifts(item);
+                            await _attachmentOperation.AttachmentSync(attachment, item.Code, systemOperator).ConfigureAwait(false);
                         }
                     }
+                    // _ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = scheduleLog.Type == "Asset" ? Entities.ShiftStatusAsset : Entities.ShiftStatusEmployee, Data = scheduleLog, responseMessage.Action }, responseMessage.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
                 }
             }
-
-            _ = _schedulingShiftStatusRepo.PutSchedulingCalendarShifts(requestValue, systemOperator);
-            //Se aplican cambios solo a los registros seleccionados.
-            List<SchedulingCalendarShifts> childrenList;
-            if (!requestValue.isEmployee && requestValue.Validation)//Para proxima funcionalidad
+            catch (Exception ex)
             {
-                requestValue.listChildren.ForEach(q =>
+                responseError = new ResponseData
                 {
-                    q.AssetLevelCode = q.IdAsset[..q.IdAsset[..q.IdAsset.IndexOf('-')].Length];
-                    q.IdAsset = q.IdAsset.Substring(q.IdAsset.IndexOf('-') + 1, q.IdAsset.Length - q.IdAsset[..q.IdAsset.IndexOf('-')].Length - 1);
-                });
+                    Message = ex.Message,
+                    Code = "Line:" + Line.ToStr()
+                };
+                returnValue.Add(responseError);
             }
-            //Falta validar el level para que sea unico el valor.
-            childrenList = [.. requestValue.listChildren.Where(q => q.IdAsset != requestValue.IdAsset || q.AssetLevelCode != requestValue.AssetLevelCode)];
-
-            foreach (SchedulingCalendarShifts children in childrenList)
-            {
-                if (!esNuevo)
-                {
-                    SchedulingCalendarShifts UpdateChildCalendarShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(null, null, UpdateCalendarShift is not null ? UpdateCalendarShift.IdParent : requestValue.IdParent, 0, requestValue.AssetLevelCode)
-                        .Find(q => q.IdAsset == children.IdAsset && q.AssetLevelCode == children.AssetLevelCode && q.FromDate == (UpdateCalendarShift is not null ? UpdateCalendarShift.FromDate : requestValue.FromDate));
-                    children.Id = UpdateChildCalendarShift?.Id;
-                }
-                children.FromDate = requestValue.FromDate;
-                children.IdParent = requestValue.IdParent;
-                children.Origin = requestValue.Origin;
-                //children.AssetLevel = requestValue.AssetLevel;
-                children.CodeShift = requestValue.CodeShift;
-                children.Status = requestValue.Status;
-                children.Validation = requestValue.Validation;
-                children.IsParent = false;
-                try
-                {
-                    ValidatePostSchedulingCalendarShift(children);
-                    if (!children.Validation)
-                    {
-                        _ = _schedulingShiftStatusRepo.PutSchedulingCalendarShifts(children, systemOperator);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    errores += ex.Message + "|";
-                }
-            }
-            return !string.IsNullOrEmpty(errores) ? throw new Exception(errores) : requestValue;
         }
-        else
+        // if (!NotifyOnce && !Validate)
+        // {
+        //     _ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = scheduleLog.Type == "Asset" ? Entities.ShiftStatusAsset : Entities.ShiftStatusEmployee, Data = new object { }, Action = ActionDB.IntegrateAll });
+        // }
+        switch (Level)
         {
-            return _schedulingShiftStatusRepo.PutSchedulingCalendarShifts(requestValue, systemOperator);
+            case LevelMessage.Warning:
+                returnValue = [.. returnValue.Where(p => !string.IsNullOrEmpty(p.Message))];
+                break;
+
+            case LevelMessage.Error:
+                returnValue = [.. returnValue.Where(p => !p.IsSuccess)];
+                break;
+            case LevelMessage.Success:
+                break;
         }
+        return returnValue;
+        //return _schedulingShiftStatusRepo.PutSchedulingShiftStatus(requestValue);
     }
 
-    /// <summary>
-    /// Method delete
-    /// </summary>
-    /// <param name="requestValue"></param>
-    /// <param name="systemOperator"></param>
-    /// <returns></returns>
-    public bool DeleteSchedulingCalendarShifts(SchedulingCalendarShifts requestValue, User systemOperator)
-    {
-        #region Permission validation
 
-        string errores = string.Empty;
-        //if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
-        //{
-        //    throw new UnauthorizedAccessException(noPermission);
-        //}
-
-        #endregion Permission validation
-
-        requestValue.UserId = systemOperator.Id;
-        if (requestValue.IsParent)
-        {
-            ValidateDeleteSchedulingCalendarShift(requestValue);
-            SchedulingCalendarShifts DeleteCalendarShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(requestValue.Id, null, null, requestValue.AssetLevel, null).FirstOrDefault();
-            //Se aplica borrado solo a los registros seleccionados.
-            List<SchedulingCalendarShifts> childrenList;
-            if (!requestValue.isEmployee)
-            {
-                requestValue.listChildren.ForEach(q =>
-                {
-                    q.AssetLevelCode = q.IdAsset[..q.IdAsset[..q.IdAsset.IndexOf('-')].Length];
-                    q.IdAsset = q.IdAsset.Substring(q.IdAsset.IndexOf('-') + 1, q.IdAsset.Length - q.IdAsset[..q.IdAsset.IndexOf('-')].Length - 1);
-                });
-            }
-            childrenList = [.. requestValue.listChildren.Where(q => q.IdAsset != DeleteCalendarShift.IdAsset || q.AssetLevelCode != DeleteCalendarShift.AssetLevelCode)];
-            foreach (SchedulingCalendarShifts children in childrenList)
-            {
-                SchedulingCalendarShifts DeleteChildCalendarShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(null, null, DeleteCalendarShift.IdParent, requestValue.AssetLevel, requestValue.AssetLevelCode)
-                    .Find(q => q.IdAsset == children.IdAsset && q.AssetLevelCode == children.AssetLevelCode && q.FromDate == DeleteCalendarShift.FromDate);
-                children.Id = DeleteChildCalendarShift?.Id;
-                try
-                {
-                    ValidateDeleteSchedulingCalendarShift(children);
-                    _ = _schedulingShiftStatusRepo.DeleteSchedulingCalendarShifts(children);
-                }
-                catch (Exception ex)
-                {
-                    errores += ex.Message + ",";
-                }
-            }
-            if (!string.IsNullOrEmpty(errores))
-            {
-                throw new Exception(errores);
-            }
-            _ = _schedulingShiftStatusRepo.DeleteSchedulingCalendarShifts(requestValue);
-            return true;
-        }
-        else
-        {
-            ValidateDeleteSchedulingCalendarShift(requestValue);
-            return _schedulingShiftStatusRepo.DeleteSchedulingCalendarShifts(requestValue);
-        }
-    }
-
-    private void ValidatePostSchedulingCalendarShift(SchedulingCalendarShifts validRequest)
-    {
-        //New Calendar Shift
-        if (string.IsNullOrEmpty(validRequest.Id))
-        {
-            List<SchedulingCalendarShifts> calendarsShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(null, validRequest.IdAsset, null, validRequest.AssetLevel, validRequest.AssetLevelCode
-                , validRequest.Origin);
-            if (calendarsShift.Count > 0)
-            {
-                SchedulingCalendarShifts last = calendarsShift.FirstOrDefault();
-                if (validRequest.FromDate <= last.FromDate)
-                {
-                    throw new Exception("@ExistShiftBindingBefore" + " | " + validRequest.AssetLevelCode + ": " + validRequest.IdAsset + "\r\n");
-                }
-                if (validRequest.CodeShift == last.CodeShift)
-                {
-                    throw new Exception("@CurrentShiftBinding" + " | " + validRequest.AssetLevelCode + ": " + validRequest.IdAsset + " - " + validRequest.Name + "\r\n");
-                }
-            }
-        }
-        else
-        {
-            List<SchedulingCalendarShifts> calendarsShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(validRequest.Id, validRequest.IdAsset, null, validRequest.AssetLevel, null, validRequest.Origin);
-            if (calendarsShift.Count > 0)
-            {
-                SchedulingCalendarShifts update = calendarsShift.FirstOrDefault();
-                if (update.ToDate.HasValue)
-                {
-                    throw new Exception("@NotCurrentShiftBinding");
-                }
-                List<SchedulingCalendarShifts> beforeCalendarsShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(null, validRequest.IdAsset, null, validRequest.AssetLevel, null, validRequest.Origin);
-                SchedulingCalendarShifts beforeUpdate = beforeCalendarsShift.Find(q => q.Id != validRequest.Id);
-                if (beforeUpdate is not null)
-                {
-                    if (beforeUpdate.CodeShift == validRequest.CodeShift)
-                    {
-                        throw new Exception("@SameShiftBinding");
-                    }
-                    if (beforeUpdate.FromDate >= validRequest.FromDate)
-                    {
-                        throw new Exception("@ExistShiftBindingBefore");
-                    }
-                }
-            }
-            else
-            {
-                throw new Exception("@NoRelatedRecords");
-            }
-        }
-    }
-
-    private void ValidateDeleteSchedulingCalendarShift(SchedulingCalendarShifts validRequest)
-    {
-        if (string.IsNullOrEmpty(validRequest.Id))
-        {
-            throw new Exception("@NoRelatedRecords");
-        }
-        List<SchedulingCalendarShifts> calendarsShift = _schedulingShiftStatusRepo.GetSchedulingCalendarShifts(validRequest.Id, null, null, validRequest.AssetLevel, null);
-        if (calendarsShift.Count > 0)
-        {
-            SchedulingCalendarShifts delete = calendarsShift.FirstOrDefault();
-            if (delete.ToDate.HasValue)
-            {
-                throw new Exception("@NotCurrentShiftBinding");
-            }
-            if (delete.FromDate < DateTime.Now)
-            {
-                throw new Exception("@NotDeleteShiftBinding");
-            }
-        }
-        else
-        {
-            throw new Exception("@NoRelatedRecords");
-        }
-    }
-
-    #endregion SchedulingCalendarShifts
+    #endregion SchedulingShiftStatus
 }

@@ -12,9 +12,8 @@ namespace EWP.SF.Item.DataAccess;
 /// </summary>
 public interface ISchedulingShiftStatusRepo
 {
-    SchedulingCalendarShifts PutSchedulingCalendarShifts(SchedulingCalendarShifts request, User systemOperator);
+    List<SchedulingShiftStatus> GetSchedulingShiftStatus(string Code, string Type, DateTime? DeltaDate = null);
 
-    List<SchedulingCalendarShifts> GetSchedulingCalendarShifts(string Id, string AssetCode, string IdParent, int AssetLevel, string AssetLevelCode, string Origin = null);
-
-    bool DeleteSchedulingCalendarShifts(SchedulingCalendarShifts request);
+    ResponseData PutSchedulingShiftStatus(SchedulingShiftStatus request, User systemOperator, bool Validation);
+   
 }

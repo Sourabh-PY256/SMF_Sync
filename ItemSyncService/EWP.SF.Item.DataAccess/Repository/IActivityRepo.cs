@@ -12,7 +12,9 @@ namespace EWP.SF.Item.DataAccess;
 /// Interface for managing work center data access operations
 /// </summary>
 public interface IActivityRepo
+
 {
+    Activity CreateActivity(Activity activityInfo, User systemOperator);
     bool UpdateActivity(Activity activityInfo, User systemOperator);
 
     List<ActivityInstanceCalculateResponse> ActivityInstanceCalculate(ActivityInstanceCalculateRequest activityInfo, User systemOperator);
@@ -21,10 +23,5 @@ public interface IActivityRepo
 
     bool DeleteActivity(Activity activityInfo, User systemOperator);
     MessageBroker ActivityMergeSchedule(Activity activityInfo, User systemOperator);
-
-
-
-
-
-
+    bool ActivityItemInsByXML(User systemOperator, string xmlComponents);
 }

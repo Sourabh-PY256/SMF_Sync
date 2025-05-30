@@ -11,9 +11,9 @@ namespace EWP.SF.Item.DataAccess;
 /// <summary>
 /// Interface for managing work center data access operations
 /// </summary>
-public interface IInventoryRepo
+public interface IWarehouseRepo
 {
-    Inventory GetInventory(string Code);
-    List<Inventory> ListInventory(string Code = "", DateTime? DeltaDate = null);
-    ResponseData MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validation);
+    Warehouse GetWarehouse(string Code);
+    ResponseData MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validation);
+    
 }

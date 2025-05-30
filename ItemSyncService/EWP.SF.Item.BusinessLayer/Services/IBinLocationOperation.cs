@@ -17,8 +17,8 @@ using EWP.SF.Common.Models.Catalogs;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public interface ISchedulingShiftStatusOperation
+public interface IBinLocationOperation
 {
-    Task<List<ResponseData>> UpdateSchedulingShiftStatus(List<SchedulingShiftStatus> requestValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true);
-
+    Task<List<ResponseData>> ListUpdateBinLocation(List<BinLocationExternal> binLocationList, List<BinLocationExternal> binLocationListOriginal, User systemOperator, bool Validate, LevelMessage Level);
+    Task<ResponseData> MergeBinLocation(BinLocation BinLocationInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true);
 }

@@ -26,10 +26,10 @@ public class AssetOperation : IAssetOperation
     private readonly IActivityOperation _activityOperation;
     private readonly ISchedulingCalendarShiftsOperation _schedulingCalendarShiftsOperation;
 
-    public AssetOperation(IAssetRepo activityRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
+    public AssetOperation(IAssetRepo assetRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
      IActivityOperation activityOperation, ISchedulingCalendarShiftsOperation  schedulingCalendarShiftsOperation )
     {
-        _activityRepo = activityRepo;
+        _assetRepo = assetRepo;
         _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
         _activityOperation = activityOperation;
@@ -247,7 +247,7 @@ public class AssetOperation : IAssetOperation
 
     public ProductionLine[] ListProductionLines(bool deleted = false, DateTime? DeltaDate = null)
     {
-        List<ProductionLine> lines = _activityRepo.ListProductionLines(DeltaDate);
+        List<ProductionLine> lines = _assetRepo.ListProductionLines(DeltaDate);
 
         return lines?.Where(d => (deleted && d.Status == Status.Deleted) || (!deleted && d.Status != Status.Deleted)).ToArray();
     }
@@ -265,7 +265,7 @@ public class AssetOperation : IAssetOperation
 
         #endregion Permission validation
 
-        return _activityRepo.GetProductionLine(Code);
+        return _assetRepo.GetProductionLine(Code);
     }
 
     public async Task<ResponseData> CreateProductionLine(ProductionLine productionLineInfo, User systemOperator
@@ -282,10 +282,10 @@ public class AssetOperation : IAssetOperation
 
         #endregion Permission validation
 
-        returnValue = _activityRepo.CreateProductionLine(productionLineInfo, systemOperator, Validate, Level);
+        returnValue = _assetRepo.CreateProductionLine(productionLineInfo, systemOperator, Validate, Level);
         if (!Validate)
         {
-            ProductionLine ObjProductionLine = _activityRepo.GetProductionLine(productionLineInfo.Code);
+            ProductionLine ObjProductionLine = _assetRepo.GetProductionLine(productionLineInfo.Code);
             // await ObjProductionLine.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);discussmario
             //_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.ProductionLine, returnValue.Action, Data = ObjProductionLine });
             if (NotifyOnce)
@@ -354,7 +354,7 @@ public class AssetOperation : IAssetOperation
 
         #endregion Permission validation
 
-        return _activityRepo.DeleteProductionLine(productionLineInfo, systemOperator);
+        return _assetRepo.DeleteProductionLine(productionLineInfo, systemOperator);
     }
 
     #endregion Production Lines
@@ -363,7 +363,7 @@ public class AssetOperation : IAssetOperation
 
     public WorkCenter GetWorkCenter(string WorkCenterCode)
     {
-        return _activityRepo.GetWorkCenter(WorkCenterCode);
+        return _assetRepo.GetWorkCenter(WorkCenterCode);
     }
 
     public async Task<ResponseData> CreateWorkCenter(WorkCenter WorkCenterInfo, User systemOperator, bool Validate = false, string Level = "Success", bool NotifyOnce = true)
@@ -380,10 +380,10 @@ public class AssetOperation : IAssetOperation
 
         #endregion Permission validation
 
-        returnValue = _activityRepo.CreateWorkCenter(WorkCenterInfo, systemOperator, Validate, Level);
+        returnValue = _assetRepo.CreateWorkCenter(WorkCenterInfo, systemOperator, Validate, Level);
         if (!Validate)
         {
-            ObjWorkCenter = _activityRepo.GetWorkCenter(WorkCenterInfo.Code);
+            ObjWorkCenter = _assetRepo.GetWorkCenter(WorkCenterInfo.Code);
             if (NotifyOnce)
             {
                 _ = await _attachmentOperation.SaveImageEntity("Workcenter", WorkCenterInfo.Image, WorkCenterInfo.Code, systemOperator).ConfigureAwait(false);
@@ -441,7 +441,7 @@ public class AssetOperation : IAssetOperation
 
     public Floor GetFloor(string FloorCode)
     {
-        return _activityRepo.GetFloor(FloorCode);
+        return _assetRepo.GetFloor(FloorCode);
     }
 
     public async Task<ResponseData> CreateFloor(Floor FloorInfo, User systemOperator
@@ -458,10 +458,10 @@ public class AssetOperation : IAssetOperation
 
         #endregion Permission validation
 
-        returnValue = _activityRepo.CreateFloor(FloorInfo, systemOperator, Validate, Level);
+        returnValue = _assetRepo.CreateFloor(FloorInfo, systemOperator, Validate, Level);
         if (!Validate)
         {
-            Floor ObjFloor = _activityRepo.GetFloor(FloorInfo.Code);
+            Floor ObjFloor = _assetRepo.GetFloor(FloorInfo.Code);
             //await ObjFloor.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             if (NotifyOnce)
             {
@@ -519,7 +519,7 @@ public class AssetOperation : IAssetOperation
 
     public Facility GetFacility(string Code)
     {
-        return _activityRepo.GetFacility(Code);
+        return _assetRepo.GetFacility(Code);
     }
 
     public async Task<ResponseData> CreateFacility(Facility FacilityInfo, User systemOperator
@@ -539,7 +539,7 @@ public class AssetOperation : IAssetOperation
 
         #endregion Permission validation
 
-        returnValue = _activityRepo.CreateFacility(FacilityInfo, systemOperator, Validate, Level);
+        returnValue = _assetRepo.CreateFacility(FacilityInfo, systemOperator, Validate, Level);
 
         if (!Validate)
         {

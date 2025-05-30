@@ -1,4 +1,3 @@
-using EWP.SF.Item.DataAccess;
 using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
@@ -17,8 +16,9 @@ using EWP.SF.Common.Models.Catalogs;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public interface ISchedulingShiftStatusOperation
+public interface IItemOperation
 {
-    Task<List<ResponseData>> UpdateSchedulingShiftStatus(List<SchedulingShiftStatus> requestValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true);
-
+    public  Task<List<ResponseData>> ListUpdateComponentBulk(List<ComponentExternal> itemList, List<ComponentExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level);
+    
+    
 }

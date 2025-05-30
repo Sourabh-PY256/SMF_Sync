@@ -460,5 +460,52 @@ public class ActivityRepo : IActivityRepo
         }
         return returnValue;
     }
+     public bool ActivityItemInsByXML(User systemOperator, string xmlComponents)
+	{
+		bool returnValue = false;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_activity_item_Ins", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.CommandTimeout = 30000;
+				_ = command.Parameters.AddWithValue("_Operator", systemOperator.Id);
+				_ = command.Parameters.AddWithValue("_XmlComponents", xmlComponents);
+
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					//returnValue = new ResponseData()
+					//{
+					//    Id = rdr["Id"].ToStr(),
+					//    Action = (ActionDB)rdr["Action"].ToInt32(),
+					//    IsSuccess = rdr["IsSuccess"].ToInt32().ToBool(),
+					//    Code = rdr["Code"].ToStr(),
+					//    Version = rdr["Version"].ToInt32(),
+					//    Message = rdr["Message"].ToStr(),
+
+					//};
+				}
+				returnValue = true;
+			}
+			catch (Exception ex)
+			{
+				//logger.Error(ex);
+				returnValue = false;
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
     #endregion Activity
 }

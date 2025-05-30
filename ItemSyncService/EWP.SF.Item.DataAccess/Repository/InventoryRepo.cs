@@ -84,7 +84,58 @@ public Inventory GetInventory(string Code)
     }
     return returnValue;
 }
+public List<Inventory> ListInventory(string Code = "", DateTime? DeltaDate = null)
+    {
+        List<Inventory> returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_ItemGroup_SEL", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+                command.Parameters.AddCondition("_Code", Code, !string.IsNullOrEmpty(Code));
+                command.Parameters.AddCondition("_DeltaDate", DeltaDate, DeltaDate.HasValue);
 
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    Inventory element = new()
+                    {
+                        InventoryId = rdr["Code"].ToStr(),
+                        Code = rdr["Code"].ToStr(),
+                        Name = rdr["Name"].ToStr(),
+                        Status = (Status)rdr["Status"].ToInt32(),
+                        Image = rdr["Image"].ToStr(),
+                        CreationDate = rdr["CreateDate"].ToDate(),
+                        CreatedBy = new User(rdr["CreateUser"].ToInt32()),
+                        LogDetailId = rdr["LogDetailId"].ToStr()
+                    };
+
+                    if (rdr["UpdateDate"].ToDate().Year > 1900)
+                    {
+                        element.ModifyDate = rdr["UpdateDate"].ToDate();
+                        element.ModifiedBy = new User(rdr["UpdateUser"].ToInt32());
+                    }
+
+                    (returnValue ??= []).Add(element);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
 	public ResponseData MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validation)
 	{
 		ResponseData returnValue = null;

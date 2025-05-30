@@ -1,10 +1,6 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using EWP.SF.Common.Attributes;
+﻿using EWP.SF.Common.Attributes;
 using EWP.SF.Common.EntityLogger;
 using EWP.SF.Common.Enumerators;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 namespace EWP.SF.Common.Models;
 

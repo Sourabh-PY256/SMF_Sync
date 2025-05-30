@@ -22,10 +22,17 @@ public class ActivityOperation : IActivityOperation
     private readonly IActivityRepo _activityRepo;
     private readonly IApplicationSettings _applicationSettings;
 
-    public ActivityOperation(IActivityRepo _activityRepo, IApplicationSettings applicationSettings)
+    private readonly IAttachmentOperation _attachmentOperation;
+
+    private readonly IProcedureOperation _procedureOperation;
+
+    public ActivityOperation(IActivityRepo activityRepo, IApplicationSettings applicationSettings
+    , IAttachmentOperation attachmentOperation, IProcedureOperation procedureOperation)
     {
         _activityRepo = activityRepo;
         _applicationSettings = applicationSettings;
+        _attachmentOperation = attachmentOperation;
+        _procedureOperation = procedureOperation;
     }
     #region Activity
     
@@ -57,7 +64,7 @@ public class ActivityOperation : IActivityOperation
             activityInfo.CurrentProcessMaster.IsManualActivity = true;
             string jsonString = JsonConvert.SerializeObject(activityInfo.CurrentProcessMaster);
             Procedure ProcedureTmp = JsonConvert.DeserializeObject<Procedure>(jsonString);
-            Common.ResponseModels.ResponseData ResultProcedure = await ProcessMasterInsByXML(ProcedureTmp, systemOperator).ConfigureAwait(false);
+            Common.ResponseModels.ResponseData ResultProcedure = await _procedureOperation.ProcessMasterInsByXML(ProcedureTmp, systemOperator).ConfigureAwait(false);
             //var ResultProcedure =ProcessMasterInsByXML(activityInfo.CurrentProcessMaster, systemOperator);
             //Fix Procedures222
             if (ResultProcedure.IsSuccess)
@@ -69,13 +76,13 @@ public class ActivityOperation : IActivityOperation
         returnValue = _activityRepo.CreateActivity(activityInfo, systemOperator);
         if (!string.IsNullOrEmpty(activityInfo.Image))
         {
-            _ = await SaveImageEntity("Activity", activityInfo.Image, activityInfo.Id, systemOperator).ConfigureAwait(false);
+            _ = await _attachmentOperation.SaveImageEntity("Activity", activityInfo.Image, activityInfo.Id, systemOperator).ConfigureAwait(false);
         }
         if (activityInfo.AttachmentIds is not null)
         {
             foreach (string attachmentId in activityInfo.AttachmentIds)
             {
-                await AttachmentSync(attachmentId, returnValue.Id, systemOperator).ConfigureAwait(false);
+                await _attachmentOperation.AttachmentSync(attachmentId, returnValue.Id, systemOperator).ConfigureAwait(false);
             }
         }
         if (activityInfo.CurrentProcessMaster?.ProcedureId is not null
@@ -96,7 +103,7 @@ public class ActivityOperation : IActivityOperation
                             if (component.AttachmentId is not null
                                && !string.IsNullOrEmpty(component.AttachmentId))
                             {
-                                _ = await AttachmentSync(component.AttachmentId, component.Id, systemOperator).ConfigureAwait(false);
+                                _ = await _attachmentOperation.AttachmentSync(component.AttachmentId, component.Id, systemOperator).ConfigureAwait(false);
                             }
                         }
                         instruction.Components = null;
@@ -205,7 +212,7 @@ public class ActivityOperation : IActivityOperation
             string jsonString = JsonConvert.SerializeObject(activityInfo.CurrentProcessMaster);
             Procedure ProcedureTmp = JsonConvert.DeserializeObject<Procedure>(jsonString);
 
-            Common.ResponseModels.ResponseData ResultProcedure = await ProcessMasterInsByXML(ProcedureTmp, systemOperator).ConfigureAwait(false);
+            Common.ResponseModels.ResponseData ResultProcedure = await _procedureOperation.ProcessMasterInsByXML(ProcedureTmp, systemOperator).ConfigureAwait(false);
             if (ResultProcedure.IsSuccess)
             {
                 activityInfo.ParentId = ResultProcedure.Id;
@@ -231,7 +238,7 @@ public class ActivityOperation : IActivityOperation
                             if (component.AttachmentId is not null
                                && !string.IsNullOrEmpty(component.AttachmentId))
                             {
-                                _ = await AttachmentSync(component.AttachmentId, component.Id, systemOperator).ConfigureAwait(false);
+                                _ = await _attachmentOperation.AttachmentSync(component.AttachmentId, component.Id, systemOperator).ConfigureAwait(false);
                             }
                         }
                         instruction.Components = null;
@@ -258,14 +265,14 @@ public class ActivityOperation : IActivityOperation
         }
         if (!string.IsNullOrEmpty(activityInfo.Image))
         {
-            _ = await SaveImageEntity("Activity", activityInfo.Image, activityInfo.Id, systemOperator).ConfigureAwait(false);
+            _ = await _attachmentOperation.SaveImageEntity("Activity", activityInfo.Image, activityInfo.Id, systemOperator).ConfigureAwait(false);
         }
 
         if (activityInfo.AttachmentIds is not null)
         {
             foreach (string attachmentId in activityInfo.AttachmentIds)
             {
-                await AttachmentSync(attachmentId, activityInfo.Id, systemOperator).ConfigureAwait(false);
+                await _attachmentOperation.AttachmentSync(attachmentId, activityInfo.Id, systemOperator).ConfigureAwait(false);
             }
         }
         //await activityInfo.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
