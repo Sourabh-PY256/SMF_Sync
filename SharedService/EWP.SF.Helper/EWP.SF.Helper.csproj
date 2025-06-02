@@ -20,8 +20,8 @@
 	</ItemGroup>
 
 	<!-- Project References -->
-	<ItemGroup>
+	<!-- <ItemGroup>
 		<ProjectReference Include="..\EWP.SF.Common\EWP.SF.Common.csproj" />
-	</ItemGroup>
+	</ItemGroup> -->
 
 </Project>

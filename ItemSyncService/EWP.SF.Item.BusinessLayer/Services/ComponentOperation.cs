@@ -2,30 +2,34 @@ using EWP.SF.Common.Models;
 using EWP.SF.Item.DataAccess;
 using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
 using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
+using EWP.SF.Common.Models.Catalogs;
 
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class ComponentOperation : IComponentOperation
 {
-	private readonly IBinLocationRepo _binLocationRepo;
+	private readonly IComponentRepo _componentRepo;
+
+	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
 	private readonly IApplicationSettings _applicationSettings;
 
 	private readonly IWarehouseOperation _warehouseOperation;
 
 	private readonly IAttachmentOperation _attachmentOperation;
 
-	public ComponentOperation(IBinLocationRepo binLocationRepo, IApplicationSettings applicationSettings
-	, IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation)
+	public ComponentOperation(IComponentRepo componentRepo, IApplicationSettings applicationSettings
+	, IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation)
 	{
-		_binLocationRepo = binLocationRepo;
+		_componentRepo = componentRepo;
 		_applicationSettings = applicationSettings;
 		_attachmentOperation = attachmentOperation;
 		_warehouseOperation = warehouseOperation;
+		_dataSyncServiceOperation = dataSyncServiceOperation;
 	}
 
 	public async Task<List<ResponseData>> ListUpdateProduct(List<ProductExternal> itemList, List<ProductExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
@@ -34,7 +38,7 @@ public class ComponentOperation : IComponentOperation
 		List<ProcedureExternal> proceduresExternal = [];
 		ResponseData MessageError;
 		bool NotifyOnce = true;
-		DataSyncErp currentERP = ListDataSyncERP("[Active]", EnableType.No).FirstOrDefault();
+		DataSyncErp currentERP = _dataSyncServiceOperation.ListDataSyncERP("[Active]", EnableType.No).FirstOrDefault();
 
 		if (itemList?.Count > 0)
 		{
@@ -244,7 +248,7 @@ public class ComponentOperation : IComponentOperation
 							operation.OperationLabor.ForEach(itm =>
 							{
 								countItems++;
-								CatProfile itemComp = (BrokerDAL.GetCatalogProfile(itm.ProfileCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - Labor {1} : ProfileCode not found. ", operation.OperationNo, itm.ProfileCode));
+								CatProfile itemComp = (_componentRepo.GetCatalogProfile(itm.ProfileCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - Labor {1} : ProfileCode not found. ", operation.OperationNo, itm.ProfileCode));
 							});
 						}
 						if (operation.OperationTools is not null)
@@ -253,7 +257,7 @@ public class ComponentOperation : IComponentOperation
 							operation.OperationTools.ForEach(itm =>
 							{
 								countItems++;
-								ToolType itemComp = (BrokerDAL.ListToolType(itm.ToolingCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - ToolingType {1} : ToolingCode is invalid. ", operation.OperationNo, itm.ToolingCode));
+								ToolType itemComp = (_componentRepo.ListToolType(itm.ToolingCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - ToolingType {1} : ToolingCode is invalid. ", operation.OperationNo, itm.ToolingCode));
 							});
 						}
 						if (operation.OperationMachines is not null)
@@ -281,7 +285,7 @@ public class ComponentOperation : IComponentOperation
 									machine.MachineTools.ForEach(itm =>
 									{
 										countItems++;
-										Tool itemComp = BrokerDAL.ListTools(itm.ToolingCode).FirstOrDefault() ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ToolintType {2} : Tooling Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ToolingCode));
+										Tool itemComp = _componentRepo.ListTools(itm.ToolingCode).FirstOrDefault() ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ToolintType {2} : Tooling Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ToolingCode));
 									});
 								}
 								if (machine.MachineTools is not null)
@@ -290,7 +294,7 @@ public class ComponentOperation : IComponentOperation
 									machine.MachineLabor.ForEach(itm =>
 									{
 										countItems++;
-										CatProfile itemComp = BrokerDAL.GetCatalogProfile(itm.ProfileCode).Find(x => x.Status != Status.Failed) ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ProfileCode {2} :  Profile Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ProfileCode));
+										CatProfile itemComp = _componentRepo.GetCatalogProfile(itm.ProfileCode).Find(x => x.Status != Status.Failed) ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ProfileCode {2} :  Profile Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ProfileCode));
 									});
 								}
 							});
@@ -557,18 +561,18 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (itmOperation.MaxOpSpanIncrease.HasValue)
 									{
-										prc.MaxOpSpanIncrease = Common.SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
+										prc.MaxOpSpanIncrease = SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
 									}
 									else
 									{
-										prc.MaxOpSpanIncrease = Common.SecondsToTimeString(0, true);
+										prc.MaxOpSpanIncrease = SecondsToTimeString(0, true);
 									}
 								}
 								else if (oldOperation is not null)
 								{
 									if (itmOperation.MaxOpSpanIncrease.HasValue && !isForcedEdit)
 									{
-										prc.MaxOpSpanIncrease = Common.SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
+										prc.MaxOpSpanIncrease = SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
 									}
 									else
 									{
@@ -953,13 +957,13 @@ public class ComponentOperation : IComponentOperation
 					ResponseData resp = new();
 					if (Validate)
 					{
-						resp = BrokerDAL.MergeProduct(itemInfo, systemOperator, Validate, Level);
-						await SaveImageEntity("Item", itemInfo.Image, itemInfo.Code, systemOperator).ConfigureAwait(false);
+						resp = _componentRepo.MergeProduct(itemInfo, systemOperator, Validate, Level);
+						await _attachmentOperation.SaveImageEntity("Item", itemInfo.Image, itemInfo.Code, systemOperator).ConfigureAwait(false);
 						if (itemInfo.AttachmentIds is not null)
 						{
 							foreach (string attachment in itemInfo.AttachmentIds)
 							{
-								await AttachmentSync(attachment, itemInfo.Code, systemOperator).ConfigureAwait(false);
+								await _attachmentOperation.AttachmentSync(attachment, itemInfo.Code, systemOperator).ConfigureAwait(false);
 							}
 						}
 					}
@@ -969,13 +973,13 @@ public class ComponentOperation : IComponentOperation
 						{
 							itemInfo.ProcessEntry.Id = string.Empty;
 						}
-						ResponseData itemFound = BrokerDAL.MergeProduct(itemInfo, systemOperator, true, Level);
-						await SaveImageEntity("Item", itemInfo.Image, itemInfo.Code, systemOperator).ConfigureAwait(false);
+						ResponseData itemFound = _componentRepo.MergeProduct(itemInfo, systemOperator, true, Level);
+						await _attachmentOperation.SaveImageEntity("Item", itemInfo.Image, itemInfo.Code, systemOperator).ConfigureAwait(false);
 						if (itemInfo.AttachmentIds is not null)
 						{
 							foreach (string attachment in itemInfo.AttachmentIds)
 							{
-								await AttachmentSync(attachment, itemInfo.Code, systemOperator).ConfigureAwait(false);
+								await _attachmentOperation.AttachmentSync(attachment, itemInfo.Code, systemOperator).ConfigureAwait(false);
 							}
 						}
 						if (itemFound.Action == ActionDB.Update)
@@ -990,7 +994,7 @@ public class ComponentOperation : IComponentOperation
 						if (resp.IsSuccess)
 						{
 							itemInfo.ProcessEntryId = resp.Id;
-							BrokerDAL.MergeComponent(itemInfo, systemOperator, Validate);
+							_componentRepo.MergeComponent(itemInfo, systemOperator, Validate);
 						}
 					}
 					returnValue.Add(resp);
@@ -1035,10 +1039,10 @@ public class ComponentOperation : IComponentOperation
 
 		#region Permission validation
 
-		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		{
-			throw new UnauthorizedAccessException(noPermission);
-		}
+		// if (!systemOperator.Permissions.Any(x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
 
 		#endregion Permission validation
 
@@ -1066,7 +1070,7 @@ public class ComponentOperation : IComponentOperation
 					//Validate Create NewVersion
 					if (entryInfo.isNewVersion)
 					{
-						int newVersion = BrokerDAL.GetNextProductVersion(componentInfo.ProcessEntry);
+						int newVersion = _componentRepo.GetNextProductVersion(componentInfo.ProcessEntry);
 						if (newVersion > 0)
 						{
 							componentInfo.ProcessEntry.Version = newVersion;
@@ -1088,7 +1092,7 @@ public class ComponentOperation : IComponentOperation
 						entryInfo.Sequence = 1;
 					}
 
-					ProcessEntry entryResult = BrokerDAL.CreateProcessEntry(entryInfo, systemOperator, intSource);
+					ProcessEntry entryResult = _componentRepo.CreateProcessEntry(entryInfo, systemOperator, intSource);
 					if (!string.IsNullOrEmpty(entryResult.Id))
 					{
 						List<SubProduct> AllSubProducts = [];
@@ -1145,17 +1149,17 @@ public class ComponentOperation : IComponentOperation
 							jsonAlternativeMaterials = JsonConvert.SerializeObject(AllAlternatives);
 						}
 						// Todo POner Tasks nueva version
-						BrokerDAL.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
+						_componentRepo.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
 
 						componentInfo.ProcessEntryId = entryResult.Id;
-						returnValue = BrokerDAL.MergeProduct(componentInfo, systemOperator, Validate, Level);
+						returnValue = _componentRepo.MergeProduct(componentInfo, systemOperator, Validate, Level);
 						componentInfo.Id = returnValue.Id;
-						await SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
+						await _attachmentOperation.SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
 						if (componentInfo.AttachmentIds is not null)
 						{
 							foreach (string attachment in componentInfo.AttachmentIds)
 							{
-								await AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+								await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
 							}
 						}
 						returnValue.Entity = componentInfo;
@@ -1193,7 +1197,7 @@ public class ComponentOperation : IComponentOperation
 							if (string.IsNullOrEmpty(x.LaborId)) { x.LaborId = x.Id; }
 							if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); }
 						});
-						BrokerDAL.MergeProcessEntryLabor(entryResult.Id, JsonConvert.SerializeObject(entryResult.Labor), systemOperator);
+						_componentRepo.MergeProcessEntryLabor(entryResult.Id, JsonConvert.SerializeObject(entryResult.Labor), systemOperator);
 					}
 
 					if (!string.IsNullOrEmpty(entryResult.Id) && entryResult.Tools is not null)
@@ -1203,7 +1207,7 @@ public class ComponentOperation : IComponentOperation
 							if (string.IsNullOrEmpty(x.ToolId)) { x.ToolId = x.Id; }
 							if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); }
 						});
-						BrokerDAL.MergeProcessEntryTools(entryResult.Id, JsonConvert.SerializeObject(entryResult.Tools), systemOperator);
+						_componentRepo.MergeProcessEntryTools(entryResult.Id, JsonConvert.SerializeObject(entryResult.Tools), systemOperator);
 					}
 
 					entryResult.Processes.ForEach(x =>
@@ -1221,18 +1225,18 @@ public class ComponentOperation : IComponentOperation
 					if (!string.IsNullOrEmpty(entryResult.Id) && attrs is not null)
 					{
 						attrs.ForEach(x => { if (string.IsNullOrEmpty(x.AttributeId)) { x.AttributeId = x.Id; } });
-						BrokerDAL.MergeProcessEntryAttributes(entryResult.Id, JsonConvert.SerializeObject(attrs), systemOperator);
+						_componentRepo.MergeProcessEntryAttributes(entryResult.Id, JsonConvert.SerializeObject(attrs), systemOperator);
 					}
 				}
 				else
 				{
-					returnValue = BrokerDAL.MergeProduct(componentInfo, systemOperator, Validate, Level);
-					await SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
+					returnValue = _componentRepo.MergeProduct(componentInfo, systemOperator, Validate, Level);
+					await _attachmentOperation.SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
 					if (componentInfo.AttachmentIds is not null)
 					{
 						foreach (string attachment in componentInfo.AttachmentIds)
 						{
-							await AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+							await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
 						}
 					}
 					componentInfo.Id = returnValue.Id;
@@ -1244,11 +1248,11 @@ public class ComponentOperation : IComponentOperation
 					//    Services.ContextCache.Components.Add(componentInfo);
 					//}
 				}
-				if (!Validate)
-				{
-					Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
-				}
-				await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+				// if (!Validate)
+				// {
+				// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
+				// }
+				// await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
 			}
 			else
 			{
@@ -1260,7 +1264,7 @@ public class ComponentOperation : IComponentOperation
 					bool MultiWarehouse = Config.Configuration["Product-MultiWarehouse"].ToBool();
 					if (!MultiVersionEnabled)
 					{
-						int newVersion = BrokerDAL.VerifyProductVersion(componentInfo.ProcessEntry);
+						int newVersion = _componentRepo.VerifyProductVersion(componentInfo.ProcessEntry);
 						if (newVersion > 0)
 						{
 							// Solo cuando es multi almacenes, cuando no es por que ya se hizo validación de tareas previamente.
@@ -1280,7 +1284,7 @@ public class ComponentOperation : IComponentOperation
 							componentInfo.ProcessEntry.Id = Guid.NewGuid().ToStr();
 						}
 					}
-					Component originalComponent = (await BrokerDAL.ListComponents(componentInfo.Id).ConfigureAwait(false)).FirstOrDefault();
+					Component originalComponent = (await _componentRepo.ListComponents(componentInfo.Id).ConfigureAwait(false)).FirstOrDefault();
 					if (originalComponent is not null)
 					{
 						if (!string.IsNullOrEmpty(componentInfo.ProcessEntry?.Id) && !isNewVersion)
@@ -1290,7 +1294,7 @@ public class ComponentOperation : IComponentOperation
 							//Validar duplicados Opcenter
 							ValidateOpcenterRules(entryInfo, systemOperator);
 
-							if (BrokerDAL.UpdateProcessEntry(entryInfo, systemOperator))
+							if (_componentRepo.UpdateProcessEntry(entryInfo, systemOperator))
 							{
 								List<SubProduct> AllSubProducts = [];
 								entryInfo.Processes.ForEach(x =>
@@ -1334,17 +1338,17 @@ public class ComponentOperation : IComponentOperation
 									jsonAlternativeMaterials = JsonConvert.SerializeObject(AllAlternatives);
 								}
 
-								bool tempDetail = BrokerDAL.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
+								bool tempDetail = _componentRepo.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
 
 								if (tempDetail)
 								{
-									returnValue = BrokerDAL.MergeProduct(componentInfo, systemOperator, Validate, Level);
-									await SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
+									returnValue = _componentRepo.MergeProduct(componentInfo, systemOperator, Validate, Level);
+									await _attachmentOperation.SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
 									if (componentInfo.AttachmentIds is not null)
 									{
 										foreach (string attachment in componentInfo.AttachmentIds)
 										{
-											await AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+											await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
 										}
 									}
 									tempDetail = returnValue.IsSuccess;
@@ -1398,7 +1402,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									entryInfo.Labor = [];
 								}
-								BrokerDAL.MergeProcessEntryLabor(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Labor), systemOperator);
+								_componentRepo.MergeProcessEntryLabor(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Labor), systemOperator);
 
 								if (tempDetail && entryInfo.Tools?.Count > 0)
 								{
@@ -1408,7 +1412,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									entryInfo.Tools = [];
 								}
-								BrokerDAL.MergeProcessEntryTools(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Tools), systemOperator);
+								_componentRepo.MergeProcessEntryTools(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Tools), systemOperator);
 
 								entryInfo.Processes.ForEach(x =>
 								{
@@ -1425,7 +1429,7 @@ public class ComponentOperation : IComponentOperation
 								if (tempDetail && attrs is not null)
 								{
 									attrs.ForEach(x => { if (string.IsNullOrEmpty(x.AttributeId)) { x.AttributeId = x.Id; } });
-									BrokerDAL.MergeProcessEntryAttributes(entryInfo.Id, JsonConvert.SerializeObject(attrs), systemOperator);
+									_componentRepo.MergeProcessEntryAttributes(entryInfo.Id, JsonConvert.SerializeObject(attrs), systemOperator);
 								}
 
 								ProcessEntry pt = (await GetProcessEntry(entryInfo.Code, entryInfo.Warehouse, entryInfo.Version, entryInfo.Sequence, systemOperator).ConfigureAwait(false)).Find(x => x.Status != Status.Failed);
@@ -1438,11 +1442,11 @@ public class ComponentOperation : IComponentOperation
 								{
 									returnValue.Entity = componentInfo;
 								}
-								if (!Validate)
-								{
-									Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
-								}
-								await componentInfo.ProcessEntry.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
+								// if (!Validate)
+								// {
+								// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
+								// }
+								// await componentInfo.ProcessEntry.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
 							}
 						}
 						else
@@ -1455,7 +1459,7 @@ public class ComponentOperation : IComponentOperation
 							ProcessEntry entryResult = null;
 							if (string.IsNullOrEmpty(entryInfo.Id) || isNewVersion)
 							{
-								entryResult = BrokerDAL.CreateProcessEntry(entryInfo, systemOperator, intSource);
+								entryResult = _componentRepo.CreateProcessEntry(entryInfo, systemOperator, intSource);
 							}
 							else
 							{
@@ -1505,7 +1509,7 @@ public class ComponentOperation : IComponentOperation
 									jsonAlternativeMaterials = JsonConvert.SerializeObject(AllAlternatives);
 								}
 
-								bool tempDetail = BrokerDAL.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
+								bool tempDetail = _componentRepo.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
 
 								if (tempDetail && entryInfo.Tasks is not null)
 								{
@@ -1538,13 +1542,13 @@ public class ComponentOperation : IComponentOperation
 								if (tempDetail && entryInfo.Labor?.Count > 0)
 								{
 									entryInfo.Labor.ForEach(x => { if (string.IsNullOrEmpty(x.LaborId)) { x.LaborId = x.Id; } });
-									BrokerDAL.MergeProcessEntryLabor(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Labor), systemOperator);
+									_componentRepo.MergeProcessEntryLabor(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Labor), systemOperator);
 								}
 
 								if (tempDetail && entryInfo.Tools?.Count > 0)
 								{
 									entryInfo.Tools.ForEach(x => { if (string.IsNullOrEmpty(x.ToolId)) { x.ToolId = x.Id; } });
-									BrokerDAL.MergeProcessEntryTools(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Tools), systemOperator);
+									_componentRepo.MergeProcessEntryTools(entryInfo.Id, JsonConvert.SerializeObject(entryInfo.Tools), systemOperator);
 								}
 
 								entryInfo.Processes.ForEach(x =>
@@ -1562,7 +1566,7 @@ public class ComponentOperation : IComponentOperation
 								if (tempDetail && attrs is not null)
 								{
 									attrs.ForEach(x => { if (string.IsNullOrEmpty(x.AttributeId)) { x.AttributeId = x.Id; } });
-									BrokerDAL.MergeProcessEntryAttributes(entryInfo.Id, JsonConvert.SerializeObject(attrs), systemOperator);
+									_componentRepo.MergeProcessEntryAttributes(entryInfo.Id, JsonConvert.SerializeObject(attrs), systemOperator);
 								}
 
 								ProcessEntry pt = (await GetProcessEntry(entryInfo.Code, entryInfo.Warehouse, entryInfo.Version, entryInfo.Sequence, systemOperator).ConfigureAwait(false)).Find(x => x.Status != Status.Failed);
@@ -1587,24 +1591,24 @@ public class ComponentOperation : IComponentOperation
 								{
 									returnValue.Entity = componentInfo;
 								}
-								if (!Validate)
-								{
-									Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
-								}
-								await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+								// if (!Validate)
+								// {
+								// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
+								// }
+								// await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
 							}
 						}
 					}
 				}
 				else
 				{
-					ResponseData mrgComponent = BrokerDAL.MergeProduct(componentInfo, systemOperator, Validate, Level);
-					await SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
+					ResponseData mrgComponent = _componentRepo.MergeProduct(componentInfo, systemOperator, Validate, Level);
+					await _attachmentOperation.SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
 					if (componentInfo.AttachmentIds is not null)
 					{
 						foreach (string attachment in componentInfo.AttachmentIds)
 						{
-							await AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+							await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
 						}
 					}
 					bool result = mrgComponent.IsSuccess;
