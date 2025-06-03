@@ -8,13 +8,13 @@ using EWP.SF.Helper;
 namespace EWP.SF.Item.BusinessLayer;
 public class ProfileOperation : IProfileOperation
 {
-    private readonly IProfileRepo _profileRepo;
+    private readonly ICatalogRepo _profileRepo;
     private readonly IApplicationSettings _applicationSettings;
     private readonly IAttachmentOperation _attachmentOperation;
     private readonly IActivityOperation _activityOperation;
     private readonly ISchedulingCalendarShiftsOperation _schedulingCalendarShiftsOperation;
 
-    public ProfileOperation(IProfileRepo profileRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
+    public ProfileOperation(ICatalogRepo profileRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
      IActivityOperation activityOperation, ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation)
     {
         _profileRepo = profileRepo;
@@ -70,9 +70,9 @@ public class ProfileOperation : IProfileOperation
 			//await ObjProfile.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
 			if (NotifyOnce)
 			{
-				await SaveImageEntity("Position", ProfileInfo.Image, returnValue.Code, systemOperator).ConfigureAwait(false);
+				await _attachmentOperation.SaveImageEntity("Position", ProfileInfo.Image, returnValue.Code, systemOperator).ConfigureAwait(false);
 				//Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Profiles, returnValue.Action, Data = ObjProfile }, returnValue.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
-				returnValue.Entity = ObjProfile;
+				//returnValue.Entity = ObjProfile;
 			}
 		}
 		return returnValue;
@@ -235,10 +235,10 @@ public class ProfileOperation : IProfileOperation
 		}
 		if (!Validate)
 		{
-			if (!NotifyOnce)
-			{
-				Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Profiles, Action = ActionDB.IntegrateAll.ToStr() });
-			}
+			// if (!NotifyOnce)
+			// {
+			// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Profiles, Action = ActionDB.IntegrateAll.ToStr() });
+			// }
 			returnValue = Level switch
 			{
 				LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],

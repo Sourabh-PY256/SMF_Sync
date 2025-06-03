@@ -1,3 +1,4 @@
+using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 
@@ -5,7 +6,7 @@ using EWP.SF.Common.ResponseModels;
 /// </summary>
 public interface IOrderTransactionMaterialRepo
 {
-    ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation);
+    ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation, IntegrationSource intSrc = IntegrationSource.ERP);
 
 }
     

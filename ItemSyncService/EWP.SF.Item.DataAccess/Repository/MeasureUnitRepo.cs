@@ -14,22 +14,22 @@ namespace EWP.SF.Item.DataAccess;
 
 public class MeasureUnitRepo : IMeasureUnitRepo
 {
-    private readonly string ConnectionString;
-    private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
-    private readonly string ConnectionStringReports;
-    private readonly string ConnectionStringLogs;
+	private readonly string ConnectionString;
+	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+	private readonly string ConnectionStringReports;
+	private readonly string ConnectionStringLogs;
 
-    private readonly string Database;
+	private readonly string Database;
 
-    public MeasureUnitRepo(IApplicationSettings applicationSettings)
-    {
-        ConnectionString = applicationSettings.GetConnectionString();
-        ConnectionStringReports = applicationSettings.GetReportsConnectionString();
-        ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
-        Database = applicationSettings.GetDatabaseFromConnectionString();
-    }
-    #region MeasureUnit
-    /// <summary>
+	public MeasureUnitRepo(IApplicationSettings applicationSettings)
+	{
+		ConnectionString = applicationSettings.GetConnectionString();
+		ConnectionStringReports = applicationSettings.GetReportsConnectionString();
+		ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
+		Database = applicationSettings.GetDatabaseFromConnectionString();
+	}
+	#region MeasureUnit
+	/// <summary>
 	///
 	/// </summary>
 	public ResponseData MergeUnitMeasure(MeasureUnit measureUnitInfo, User systemOperator, bool Validation)
@@ -84,5 +84,65 @@ public class MeasureUnitRepo : IMeasureUnitRepo
 		}
 		return returnValue;
 	}
+	/// <summary>
+	///
+	/// </summary>
+	public List<MeasureUnit> GetMeasureUnits(UnitType? unitType = null, string unitId = null, DateTime? DeltaDate = null)
+	{
+		List<MeasureUnit> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Unit_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+
+				command.Parameters.AddCondition("_UnitType", () => unitType.Value.ToInt32(), unitType.HasValue);
+				command.Parameters.AddCondition("_UnitId", unitId, !string.IsNullOrEmpty(unitId));
+				command.Parameters.AddCondition("_DeltaDate", DeltaDate, DeltaDate.HasValue);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					MeasureUnit element = new()
+					{
+						Id = rdr["Code"].ToStr(),
+						Code = rdr["Code"].ToStr(),
+						Type = (UnitType)rdr["UnitTypeId"].ToInt32(),
+						TypeName = rdr["UnitType"].ToStr(),
+						Name = rdr["Name"].ToStr(),
+						Factor = rdr["Factor"].ToDecimal(),
+						CreationDate = rdr["CreateDate"].ToDate(),
+						CreatedBy = new User(rdr["CreateUser"].ToInt32()),
+						Status = (Status)rdr["Status"].ToInt32(),
+						IsProductionResult = rdr["IsProductionResult"].ToBool(),
+						StatusMessage = rdr["StatusMessage"].ToStr(),
+						Image = rdr["Image"].ToStr(),
+						LogDetailId = rdr["LogDetailId"].ToStr()
+					};
+					if (rdr["UpdateDate"].ToDate().Year > 1900)
+					{
+						element.ModifyDate = rdr["UpdateDate"].ToDate();
+						element.ModifiedBy = new User(rdr["UpdateUser"].ToInt32());
+					}
+					(returnValue ??= []).Add(element);
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
     #endregion MeasureUnit
 }

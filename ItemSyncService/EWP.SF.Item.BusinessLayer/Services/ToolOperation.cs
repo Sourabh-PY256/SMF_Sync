@@ -10,16 +10,20 @@ namespace EWP.SF.Item.BusinessLayer;
 public class ToolOperation : IToolOperation
 {
     private readonly IToolRepo _toolRepo;
+
+    private readonly ICatalogRepo _catalogRepo;
     private readonly IApplicationSettings _applicationSettings;
 
     private readonly IProcessTypeOperation _processTypeOperation;
 
     private readonly IAttachmentOperation _attachmentOperation;
 
-    public ToolOperation(IToolRepo toolRepo, IApplicationSettings applicationSettings
+    public ToolOperation(IToolRepo toolRepo,ICatalogRepo catalogRepo, IApplicationSettings applicationSettings
     , IProcessTypeOperation processTypeOperation, IAttachmentOperation attachmentOperation)
     {
+
         _toolRepo = toolRepo;
+        _catalogRepo = catalogRepo;
         _applicationSettings = applicationSettings;
         _processTypeOperation = processTypeOperation;
         _attachmentOperation = attachmentOperation;
@@ -31,7 +35,7 @@ public class ToolOperation : IToolOperation
     {
         List<ResponseData> returnValue = [];
         List<ProcedureExternal> proceduresExternal = [];
-        List<CatProfile> listProfiles = .GetCatalogProfile();
+        List<CatProfile> listProfiles = _catalogRepo.GetCatalogProfile();
         ResponseData MessageError;
         bool NotifyOnce = true;
         string BaseId = string.Empty;

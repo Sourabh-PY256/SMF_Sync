@@ -2,7 +2,8 @@ using EWP.SF.Item.DataAccess;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
+using EWP.SF.Common.Models.Sensors;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -28,7 +29,109 @@ public class DeviceOperation : IDeviceOperation
     /// <summary>
 	///
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateMachine(
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public async Task<ResponseData> CreateMachine(
+	  Machine machineInfo,
+	  User systemOperator,
+	  bool validate = false,
+	  string level = "Success",
+	  bool notifyOnce = true)
+	{
+		ResponseData returnValue = null;
+
+		#region Permission validation
+
+		// if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_MACHINE_CREATE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		returnValue = BrokerDAL.CreateMachine(machineInfo, systemOperator, validate, level);
+		if (!validate)
+		{
+			if (!machineInfo.Skills.IsNull())
+			{
+				BrokerDAL.SaveMachineSkills(returnValue.Id, machineInfo.Skills, systemOperator);
+			}
+			if (!string.IsNullOrEmpty(returnValue.Id))
+			{
+				SyncInitializer.ForcePush(new MessageBroker
+				{
+					Type = MessageBrokerType.MachineUpdate,
+					ElementId = null,
+					ElementValue = null,
+					MachineId = returnValue.Id,
+					Aux = null
+				});
+			}
+
+			List<Machine> listMachine = [.. ListDevices()];
+			Machine ObjMachine = listMachine.Where(x => x.Id == returnValue.Id).FirstOrDefault(x => x.Status != Status.Failed);
+			//await ObjMachine.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+			if (notifyOnce)
+			{
+				await _attachmentOperation.SaveImageEntity("Machine", machineInfo.Image, machineInfo.Code, systemOperator).ConfigureAwait(false);
+				if (machineInfo.AttachmentIds is not null)
+				{
+					foreach (string attachment in machineInfo.AttachmentIds)
+					{
+						await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+					}
+				}
+				if (machineInfo.Skills?.Count > 0)
+				{
+					ObjMachine.Skills = machineInfo.Skills;
+				}
+				if (machineInfo.Activities?.Count > 0)
+				{
+					foreach (Activity activity in machineInfo.Activities)
+					{
+						if (string.IsNullOrEmpty(activity.Id))
+						{
+							await _activityOperation.CreateActivity(activity, systemOperator).ConfigureAwait(false);
+						}
+						else if (activity.ManualDelete)
+						{
+							await _activityOperation.DeleteActivity(activity, systemOperator).ConfigureAwait(false);
+						}
+						else if (activity.ActivityClassId > 0)
+						{
+							await _activityOperation.UpdateActivity(activity, systemOperator).ConfigureAwait(false);
+						}
+					}
+				}
+				if (machineInfo.Shift?.CodeShift is not null && !string.IsNullOrEmpty(machineInfo.Shift.CodeShift))
+				{
+					machineInfo.Shift.Validation = false;
+					machineInfo.Shift.IdAsset = machineInfo.Code;
+					_schedulingCalendarShiftsOperation.UpdateSchedulingCalendarShifts(machineInfo.Shift, systemOperator);
+				}
+				if (machineInfo.ShiftDelete?.Id is not null && !string.IsNullOrEmpty(machineInfo.ShiftDelete.Id))
+				{
+					machineInfo.ShiftDelete.Validation = false;
+					_schedulingCalendarShiftsOperation.DeleteSchedulingCalendarShifts(machineInfo.ShiftDelete, systemOperator);
+				}
+
+				// ServiceManager.SendMessage(
+				// 	MessageBrokerType.CatalogChanged,
+				// 	new
+				// 	{
+				// 		Catalog = Entities.Machine,
+				// 		returnValue.Action,
+				// 		Data = ObjMachine
+				// 	}
+				//   );
+			}
+		}
+
+		return returnValue;
+	}
+    /// <summary>
+    ///
+    /// </summary>
+    public async Task<List<ResponseData>> ListUpdateMachine(
       List<MachineExternal> listMachines,
       List<MachineExternal> listMachinesOriginal,
       User systemOperator,
@@ -281,101 +384,59 @@ public class DeviceOperation : IDeviceOperation
 
         return returnValue;
     }
+   
     /// <summary>
 	///
 	/// </summary>
-	/// <exception cref="UnauthorizedAccessException"></exception>
-	public async Task<ResponseData> CreateMachineModel(
-	  MachineModel machineInfo,
-	  User systemOperator,
-	  bool validate = false,
-	  string level = "Success",
-	  bool notifyOnce = true)
+	public Machine GetDevice(string machineId, bool whenThen = false)
 	{
-		ResponseData returnValue = null;
-
-		#region Permission validation
-
-		// if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_MACHINE_CREATE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
-
-		#endregion Permission validation
-
-		returnValue = BrokerDAL.CreateMachineModel(machineInfo, systemOperator, validate, level);
-		if (!validate)
+		Sensor sensorTemp = null;
+		Machine returnValue = BrokerDAL.ListMachines(machineId)?.FirstOrDefault();
+		returnValue.Name = returnValue.Description;
+		if (returnValue is not null && returnValue.Status != Status.Deleted)
 		{
-			if (!machineInfo.Skill.IsNull())
+			returnValue.Environment = new MachineEnvironment();
+			returnValue.ProcessType = BrokerDAL.GetProcessType(returnValue.TypeId).FirstOrDefault();
+			returnValue.OEEConfiguration = BrokerDAL.GetMachineOeeConfiguration(returnValue.Id);
+			returnValue.Programming = BrokerDAL.GetMachineProgramming(returnValue.Id);
+			if (returnValue.ProcessType is not null && returnValue.OEEConfiguration is not null)
 			{
-				BrokerDAL.SaveMachineSkills(returnValue.Id, machineInfo.Skill, systemOperator);
+				returnValue.ProcessType.Details = BrokerDAL.ListMachineProcessTypeDetails(machineId);
 			}
-			if (!string.IsNullOrEmpty(returnValue.Id))
+			List<Sensor> sensors = BrokerDAL.ListSensors(null, machineId);
+			List<Sensor> sensorsDetails = BrokerDAL.GetSensors(null, machineId);
+			if (whenThen)
 			{
-				SyncInitializer.ForcePush(new MessageBroker
+				try
 				{
-					Type = MessageBrokerType.MachineUpdate,
-					ElementId = null,
-					ElementValue = null,
-					MachineId = returnValue.Id,
-					Aux = null
-				});
+					sensorTemp = BrokerDAL.GetSensorsDetails(null);
+				}
+				catch (Exception ex)
+				{
+					//logger.Error(ex);
+				}
 			}
+			List<MachineParam> parameters = BrokerDAL.ListMachineParams(null, machineId);
 
-			List<Machine> listMachine = [.. ListDevices()];
-			Machine ObjMachine = listMachine.Where(x => x.Id == returnValue.Id).FirstOrDefault(x => x.Status != Status.Failed);
-			await ObjMachine.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
-			if (notifyOnce)
+			if (sensors is not null)
 			{
-				await SaveImageEntity("Machine", machineInfo.Image, machineInfo.Code, systemOperator).ConfigureAwait(false);
-				if (machineInfo.AttachmentIds is not null)
+				if (sensorTemp is not null)
 				{
-					foreach (string attachment in machineInfo.AttachmentIds)
+					foreach (Sensor sensor in sensorsDetails)
 					{
-						await AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+						sensor.SensorsWhen = [.. sensorTemp.SensorsWhen.Where(x => x.SensorId == sensor.Code)];
+						sensor.SensorLiveViewer = [.. sensorTemp.SensorLiveViewer.Where(x => x.SensorId == sensor.Code)];
 					}
 				}
-
-				if (machineInfo.Activities?.Count > 0)
-				{
-					foreach (Activity activity in machineInfo.Activities)
-					{
-						if (string.IsNullOrEmpty(activity.Id))
-						{
-							await CreateActivity(activity, systemOperator).ConfigureAwait(false);
-						}
-						else if (activity.ManualDelete)
-						{
-							await DeleteActivity(activity, systemOperator).ConfigureAwait(false);
-						}
-						else if (activity.ActivityClassId > 0)
-						{
-							await UpdateActivity(activity, systemOperator).ConfigureAwait(false);
-						}
-					}
-				}
-				if (machineInfo.Shift?.CodeShift is not null && !string.IsNullOrEmpty(machineInfo.Shift.CodeShift))
-				{
-					machineInfo.Shift.Validation = false;
-					machineInfo.Shift.IdAsset = machineInfo.Code;
-					UpdateSchedulingCalendarShifts(machineInfo.Shift, systemOperator);
-				}
-				if (machineInfo.ShiftDelete?.Id is not null && !string.IsNullOrEmpty(machineInfo.ShiftDelete.Id))
-				{
-					machineInfo.ShiftDelete.Validation = false;
-					DeleteSchedulingCalendarShifts(machineInfo.ShiftDelete, systemOperator);
-				}
-
-				// ServiceManager.SendMessage(
-				// 	MessageBrokerType.CatalogChanged,
-				// 	new
-				// 	{
-				// 		Catalog = Entities.Machine,
-				// 		returnValue.Action,
-				// 		Data = ObjMachine
-				// 	}
-				//   );
 			}
+			else
+			{
+				sensors = [];
+			}
+			parameters ??= [];
+			returnValue.Parameters = parameters;
+			returnValue.Sensors = sensors;
+			returnValue.SensorDetails = sensorsDetails;
 		}
 
 		return returnValue;
