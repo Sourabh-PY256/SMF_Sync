@@ -1,8 +1,11 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using EWP.SF.Common.EventHandlers;
 using EWP.SF.Common.Models;
+using EWP.SF.Common.Models.Operations;
 using EWP.SF.Common.Models.Sensors;
+using EWP.SF.Helper;
 
 
 // using EWP.SF.API.BusinessEntities.EventHandlers;
@@ -11,7 +14,7 @@ using EWP.SF.Common.Models.Sensors;
 // using EWP.SF.API.BusinessEntities.RequestModels.Operations;
 
 
-namespace EWP.SF.Common.CustomBehavior;
+namespace EWP.SF.Common.Models;
 
 /// <summary>
 /// Provides helper methods for custom behavior.

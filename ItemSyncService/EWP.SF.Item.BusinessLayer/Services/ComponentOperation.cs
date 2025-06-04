@@ -31,7 +31,10 @@ public class ComponentOperation : IComponentOperation
 		_warehouseOperation = warehouseOperation;
 		_dataSyncServiceOperation = dataSyncServiceOperation;
 	}
-
+	public Component GetComponentByCode(string Code)
+	{
+		return _componentRepo.GetComponentByCode(Code);
+}
 	public async Task<List<ResponseData>> ListUpdateProduct(List<ProductExternal> itemList, List<ProductExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
 	{
 		List<ResponseData> returnValue = [];
@@ -1619,4 +1622,6 @@ public class ComponentOperation : IComponentOperation
 		}
 		return returnValue;
 	}
+
+
 }

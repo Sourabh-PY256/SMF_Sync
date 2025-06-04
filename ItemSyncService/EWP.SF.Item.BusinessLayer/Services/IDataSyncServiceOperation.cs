@@ -31,7 +31,6 @@ public interface IDataSyncServiceOperation
     // DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping);
     List<TimeZoneCatalog> GetTimezones(bool currentValues = false);
     string GetDatasyncDynamicBody(string entityCode);
-    double GetTimezoneOffset(string offSetName = "");
 
     List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);
 }

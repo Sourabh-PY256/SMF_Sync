@@ -4,7 +4,7 @@ using EWP.SF.Common.Models;
 
 using Newtonsoft.Json;
 
-namespace EWP.SF.Common.CustomBehavior;
+namespace EWP.SF.Common.Models;
 
 /// <summary>
 ///

@@ -1,7 +1,6 @@
 ﻿using EWP.SF.Common.Attributes;
 using EWP.SF.Common.EntityLogger;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.CustomBehavior;
 
 using Newtonsoft.Json;
 

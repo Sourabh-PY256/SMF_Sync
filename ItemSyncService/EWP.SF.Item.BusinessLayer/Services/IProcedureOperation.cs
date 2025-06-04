@@ -1,3 +1,4 @@
+using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 
@@ -11,10 +12,8 @@ public interface IProcedureOperation
         User systemOperator,
         bool Validate = false,
         bool NotifyOnce = true);
-    Task<ResponseData> ProcessMasterIns(
-    Procedure processMasterinfo,
-    User systemOperator,
-    bool Validate = false,
-    bool NotifyOnce = true);
-    Task<Procedure> GetProcedure(string ProcedureId, string ActivityId = null, string Instance = null);
+
+    
+    Task<List<ResponseData>> ProcessMasterInsExternalSync(List<ProcedureExternalSync> listProcedures
+    , List<ProcedureExternalSync> listProceduresOriginal, User systemOperator, bool Validate, LevelMessage Level = 0);
 }

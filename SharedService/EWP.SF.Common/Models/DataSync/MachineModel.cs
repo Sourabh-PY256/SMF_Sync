@@ -1,15 +1,3 @@
-using System.Collections.Concurrent;
-using System.ComponentModel.DataAnnotations;
-using System.Xml.Serialization;
-using EWP.SF.Common.Attributes;
-using EWP.SF.Common.CustomBehavior;
-using EWP.SF.Common.EntityLogger;
-using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models.Sensors;
-
-using Newtonsoft.Json;
-
-using NLog;
 
 namespace EWP.SF.Common.Models;
 

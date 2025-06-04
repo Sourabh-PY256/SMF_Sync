@@ -22,17 +22,17 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
     private readonly IOrderTransactionMaterialRepo _orderTransactionMaterialRepo;
     private readonly IApplicationSettings _applicationSettings;
 
-    private readonly IAttachmentOperation _attachmentOperation;
+    private readonly IWorkOrderOperation _workOrderOperation;
 
-    private readonly IProcedureOperation _procedureOperation;
+    private readonly IComponentOperation _componentOperation;
 
 	public OrderTransactionMaterialOperation(IOrderTransactionMaterialRepo orderTransactionMaterialRepo, IApplicationSettings applicationSettings
-	, IAttachmentOperation attachmentOperation, IProcedureOperation procedureOperation)
+	, IWorkOrderOperation workOrderOperation, IComponentOperation componentOperation)
 	{
 		_orderTransactionMaterialRepo = orderTransactionMaterialRepo;
 		_applicationSettings = applicationSettings;
-		_attachmentOperation = attachmentOperation;
-		_procedureOperation = procedureOperation;
+	    _workOrderOperation = workOrderOperation;
+		_componentOperation = componentOperation;
 	}
 	/// <summary>
 	///
@@ -82,7 +82,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					// Order
 
 					string orderId = string.Empty;
-					WorkOrder wo = (await GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
+					WorkOrder wo = (await _workOrderOperation.GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
 					if (wo is not null)
 					{
 						orderId = wo.Id;
@@ -116,7 +116,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						OrderTransactionMaterialDetail itemDetail = null;
 						orderTransaction.Items.ForEach(otItem =>
 						{
-							Component objItem = _orderTransactionMaterialRepo.GetComponentByCode(otItem.ItemCode);
+							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode);
 							if (objItem is not null)
 							{
 								if (objItem.Status == Status.Failed)
@@ -266,7 +266,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					string transactionId = Guid.NewGuid().ToString();
 					// Order
 					string orderId = string.Empty;
-					WorkOrder wo = (await GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
+					WorkOrder wo = (await _workOrderOperation.GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
 					if (wo is not null)
 					{
 						orderId = wo.Id;
@@ -301,7 +301,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						OrderTransactionMaterialDetail itemDetail = null;
 						orderTransaction.Items.ForEach(otItem =>
 						{
-							Component objItem = _orderTransactionMaterialRepo.GetComponentByCode(otItem.ItemCode);
+							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode);
 							if (objItem is not null)
 							{
 								if (objItem.Status == Status.Failed)
@@ -450,7 +450,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					string transactionId = Guid.NewGuid().ToString();
 					// Order
 					string orderId = string.Empty;
-					WorkOrder wo = (await GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
+					WorkOrder wo = (await _workOrderOperation.GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
 					if (wo is not null)
 					{
 						orderId = wo.Id;
@@ -485,7 +485,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						OrderTransactionMaterialDetail itemDetail = null;
 						orderTransaction.Items.ForEach(otItem =>
 						{
-							Component objItem = _orderTransactionMaterialRepo.GetComponentByCode(otItem.ItemCode);
+							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode);
 							if (objItem is not null)
 							{
 								if (objItem.Status == Status.Failed)

@@ -6,6 +6,8 @@ using System.Xml.Serialization;
 using System.Text;
 using Range = EWP.SF.Common.Models.Range;
 using SixLabors.ImageSharp;
+using EWP.SF.Item.DataAccess;
+using EWP.SF.Common.Enumerators;
 namespace EWP.SF.Item.BusinessLayer;
 
 public class ProcedureOperation : IProcedureOperation
@@ -337,5 +339,456 @@ public class ProcedureOperation : IProcedureOperation
         }
         return returnValue;
     }
+    /// <summary>
+	/// Create /Update List Procedures
+	/// </summary>
+	/// <param name="listProcedures">List Data</param>
+	/// <param name="listProceduresOriginal">List Data</param>
+	/// <param name="Validate">List Data</param>
+	/// <param name="Level">List Data</param>///
+	/// <param name="systemOperator">User Current</param>
+	public async Task<List<ResponseData>> ProcessMasterInsExternalSync(List<ProcedureExternalSync> listProcedures
+    , List<ProcedureExternalSync> listProceduresOriginal, User systemOperator, bool Validate, LevelMessage Level = 0)
+    {
+        List<ResponseData> returnValue = [];
+        Procedure procedureInfo;
+        ResponseData MessageError;
+        List<ProcedureVersion> listProcedureVersions;
+        Procedure procedureDB;
+        bool NotifyOnce = true;
+        bool CreateVersionSync = false;
+        if (listProcedures?.Count > 0)
+        {
+            NotifyOnce = listProcedures.Count == 1;
+            int Line = 0;
+            foreach (ProcedureExternalSync procedure in listProcedures)
+            {
+                Line++;
+                try
+                {
+                    procedureDB = new Procedure();
+                    procedureInfo = new Procedure();
+                    listProcedureVersions = ListProcedureVersionsByCode(procedure.ProcedureCode);
+                    procedureDB = GetProcessByProcessCodeVersion(procedure.ProcedureCode, procedure.Version);
+                    procedureInfo = await CompararYReemplazar(procedureDB, procedure, listProceduresOriginal, systemOperator).ConfigureAwait(false);
+
+                    listProcedureVersions = ListProcedureVersionsByCode(procedure.ProcedureCode);
+                    ProcedureVersion findProcedureDb = null;
+                    if (listProcedureVersions is null || listProcedureVersions.Count == 0)
+                    {
+                        findProcedureDb = null;
+                    }
+                    else
+                    {
+                        findProcedureDb = listProcedureVersions.Find(x => x.Version == procedure.Version);
+                    }
+
+                    ProcedureVersion procedureWithMaxVersion = null;
+                    if (listProcedureVersions is null || listProcedureVersions.Count == 0)
+                    {
+                        procedureWithMaxVersion = null;
+                    }
+                    else
+                    {
+                        procedureWithMaxVersion = listProcedureVersions.OrderByDescending(item => item.Version).FirstOrDefault();
+                    }
+
+                    if (findProcedureDb is null)
+                    {
+                        CreateVersionSync = true;
+                    }
+                    else if (findProcedureDb?.IsActivityUsed == true)
+                    {
+                        CreateVersionSync = true;
+                        procedureInfo.Version = procedureWithMaxVersion.Version + 1;
+                    }
+                    else if (findProcedureDb?.IsActivityUsed == false)
+                    {
+                        CreateVersionSync = false;
+                        procedureInfo.ProcedureId = findProcedureDb.ProcedureId;
+                    }
+                    else
+                    {
+                        CreateVersionSync = false;
+                    }
+
+                    procedureInfo.CreateVersionSync = CreateVersionSync;
+                    if (procedureInfo.Sections?.Count > 0)
+                    {
+                        procedureInfo.Sections.ForEach(section =>
+                        {
+                            if (section.ListInstrucctions?.Count > 0)
+                            {
+                                section.ListInstrucctions.ForEach(instruction =>
+                                {
+                                    if (instruction.MultipleChoice?.Count > 0)
+                                    {
+                                        instruction.MultipleChoice.ForEach(choice =>
+                                        {
+                                            if (!string.IsNullOrEmpty(choice.SectionId))
+                                            {
+                                                ProcedureSection result = procedureInfo.Sections.Find(x => x.OrderSection == choice.SectionId.ToInt32());
+                                                if (result is not null)
+                                                {
+                                                    choice.SectionId = result.SectionId;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                choice.SectionId = null;
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    ResponseData result = await ProcessMasterInsByXML(procedureInfo, systemOperator, Validate, NotifyOnce).ConfigureAwait(false);
+                    returnValue.Add(result);
+                }
+                catch (Exception ex)
+                {
+                    MessageError = new ResponseData
+                    {
+                        Message = ex.Message,
+                        Code = "Line:" + Line.ToStr()
+                    };
+                    returnValue.Add(MessageError);
+                }
+            }
+            if (!Validate)
+            {
+                // if (!NotifyOnce)
+                // {
+                // 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Procedure, Action = ActionDB.IntegrateAll.ToStr() });
+                // }
+
+                returnValue = Level switch
+                {
+                    LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
+                    LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
+                    _ => returnValue
+                };
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public List<ProcedureVersion> ListProcedureVersionsByCode(string Code) => _procedureRepo.ListProcedureVersionsByCode(Code);
+    /// <summary>
+    ///
+    /// </summary>
+    public Procedure GetProcessByProcessCodeVersion(string Code, int Version)
+    {
+        Procedure Result = null;
+        try
+        {
+            ProcessMasterVersionresult returnDB = _procedureRepo.GetProcessVersion(Code, Version);
+            if (returnDB is not null)
+            {
+                Result = _procedureRepo.GetProcedure(returnDB.ProcedureId);
+            }
+        }
+        catch (Exception ex)
+        {
+            //logger.Error(ex);
+            throw;
+        }
+        return Result;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public async Task<Procedure> CompararYReemplazar(Procedure procedureDB, ProcedureExternalSync procedureSync, List<ProcedureExternalSync> listProceduresOriginal, User systemOperator)
+    {
+        Procedure resultProcedure = new();
+        procedureDB ??= new Procedure();
+        int varStatus = 1;
+        if (procedureSync.Status == "Development")
+        {
+            varStatus = 7;
+        }
+        else if (procedureSync.Status == "Active")
+        {
+            varStatus = 1;
+        }
+        else if (procedureSync.Status == "Inactive")
+        {
+            varStatus = 2;
+        }
+        else
+        {
+            varStatus = 1;
+        }
+        ProcedureExternalSync procedureOriginal = listProceduresOriginal.Find(x => x.ProcedureCode == procedureSync.ProcedureCode && x.Version == procedureSync.Version);
+        resultProcedure.Name = ValidateString(procedureSync.ProcedureName, procedureDB.Name, procedureOriginal.ProcedureName);
+        resultProcedure.ProcedureId = !string.IsNullOrEmpty(procedureDB.ProcedureId) ? procedureDB.ProcedureId : Guid.NewGuid().ToStr();
+        resultProcedure.ProcedureIdOrigin = procedureDB.ProcedureIdOrigin;
+        resultProcedure.Code = procedureSync.ProcedureCode;
+        resultProcedure.Description = ValidateString(procedureSync.ProcedureName, procedureDB.Description, procedureOriginal.ProcedureName);
+        resultProcedure.Version = procedureSync.Version;
+        resultProcedure.Status = varStatus; // (Enum.Parse(typeof(Status), ValidateString(procedureSync.Status, ((Status)procedureDB.Status).ToString(), procedureOriginal.Status)).ToInt32());
+        resultProcedure.EarlierVersion = procedureSync.EarlierVersion;
+        resultProcedure.IdActivityClass = Enum.Parse<ClassTypeProcedure>(ValidateString(procedureSync.ClassCode, ((ClassTypeProcedure)procedureDB.IdActivityClass).ToString(), procedureOriginal.ClassCode)).ToInt32();
+        resultProcedure.ActivityType = ValidateString(procedureSync.ActivityTypeCode, procedureDB.ActivityType, procedureOriginal.ActivityTypeCode);
+        resultProcedure.InterventionId = ValidateString(procedureSync.InterventionCode, procedureDB.InterventionId, procedureOriginal.InterventionCode);
+        resultProcedure.SourceId = ValidateString(procedureSync.SourceCode, procedureDB.SourceId, procedureOriginal.SourceCode);
+        resultProcedure.Sections ??= [];
+        foreach (SectionExternalSync section in procedureSync.Sections)
+        {
+            ProcedureSection sectionDb = new();
+            if (procedureDB.Sections?.Count > 0)
+            {
+                sectionDb = procedureDB.Sections.Find(x => x.OrderSection == section.SectionOrder);
+            }
+            sectionDb ??= new();
+            SectionExternalSync sectionOriginal = procedureOriginal.Sections.Find(x => x.SectionOrder == section.SectionOrder);
+            resultProcedure.Sections.Add(await ValidateSection(section, sectionDb, sectionOriginal, resultProcedure.ProcedureId, systemOperator).ConfigureAwait(false));
+        }
+
+        return resultProcedure;
+    }
+    /// <summary>
+    ///
+    /// </summary>
+    public static string ValidateString(string SyncValue, string DbValue, string OriginalValue)
+    {
+        DbValue ??= "";
+        string retunrValue;
+        if (string.IsNullOrEmpty(SyncValue))
+        {
+            retunrValue = DbValue;
+        }
+        else if (SyncValue != DbValue)
+        {
+            if (string.IsNullOrEmpty(OriginalValue) && !string.IsNullOrEmpty(DbValue))
+            {
+                retunrValue = DbValue;
+            }
+            else
+            {
+                retunrValue = SyncValue;
+            }
+        }
+        else
+        {
+            retunrValue = DbValue;
+        }
+        return retunrValue;
+    }
+    /// <summary>
+    ///
+    /// </summary>
+    public async Task<ProcedureSection> ValidateSection(SectionExternalSync SyncSection, ProcedureSection DbSection, SectionExternalSync OriginalSection, string ProcedureId, User systemOperator)
+    {
+        ProcedureSection sectionAdd = new()
+        {
+            SectionId = (!string.IsNullOrEmpty(DbSection.SectionId) && DbSection.SectionId is not null) ? DbSection.SectionId : Guid.NewGuid().ToStr(),
+            Section = ValidateString(SyncSection.SectionName, DbSection.Section, OriginalSection.SectionName),
+            Description = ValidateString(SyncSection.SectionDescription, DbSection.Description, OriginalSection.SectionDescription),
+            Observations = ValidateString(SyncSection.Observations, DbSection.Observations, OriginalSection.Observations),
+            ProcedureId = !string.IsNullOrEmpty(ProcedureId) ? ProcedureId : Guid.NewGuid().ToStr(),
+            TypeSection = CastStringToEnumOrNullSync<SectionType>(SyncSection.SectionType, DbSection.SectionType, OriginalSection.SectionType),
+            OrderSection = SyncSection.SectionOrder,
+            Status = 1
+        };
+        if (SyncSection.TypeVisualHelp.Equals("ATTACH FILE", StringComparison.OrdinalIgnoreCase) || SyncSection.TypeVisualHelp.Equals("URL", StringComparison.OrdinalIgnoreCase))
+        {
+            List<AttachmentLocal> listAttachmentRequest = [];
+            AttachmentLocal objAdd = new()
+            {
+                TypeCode = SyncSection.TypeVisualHelp.Equals("ATTACH FILE", StringComparison.OrdinalIgnoreCase) ? "Image" : SyncSection.TypeVisualHelp,
+                Name = SyncSection.TypeVisualHelp.Equals("ATTACH FILE", StringComparison.OrdinalIgnoreCase) ? "jpg" : SyncSection.VisualHelp,
+                Extension = SyncSection.TypeVisualHelp.Equals("ATTACH FILE", StringComparison.OrdinalIgnoreCase) ? "jpg" : SyncSection.TypeVisualHelp,
+                FileBase64 = SyncSection.VisualHelp,
+                AuxId = sectionAdd.SectionId,
+                Entity = "Procedure.Section",
+                IsTemp = false,
+                Size = "0",
+                Status = 1,
+                IsImageEntity = true,
+            };
+
+            listAttachmentRequest.Add(objAdd);
+            List<AttachmentResponse> result = await SaveAttachment(listAttachmentRequest, systemOperator).ConfigureAwait(false);
+            if (result?.Count > 0)
+            {
+                sectionAdd.Attachment = new()
+                {
+                    Id = result.FirstOrDefault().Id
+                };
+            }
+        }
+        sectionAdd.ListInstrucctions ??= [];
+        SyncSection.Instructions.ForEach(instrucction =>
+        {
+            ProcedureMasterInstruction instructionDB = new();
+            if (DbSection.ListInstrucctions?.Count > 0)
+            {
+                instructionDB = DbSection.ListInstrucctions.Find(x => x.CodeInstruction == instrucction.InstructionOrder);
+            }
+            InstrucctionExternalSync instructionOriginal = OriginalSection.Instructions.Find(x => x.InstructionOrder == instrucction.InstructionOrder);
+            instructionDB ??= new();
+            sectionAdd.ListInstrucctions.Add(ValidateInstruction(instrucction, instructionDB, instructionOriginal, SyncSection, sectionAdd.SectionId));
+        });
+        return sectionAdd;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public static ProcedureMasterInstruction ValidateInstruction(InstrucctionExternalSync instrucctionSync, ProcedureMasterInstruction instructionDB
+        , InstrucctionExternalSync instructionOriginal, SectionExternalSync SyncSection, string sectionId)
+    {
+        ProcedureMasterInstruction instructionAdd = new()
+        {
+            SectionId = sectionId,
+            InstructionId = (!string.IsNullOrEmpty(instructionDB.InstructionId) && instructionDB.InstructionId is not null) ? instructionDB.InstructionId : Guid.NewGuid().ToStr(),
+            DefaultValue = ValidateString(instrucctionSync.DefaultValue.ToStr(), instructionDB.DefaultValue, instructionOriginal.DefaultValue.ToStr()),
+            // instructionAdd.ProcessId = procedureInfo.CreateNewVersion == false ? procedureDB.ProcedureId : "";
+            TypeInstrucction = ValidateString(instrucctionSync.InstructionType, instructionDB.TypeInstrucction, instructionOriginal.InstructionType),
+            CodeInstruction = instrucctionSync.InstructionOrder,
+            //instructionAdd.Instruction = "&lt;h5 style=\"font-weight: bold; color: rgb(71, 95, 123); letter-spacing: 0.15px;\" & gt;" + instrucctionSync.InstructionDescription + "&lt;/h5&gt;";
+            Instruction = "&lt;h5 style=\"font-weight: bold; color: rgb(71, 95, 123); letter-spacing: 0.15px;\"&gt;"
+        + ValidateString(instrucctionSync.InstructionDescription, instructionDB.Instruction, instructionOriginal.InstructionDescription) + "&lt;/h5&gt;",
+            // instructionAdd.Code = procedure.ProcedureCode;
+            //  instructionAdd.Version = procedure.Version;
+            SectionOrder = SyncSection.SectionOrder
+        };
+        int viewType = 0;
+        if (instructionDB.ViewType is not null)
+        {
+            viewType = (int)instructionDB.ViewType;
+        }
+
+        instructionAdd.ViewType = CastIntToEnumOrNullSync<ViewTypes>(instrucctionSync.ViewType, viewType, instructionOriginal.ViewType);
+        instructionAdd.MultiSelect = ValidateString(instrucctionSync.MultiSelect, instructionDB.MultiSelect.ToStr(), instructionOriginal.MultiSelect).ToBool();
+        instructionAdd.Mandatory = ValidateString(instrucctionSync.InstructionMandatory.ToString(), instructionDB.Mandatory.ToString(), instructionOriginal.InstructionMandatory.ToString()).ToBool();// instrucctionSync.InstructionMandatory;
+        instructionAdd.IsGauge = ValidateString(instrucctionSync.IsGauge.ToString(), instructionDB.IsGauge.ToString(), instructionOriginal.IsGauge.ToString()).ToBool();
+        instructionAdd.Long = ValidateString(instrucctionSync.InstructionLongText.ToString(), instructionDB.Long.ToString(), instructionOriginal.InstructionLongText.ToString()).ToInt32();
+        instructionAdd.QueryUser = ValidateString(instrucctionSync.InstructionQueryUser, instructionDB.QueryUser, instructionOriginal.InstructionQueryUser);
+        instructionAdd.SignalCode = ValidateString(instrucctionSync.DataReadingSignalCode, instructionDB.SignalCode, instructionOriginal.DataReadingSignalCode);
+
+        if (string.Equals(instrucctionSync.InstructionDataType, "NUMERIC", StringComparison.OrdinalIgnoreCase))
+        {
+            if (instrucctionSync.IsDecimal)
+            {
+                instructionAdd.Type = InputType.Decimal.ToInt32();
+            }
+            else
+            {
+                instructionAdd.Type = InputType.Integer.ToInt32();
+            }
+        }
+        else
+        {
+            instructionAdd.Type = CastIntToEnumOrNullSync<InputType>(instrucctionSync.InstructionDataType, instructionDB.Type.ToInt32(), instructionOriginal.InstructionDataType);
+        }
+        instructionAdd.TypeDataReading = CastIntToEnumOrNullSync<DataReadingType>(instrucctionSync.TypeDataReading, instructionDB.TypeDataReading.ToInt32(), instructionOriginal.TypeDataReading);
+        instructionAdd.TimeInSec = ValidateString(instrucctionSync.TimeInSec.ToStr(), instructionDB.TimeInSec.ToStr(), instructionOriginal.TimeInSec.ToStr()).ToInt64();
+        instructionAdd.QueryUser = ValidateString(instrucctionSync.InstructionQueryUser, instructionDB.QueryUser, instructionOriginal.InstructionQueryUser);
+        instructionAdd.Status = 1;
+        instructionAdd.MinValue = ValidateString(instrucctionSync.GaugeMinValue.ToStr(), instructionDB.MinValue.ToStr(), instructionOriginal.GaugeMinValue.ToStr()).ToDecimal();
+        instructionAdd.MaxValue = ValidateString(instrucctionSync.GaugeMaxValue.ToStr(), instructionDB.MaxValue.ToStr(), instructionOriginal.GaugeMaxValue.ToStr()).ToDecimal();
+        instructionAdd.TargetValue = ValidateString(instrucctionSync.GaugeTargetValue.ToStr(), instructionDB.TargetValue.ToStr(), instructionOriginal.GaugeTargetValue.ToStr()).ToDecimal();
+        instructionAdd.CodeAutomatic = ValidateString(instrucctionSync.CodeAutomatic, instructionDB.CodeAutomatic, instructionOriginal.CodeAutomatic);
+
+        switch (instructionAdd.TypeInstrucction.ToUpperInvariant())
+        {
+            case "MULTIPLECHOICE":
+                instructionAdd.MultipleChoice ??= [];
+                if (instrucctionSync.Choices?.Count > 0)
+                {
+                    instrucctionSync.Choices.ForEach(choice =>
+                    {
+                        Choice choiceDb = new();
+                        if (instructionDB.MultipleChoice?.Count > 0)
+                        {
+                            choiceDb = instructionDB.MultipleChoice.Find(x => x.OrderChoice == choice.OrderChoice);
+                        }
+                        choiceDb ??= new();
+                        ChoiceExternalSync sectionOriginal = instructionOriginal.Choices.Find(x => x.OrderChoice == choice.OrderChoice);
+                        instructionAdd.MultipleChoice.Add(ValidateChoice(choice, choiceDb, sectionOriginal, instructionAdd));
+                    });
+                }
+                else
+                {
+                    throw new Exception(string.Format("Section Order: {0}   Instruction Order: {1}  Chocies not found. ", instructionAdd.CodeInstruction, SyncSection.SectionOrder));
+                }
+
+                break;
+        }
+
+        return instructionAdd;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public static Choice ValidateChoice(ChoiceExternalSync choiceSync, Choice choiceDB
+, ChoiceExternalSync choiceOriginal, ProcedureMasterInstruction instructionAdd)
+    {
+        return new()
+        {
+            InstructionId = instructionAdd.InstructionId,
+            OrderChoice = choiceSync.OrderChoice,
+            ValueChoice = ValidateString(choiceSync.Value, choiceDB.ValueChoice, choiceOriginal.Value),
+            SectionId = CastStrinToEnum<ActionTypeCode>(choiceSync.Action) == ActionTypeCode.Goto ? ValidateString(choiceSync.OrderSectionGoTo, choiceDB.SectionId, choiceOriginal.OrderSectionGoTo)
+            : (CastStrinToEnum<ActionTypeCode>(choiceSync.Action) == ActionTypeCode.FinisWithWarning ? ActionTypeCode.finisherror.ToString() : choiceSync.Action),
+            IsNotify = ValidateString(choiceSync.IsNotify.ToStr(), choiceDB.IsNotify.ToStr(), choiceOriginal.IsNotify.ToStr()).ToBool(),
+            MessageNotify = ValidateString(choiceSync.MessageNotify, choiceDB.MessageNotify, choiceOriginal.MessageNotify),
+            Message = ValidateString(choiceSync.MessageWarning, choiceDB.Message, choiceOriginal.MessageWarning),
+            // choiceAdd.AttachmentId = instructionAdd.InstructionId;
+            Id = (!string.IsNullOrEmpty(choiceDB.Id) && choiceDB.Id is not null) ? choiceDB.Id : Guid.NewGuid().ToStr()
+        };
+    }
+    public static T? CastStrinToEnum<T>(string value) where T : struct, Enum
+	{
+		return Enum.TryParse(value, true, out T resultSync) ? resultSync : null;
+	}
+    /// <summary>
+    ///
+    /// </summary>
+    public static int CastStringToEnumOrNullSync<T>(string valueSync, string valueDb, string valueOriginal) where T : struct, Enum
+    {
+        string sync = "", db = "", original = "";
+        if (Enum.TryParse(valueSync, true, out T resultSync))
+        {
+            sync = resultSync.ToStr();
+        }
+        if (Enum.TryParse(valueDb, true, out T resultDb))
+        {
+            db = resultDb.ToStr();
+        }
+        if (Enum.TryParse(valueOriginal, true, out T resultOriginal))
+        {
+            original = resultOriginal.ToStr();
+        }
+        return Enum.TryParse(ValidateString(sync, db, original), true, out T resultFunction) ? resultFunction.ToInt32() : 0;
+    }
+
+	/// <summary>
+	///
+	/// </summary>
+	public static int CastIntToEnumOrNullSync<T>(string valueSync, int valueDb, string valueOriginal) where T : struct, Enum
+	{
+		string sync = "", db = "", original = "";
+		if (Enum.TryParse(valueSync, true, out T resultSync))
+		{
+			sync = resultSync.ToStr();
+		}
+		if (Enum.IsDefined(typeof(T), valueDb))
+		{
+			db = ((T)Enum.ToObject(typeof(T), valueDb)).ToString();
+		}
+		if (Enum.TryParse(valueOriginal, true, out T resultOriginal))
+		{
+			original = resultOriginal.ToStr();
+		}
+		return Enum.TryParse(ValidateString(sync, db, original), true, out T resultFunction) ? resultFunction.ToInt32() : 0;
+	}
     #endregion ProcessMaster
 }

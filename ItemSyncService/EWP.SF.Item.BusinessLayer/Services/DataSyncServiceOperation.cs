@@ -62,64 +62,9 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 
     public List<TimeZoneCatalog> GetTimezones(bool currentValues = false)
     {
-        throw new NotImplementedException();
+        return _dataSyncRepository.GetTimezones(currentValues);
     }
-    // public async Task<List<DataSyncIoTDataSimulator>> GetTagsSimulatorService(bool IsInitial)
-    // {
-    // 	return await _dataSyncRepository.GetTagsSimulatorService(IsInitial).ConfigureAwait(false);
-    // }
 
-    public double GetTimezoneOffset(string offSetName = "")
-    {
-        double offset = 0;
-        if (offSetName == "ERP")
-        {
-            if (!ContextCache.ERPOffset.HasValue)
-            {
-                try
-                {
-                    List<TimeZoneCatalog> tz = _dataSyncRepository.GetTimezones(true);
-                    TimeZoneCatalog erpOffset = tz.Find(t => t.Key == "ERP");
-                    offset = erpOffset.Offset;
-                    ContextCache.ERPOffset = offset;
-                }
-                catch { }
-            }
-            else
-            {
-                offset = ContextCache.ERPOffset.Value;
-            }
-        }
-        else
-        {
-            List<TimeZoneCatalog> tz = _dataSyncRepository.GetTimezones(true);
-            if (string.IsNullOrEmpty(offSetName))
-            {
-                TimeZoneCatalog SfOffset = tz.Find(t => t.Key == "SmartFactory");
-                TimeZoneCatalog erpOffset = tz.Find(t => t.Key == "ERP");
-                double baseOffset = 0;
-                double integrationOffset = 0;
-                if (SfOffset is not null)
-                {
-                    baseOffset = SfOffset.Offset;
-                }
-                if (erpOffset is not null)
-                {
-                    integrationOffset = erpOffset.Offset;
-                }
-                offset = baseOffset - integrationOffset;
-            }
-            else
-            {
-                TimeZoneCatalog namedOffset = tz.Find(t => t.Key == offSetName);
-                if (namedOffset is not null)
-                {
-                    offset = namedOffset.Offset;
-                }
-            }
-        }
-        return offset;
-    }
 
     /// <summary>
 	///

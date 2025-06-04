@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Xml.Serialization;
 using EWP.SF.Common.Attributes;
-using EWP.SF.Common.CustomBehavior;
 using EWP.SF.Common.EntityLogger;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models.Sensors;
@@ -741,16 +740,24 @@ public class MachineParam : IBehaviorMatch, ICloneable
 	///
 	/// </summary>
 	public string CustomBehaviorId { get; set; }
+    private CustomBehavior customBehavior;
 
-	/// <summary>
-	///
-	/// </summary>
-	[JsonIgnore]
-	public CustomBehavior CustomBehavior { get; set; }
+    /// <summary>
+    ///
+    /// </summary>
+    public CustomBehavior GetCustomBehavior()
+    {
+        return customBehavior;
+    }
 
-	/// <summary>Creates a new object that is a copy of the current instance.</summary>
-	/// <returns>A new object that is a copy of this instance.</returns>
-	public object Clone() => MemberwiseClone();
+    public void SetCustomBehavior(CustomBehavior value)
+    {
+        customBehavior = value;
+    }
+
+    /// <summary>Creates a new object that is a copy of the current instance.</summary>
+    /// <returns>A new object that is a copy of this instance.</returns>
+    public object Clone() => MemberwiseClone();
 
 	/// <summary>Returns a string that represents the current object.</summary>
 	/// <returns>A string that represents the current object.</returns>

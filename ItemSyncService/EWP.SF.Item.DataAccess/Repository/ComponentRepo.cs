@@ -90,5 +90,67 @@ public class ComponentRepo : IComponentRepo
         }
         return returnValue;
     }
+    /// <summary>
+	///
+	/// </summary>
+	public Component GetComponentByCode(string Code)
+	{
+		Component returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				const string script = "SP_SF_Item_By_Code_SEL";
+				using EWP_Command command = new(script, connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_Code", Code, !string.IsNullOrEmpty(Code));
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					returnValue = new Component
+					{
+						Id = rdr["Code"].ToStr(),
+						ExternalId = rdr["Code"].ToStr(),
+						Code = rdr["Code"].ToStr(),
+						Name = rdr["Name"].ToStr(),
+						ComponentType = (ComponentType)rdr["ItemType"].ToInt32(),
+						UnitType = (UnitType)rdr["UnitType"].ToInt32(),
+						UnitId = rdr["UnitId"].ToStr(),
+						CreationDate = rdr["CreateDate"].ToDate(),
+						CreatedBy = new User(rdr["CreateUser"].ToInt32()),
+						Status = (Status)rdr["Status"].ToInt32(),
+						Type = rdr["StockType"].ToInt32(),
+						Maker = rdr["Maker"].ToStr(),
+						InventoryId = rdr["ItemGroupCode"].ToStr(),
+						ManagedBy = rdr["ManagedBy"].ToInt32(),
+						UnitInventory = rdr["InventoryUnit"].ToStr(),
+						UnitProduction = rdr["ProductionUnit"].ToStr(),
+						Image = rdr["Image"].ToStr(),
+						SupplyLeadTime = rdr["SupplyLeadTime"].ToInt32(),
+						SafetyQty = rdr["SafetyQty"].ToDouble(),
+						Schedule = rdr["EnableSchedule"].ToInt32()
+					};
+					if (rdr["UpdateDate"].ToDate().Year > 1900)
+					{
+						returnValue.ModifyDate = rdr["UpdateDate"].ToDate();
+						returnValue.ModifiedBy = new User(rdr["UpdateUser"].ToInt32());
+					}
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
     #endregion Component
 }

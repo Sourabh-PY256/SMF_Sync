@@ -14,4 +14,5 @@ namespace EWP.SF.Item.DataAccess;
 public interface IComponentRepo
 {
     ResponseData MergeProduct(Component componentInfo, User systemOperator, bool Validation, LevelMessage Level);
+    Component GetComponentByCode(string Code);
 }

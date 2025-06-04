@@ -14,8 +14,9 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
+
 	<ItemGroup>
-		<ProjectReference Include="..\EWP.SF.Common\EWP.SF.Helper.csproj" />
+		<ProjectReference Include="..\EWP.SF.Helper\EWP.SF.Helper.csproj" />
 	</ItemGroup>
 
 
