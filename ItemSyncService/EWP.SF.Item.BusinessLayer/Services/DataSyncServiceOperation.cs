@@ -60,7 +60,7 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
         throw new NotImplementedException();
     }
 
-    public List<TimeZoneCatalog> GetTimezones(bool currentValues = false)
+    public  Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false)
     {
         return _dataSyncRepository.GetTimezones(currentValues);
     }

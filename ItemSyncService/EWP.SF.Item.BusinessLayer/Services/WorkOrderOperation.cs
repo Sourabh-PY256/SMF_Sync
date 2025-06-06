@@ -18,18 +18,26 @@ public class WorkOrderOperation : IWorkOrderOperation
 	private readonly IApplicationSettings _applicationSettings;
 
 	private readonly IMeasureUnitOperation _measureUnitOperation;
+	private readonly IWarehouseOperation _warehouseOperation;
 
 	private readonly IEmployeeOperation _employeeOperation;
 
+	IOrderTransactionProductRepo _orderTransactionProductRepo;
+	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
+
+
 	public WorkOrderOperation(IWorkOrderRepo workOrderRepo, ICatalogRepo catalogRepo, IApplicationSettings applicationSettings
-	, IMeasureUnitOperation measureUnitOperation, IEmployeeOperation employeeOperation)
+	, IMeasureUnitOperation measureUnitOperation, IEmployeeOperation employeeOperation
+	, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation)
 	{
 
 		_workOrderRepo = workOrderRepo;
 		_catalogRepo = catalogRepo;
 		_applicationSettings = applicationSettings;
 		_measureUnitOperation = measureUnitOperation;
+		_warehouseOperation = warehouseOperation;
 		_employeeOperation = employeeOperation;
+		_dataSyncServiceOperation = dataSyncServiceOperation;
 	}
 	/// <summary>
 	///
@@ -333,7 +341,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 			{
 				try
 				{
-					List<TimeZoneCatalog> tz = await _workOrderRepo.GetTimezones(true).ConfigureAwait(false);
+					List<TimeZoneCatalog> tz = await _dataSyncServiceOperation.GetTimezones(true).ConfigureAwait(false);
 					TimeZoneCatalog erpOffset = tz.Find(x => x.Key == "ERP");
 					offset = erpOffset.Offset;
 					ContextCache.ERPOffset = offset;
@@ -347,7 +355,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		}
 		else
 		{
-			List<TimeZoneCatalog> tz = await _workOrderRepo.GetTimezones(true).ConfigureAwait(false);
+			List<TimeZoneCatalog> tz = await _dataSyncServiceOperation.GetTimezones(true).ConfigureAwait(false);
 			if (string.IsNullOrEmpty(offSetName))
 			{
 				TimeZoneCatalog SfOffset = tz.Find(x => x.Key == "SmartFactory");
@@ -541,6 +549,24 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 		#endregion Permission validation
 
-		return BrokerDAL.GetProductReturnContext(workorderId);
+		return _workOrderRepo.GetProductReturnContext(workorderId);
 	}
+	/// <summary>
+	/// Merges the order transaction product status.
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public ResponseData MergeOrderTransactionProductStatus(OrderTransactionProductStatus orderTransactionInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+	{
+		#region Permission validation
+
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		return _orderTransactionProductRepo.MergeOrderTransactionProductStatus(orderTransactionInfo, systemOperator, Validate);
+	}
+	
 }

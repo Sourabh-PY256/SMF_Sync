@@ -7,26 +7,31 @@ using EWP.SF.Helper;
 using System.Xml.Serialization;
 using SixLabors.ImageSharp;
 using EWP.SF.Common.Models.Catalogs;
+using Newtonsoft.Json;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class EmployeeOperation : IEmployeeOperation
 {
     private readonly IEmployeeRepo _employeeRepo;
+    private readonly ICatalogRepo _catalogRepo;
+    private readonly ISchedulingRepo _schedulingRepo;
     private readonly IApplicationSettings _applicationSettings;
     private readonly IAttachmentOperation _attachmentOperation;
     private readonly IActivityOperation _activityOperation;
     private readonly ISchedulingCalendarShiftsOperation _schedulingCalendarShiftsOperation;
 
     public EmployeeOperation(IEmployeeRepo employeeRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
-     IActivityOperation activityOperation, ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation)
+     IActivityOperation activityOperation,
+     ICatalogRepo catalogRepo, ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation)
     {
         _employeeRepo = employeeRepo;
+        _catalogRepo = catalogRepo;
         _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
         _activityOperation = activityOperation;
         _schedulingCalendarShiftsOperation = schedulingCalendarShiftsOperation;
-        
+
     }
     #region Employee
     public async Task<List<ResponseData>> ImportEmployeesAsync(List<EmployeeExternal> requestValue, List<EmployeeExternal> originalValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true, bool isDataSync = false)
@@ -36,8 +41,8 @@ public class EmployeeOperation : IEmployeeOperation
         Employee employeeHistory = null;
         EmployeeContractsDetail historyContract = null;
         List<Employee> employeeList = [];
-        List<CatProfile> lstProfiles = _employeeRepo.GetCatalogProfile();
-        List<CatSkills> lstCatSkills = _employeeRepo.GetCatSkillsList();
+        List<CatProfile> lstProfiles = _catalogRepo.GetCatalogProfile();
+        List<CatSkills> lstCatSkills = _catalogRepo.GetCatSkillsList();
         CatProfile catProfile = null;
         CatSkills catSkill = null;
         EmployeeSkills employeeSkill = null;
@@ -46,7 +51,7 @@ public class EmployeeOperation : IEmployeeOperation
         {
             EmployeeExternal item = cycleItem;
 
-            employeeHistory = GetEmployee(cycleItem.EmployeeCode);
+            employeeHistory = _employeeRepo.GetEmployee(cycleItem.EmployeeCode);
             bool editMode = employeeHistory is not null;
             if (editMode && originalValue is not null)
             {
@@ -183,7 +188,7 @@ public class EmployeeOperation : IEmployeeOperation
         List<EmployeeSkills> responseEmployeeSkills = [];
         List<EmployeeContractsDetail> responseEmployeeContractsDetail = [];
         Employee employeeLog = null;
-        int Line = 0;
+        const int Line = 0;
         // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.HR_EMPLOYEE_MANAGE))
         // {
         // 	throw new UnauthorizedAccessException(noPermission);
@@ -218,7 +223,7 @@ public class EmployeeOperation : IEmployeeOperation
                     responseMessage.Entity = new Employee { Id = "@CEOPositionHeldBy" };
                     continue;
                 }
-                _ = await _attachmentOperation.SaveImageEntity("Employee", item.Image, item.Code, systemOperator).ConfigureAwait(false);
+                await _attachmentOperation.SaveImageEntity("Employee", item.Image, item.Code, systemOperator).ConfigureAwait(false);
                 if (item.AttachmentIds is not null)
                 {
                     foreach (string attachment in item.AttachmentIds)
@@ -238,12 +243,9 @@ public class EmployeeOperation : IEmployeeOperation
                         {
                             bool tempResult = await _activityOperation.DeleteActivity(activity, systemOperator).ConfigureAwait(false);
                         }
-                        else
+                        else if (activity.ActivityClassId > 0)
                         {
-                            if (activity.ActivityClassId > 0)
-                            {
-                                _ = await _activityOperation.GetAnonymousValueUpdateActivity(activity, systemOperator).ConfigureAwait(false);
-                            }
+                            await _activityOperation.UpdateActivity(activity, systemOperator).ConfigureAwait(false);
                         }
                     }
                 }
@@ -273,7 +275,7 @@ public class EmployeeOperation : IEmployeeOperation
                         string xmlDowntimesTypes = System.Text.Encoding.UTF8.GetString(ms.ToArray()).Replace("'", "´").Replace("<?xml version=\"1.0\"?>", "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>");
 
                         responseEmployeeSkills = _employeeRepo.CreateEmployeeSkills(item.Id, xmlDowntimesTypes, systemOperator);
-                        responseEmployeeSkills.ForEach(x => x.AttachmentId = item.EmployeeSkills.First(q => q.SkillId == x.SkillId).AttachmentId);
+                        responseEmployeeSkills.ForEach(x => x.AttachmentId = item.EmployeeSkills.First(x => x.SkillId == x.SkillId).AttachmentId);
                         //Validar el guardado de Attachment
 
                         foreach (EmployeeSkills itemSkill in responseEmployeeSkills)
@@ -305,48 +307,48 @@ public class EmployeeOperation : IEmployeeOperation
                 //Valid insert detalle tables
                 //if ()
                 //    continue;
-                if (!Validate)
-                {
-                    //employeeLog = _employeeRepo.ListEmployees(null, item.Code).Find(x => x.Status != Status.Failed);
-                    //await employeeLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
-                }
-
                 // if (!Validate)
                 // {
-                //     try
-                //     {
-                //         if (responseMessage.Action == ActionDB.Create)
-                //         {
-                //             result = await CheckUserTraining(employeeLog).ConfigureAwait(false);
-                //             if (result.IsSuccess && result.Data is null)
-                //             {
-                //                 result = await CreateUserTraining(employeeLog).ConfigureAwait(false);
-                //             }
-                //         }
-                //         else
-                //         {
-                //             result = await CheckUserTraining2(employeeLog.Email, employeeLog.Code).ConfigureAwait(false);
-                //             if (result.IsSuccess && result.Data is null)
-                //             {
-                //                 result = await CreateUserTraining2(employeeLog.Email, employeeLog.Code, employeeLog.Name, employeeLog.LastName).ConfigureAwait(false);
-                //             }
-                //         }
-                //     }
-                //     catch (Exception ex)
-                //     {
-                //         responseError = new ResponseData
-                //         {
-                //             Message = ex.Message,
-                //             Code = "Warning Line:" + Line.ToStr()
-                //         };
-                //         returnValue.Add(responseError);
-                //     }
+                // 	employeeLog = _employeeRepo.ListEmployees(null, item.Code).Find(x => x.Status != Status.Failed);
+                // 	await employeeLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
                 // }
-                // if (NotifyOnce && !Validate)
-                // {
-                // 	responseMessage.Entity = employeeLog;
-                // 	_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Employees, Data = employeeLog, responseMessage.Action }, responseMessage.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
-                // }
+
+                if (!Validate)
+                {
+                    try
+                    {
+                        // if (responseMessage.Action == ActionDB.Create)
+                        // {
+                        //     result = await CheckUserTraining(employeeLog).ConfigureAwait(false);
+                        //     if (result.IsSuccess && result.Data is null)
+                        //     {
+                        //         result = await CreateUserTraining(employeeLog).ConfigureAwait(false);
+                        //     }
+                        // }
+                        // else
+                        // {
+                        //     result = await CheckUserTraining2(employeeLog.Email, employeeLog.Code).ConfigureAwait(false);
+                        //     if (result.IsSuccess && result.Data is null)
+                        //     {
+                        //         result = await CreateUserTraining2(employeeLog.Email, employeeLog.Code, employeeLog.Name, employeeLog.LastName).ConfigureAwait(false);
+                        //     }
+                        // }
+                    }
+                    catch (Exception ex)
+                    {
+                        responseError = new ResponseData
+                        {
+                            Message = ex.Message,
+                            Code = "Warning Line:" + Line.ToStr()
+                        };
+                        returnValue.Add(responseError);
+                    }
+                }
+                if (NotifyOnce && !Validate)
+                {
+                    responseMessage.Entity = employeeLog;
+                    //Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Employees, Data = employeeLog, responseMessage.Action }, responseMessage.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
+                }
             }
             catch (Exception ex)
             {
@@ -360,26 +362,76 @@ public class EmployeeOperation : IEmployeeOperation
         }
         // if (!NotifyOnce && !Validate)
         // {
-        // 	_ = Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Employees, Data = new object { }, Action = ActionDB.IntegrateAll });
+        // 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Employees, Data = new object(), Action = ActionDB.IntegrateAll });
         // }
-        switch (Level)
+        return Level switch
         {
-            case LevelMessage.Warning:
-                returnValue = [.. returnValue.Where(p => !string.IsNullOrEmpty(p.Message))];
-                break;
-
-            case LevelMessage.Error:
-                returnValue = [.. returnValue.Where(p => !p.IsSuccess)];
-                break;
-            case LevelMessage.Success:
-                break;
-        }
-
-        return returnValue;
+            LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
+            LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
+            _ => returnValue
+        };
     }
     public void GeneratePositionShiftExplosion(string employeeCode)
     {
-        _employeeRepo.GeneratePositionShiftExplosion(employeeCode);
+        _schedulingRepo.GeneratePositionShiftExplosion(employeeCode);
     }
+    /// <summary>
+	///
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public List<Employee> GetEmployees(string id, string code, User systemOperator, DateTime? DeltaDate = null)
+	{
+		#region Permission validation
+
+		// if (!systemOperator.Permissions.Any(static x => x.Code is Permissions.PRD_ORDERPROGRESS_MANAGE or Permissions.HR_EMPLOYEE_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		return _employeeRepo.ListEmployees(id, code, DeltaDate);
+	}
+    /// <summary>
+    ///
+    /// </summary>
+    // public async Task<ResponseModel> CheckUserTraining(Employee employee)
+    // {
+    // 	ResponseModel returnValue = new();
+    // 	Training credentials = await GetTraining().ConfigureAwait(false);
+    // 	string apiBaseUrl = credentials.urltraining + "/webservice/rest/server.php";
+    // 	try
+    // 	{
+    // 		using HttpClient client = new();
+    // 		client.DefaultRequestHeaders.Accept.Clear();
+    // 		// client.DefaultRequestHeaders.Add("Authorization", token.TokenType + " " + token.AccessToken);
+    // 		// StringContent httpContent = new StringContent(JsonConvert.SerializeObject(permissionData), Encoding.UTF8, "application/json");
+
+    // 		if (string.IsNullOrEmpty(employee.Email))
+    // 		{
+    // 			employee.Email = employee.Name.ToUpperInvariant() + "@sf.com";
+    // 		}
+    // 		KeyValuePair<string, string>[] data =
+    // 		[
+    // 			new KeyValuePair<string, string>("wstoken",credentials.token),
+    // 				new KeyValuePair<string, string>("wsfunction", "core_user_get_users_by_field"),
+    // 				new KeyValuePair<string, string>("moodlewsrestformat", "json"),
+    // 				new KeyValuePair<string, string>("field", "username"),
+    // 				new KeyValuePair<string, string>("values[0]", employee.Code.ToUpperInvariant())
+    // 		];
+
+    // 		using FormUrlEncodedContent content = new(data);
+    // 		HttpResponseMessage result = await client.PostAsync(new Uri(apiBaseUrl), content).ConfigureAwait(false);
+    // 		string resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
+    // 		returnValue.Data = JsonConvert.DeserializeObject<object>(resultContent);
+    // 	}
+    // 	catch (Exception ex)
+    // 	{
+    // 		//logger.Error(ex);
+    // 		returnValue.IsSuccess = false;
+    // 		returnValue.Message = ex.Message;
+    // 	}
+    // 	return returnValue;
+    // }
     #endregion Employee
 }

@@ -15,5 +15,7 @@ public interface IWarehouseRepo
 {
     Warehouse GetWarehouse(string Code);
     ResponseData MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validation);
+
+    List<Warehouse> ListWarehouse(string Code = "", DateTime? DeltaDate = null);
     
 }

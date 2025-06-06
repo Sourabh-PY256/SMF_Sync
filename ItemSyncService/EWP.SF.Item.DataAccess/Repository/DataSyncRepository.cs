@@ -361,7 +361,7 @@ public class DataSyncRepository : IDataSyncRepository
 		return returnValue;
 	}
 
-	public List<TimeZoneCatalog> GetTimezones(bool currentValues)
+	public async Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues)
 	{
 		List<TimeZoneCatalog> returnValue = null;
 		using (EWP_Connection connection = new(ConnectionString))
@@ -537,7 +537,7 @@ public class DataSyncRepository : IDataSyncRepository
 		return returnValue;
 	}
 
-	
+
 	public async Task<User> GetUser(int userId, string userHash, User systemOperator, CancellationToken cancellationToken = default)
 	{
 		User returnValue = null;
@@ -674,5 +674,85 @@ public class DataSyncRepository : IDataSyncRepository
 			}
 		}
 	}
-	
+
+/// <summary>
+	/// List the data synchronization ERP information.
+	/// </summary>
+	public List<DataSyncErp> ListDataSyncERP(string Id = "", EnableType GetInstances = EnableType.Yes)
+	{
+		List<DataSyncErp> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_DataSync_Erp_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_Id", Id, !string.IsNullOrEmpty(Id));
+				command.Parameters.AddWithValue("_GetInstances", GetInstances);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				if (rdr.HasRows)
+				{
+					while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+					{
+						DataSyncErp element = new()
+						{
+							Id = rdr["Id"].ToStr(),
+							ErpCode = rdr["ErpCode"].ToStr(),
+							Erp = rdr["Erp"].ToStr(),
+							ErpVersionCode = rdr["ErpVersionCode"].ToStr(),
+							ErpVersion = rdr["ErpVersion"].ToStr(),
+							DbCode = rdr["DbCode"].ToStr(),
+							Db = rdr["Db"].ToStr(),
+							DbVersionCode = rdr["DbVersionCode"].ToStr(),
+							DbVersion = rdr["DbVersion"].ToStr(),
+							ManufacturingCode = rdr["ManufacturingCode"].ToStr(),
+							Manufacturing = rdr["Manufacturing"].ToStr(),
+							ManufacturingVersionCode = rdr["ManufacturingVersionCode"].ToStr(),
+							ManufacturingVersion = rdr["ManufacturingVersion"].ToStr(),
+							BaseUrl = rdr["BaseUrl"].ToStr(),
+							TokenRequestJson = rdr["TokenRequestJson"].ToStr(),
+							TokenRequestPath = rdr["TokenRequestPath"].ToStr(),
+							TokenRequestMapSchema = rdr["TokenRequestMapSchema"].ToStr(),
+							TokenRequestResultProp = rdr["TokenRequestResultProp"].ToStr(),
+							RequiresTokenRenewal = (EnableType)rdr["RequiresTokenRenewal"].ToInt32(),
+							TokenRenewalMapSchema = rdr["TokenRenewalMapSchema"].ToStr(),
+							RequiredHeaders = rdr["RequiredHeaders"].ToStr(),
+							DateTimeFormat = (DateTimeFormatType)rdr["DateTimeFormat"].ToInt32(),
+							TimeZone = rdr["TimeZone"].ToStr(),
+							ReprocessingTime = rdr["ReprocessingTime"].ToInt32(),
+							MaxReprocessingTime = rdr["MaxReprocessingTime"].ToInt32(),
+							ReprocessingTimeOffset = rdr["ReprocessingOffsetSeconds"].ToInt32(),
+							CreateDate = rdr["CreateDate"].ToDate(),
+							CreateUser = new User(rdr["CreateUser"].ToInt32()),
+							Status = (Status)rdr["Status"].ToInt32()
+						};
+						if (rdr["UpdateDate"].ToDate().Year > 1900)
+						{
+							element.UpdateDate = rdr["UpdateDate"].ToDate();
+							element.UpdateUser = new User(rdr["UpdateUser"].ToInt32());
+						}
+						(returnValue ??= []).Add(element);
+					}
+				}
+				else
+				{
+					returnValue = [];
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
 }

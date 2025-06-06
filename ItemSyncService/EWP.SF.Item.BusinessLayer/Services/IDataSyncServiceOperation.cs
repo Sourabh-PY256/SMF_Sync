@@ -29,7 +29,7 @@ public interface IDataSyncServiceOperation
     // List<DataSyncService> ListDisabledServices();
     // DataSyncErp MergeFullData(User systemOperator, DataSyncErp dataInfo);
     // DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping);
-    List<TimeZoneCatalog> GetTimezones(bool currentValues = false);
+    Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false);
     string GetDatasyncDynamicBody(string entityCode);
 
     List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);

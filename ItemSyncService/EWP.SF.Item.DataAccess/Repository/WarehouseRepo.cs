@@ -16,23 +16,23 @@ namespace EWP.SF.Item.DataAccess;
 
 public class WarehouseRepo : IWarehouseRepo
 {
-    private readonly string ConnectionString;
-    private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
-    private readonly string ConnectionStringReports;
-    private readonly string ConnectionStringLogs;
+	private readonly string ConnectionString;
+	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+	private readonly string ConnectionStringReports;
+	private readonly string ConnectionStringLogs;
 
-    private readonly string Database;
+	private readonly string Database;
 
-    public WarehouseRepo(IApplicationSettings applicationSettings)
-    {
-        ConnectionString = applicationSettings.GetConnectionString();
-        ConnectionStringReports = applicationSettings.GetReportsConnectionString();
-        ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
-        Database = applicationSettings.GetDatabaseFromConnectionString();
-    }
+	public WarehouseRepo(IApplicationSettings applicationSettings)
+	{
+		ConnectionString = applicationSettings.GetConnectionString();
+		ConnectionStringReports = applicationSettings.GetReportsConnectionString();
+		ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
+		Database = applicationSettings.GetDatabaseFromConnectionString();
+	}
 
-    #region WarehouseRepo
-    public Warehouse GetWarehouse(string Code)
+	#region WarehouseRepo
+	public Warehouse GetWarehouse(string Code)
 	{
 		Warehouse returnValue = null;
 		using (EWP_Connection connection = new(ConnectionString))
@@ -147,6 +147,72 @@ public class WarehouseRepo : IWarehouseRepo
 						Code = rdr["Code"].ToStr(),
 						Message = rdr["Message"].ToStr(),
 					};
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+	/// <summary>
+	///
+	/// </summary>
+	public List<Warehouse> ListWarehouse(string Code = "", DateTime? DeltaDate = null)
+	{
+		List<Warehouse> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Warehouse_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				if (string.IsNullOrEmpty(Code))
+				{
+					command.Parameters.AddNull("_Code");
+				}
+				else
+				{
+					command.Parameters.AddWithValue("_Code", Code);
+				}
+				command.Parameters.AddCondition("_DeltaDate", DeltaDate, DeltaDate.HasValue);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					Warehouse element = new()
+					{
+						Id = rdr["Code"].ToStr(),
+						WarehouseId = rdr["Code"].ToStr(),
+						Code = rdr["Code"].ToStr(),
+						Name = rdr["Name"].ToStr(),
+						Status = (Status)rdr["Status"].ToInt32(),
+						Image = rdr["Image"].ToStr(),
+						CreationDate = rdr["CreateDate"].ToDate(),
+						CreatedBy = new User(rdr["CreateUser"].ToInt32()),
+						Schedule = rdr["EnableSchedule"].ToBool(),
+						FacilityCode = rdr["FacilityCode"].ToStr(),
+						BinLocationCode = rdr["BinLocationCode"].ToStr(),
+						IsProduction = rdr["IsProduction"].ToBool(),
+						LogDetailId = rdr["LogDetailId"].ToStr()
+					};
+
+					if (rdr["UpdateDate"].ToDate().Year > 1900)
+					{
+						element.ModifyDate = rdr["UpdateDate"].ToDate();
+						element.ModifiedBy = new User(rdr["UpdateUser"].ToInt32());
+					}
+
+					(returnValue ??= []).Add(element);
 				}
 			}
 			catch

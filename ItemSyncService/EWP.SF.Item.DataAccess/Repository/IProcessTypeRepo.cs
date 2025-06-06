@@ -7,5 +7,6 @@ public interface IProcessTypeRepo
 {
     ResponseData SaveSubOperationTypes_Bulk(string paramsJSON, User systemOperator);
     List<ProcessType> GetProcessType(string processTypeId, bool WithTool = false, DateTime? DeltaDate = null);
+    List<ProcessTypeDetail> ListMachineProcessTypeDetails(string machineId);
 }
 

@@ -131,6 +131,22 @@ public class ProcessTypeOperation : IProcessTypeOperation
 
 		return returnValue;
 	}
+/// <summary>
+	///
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public List<ProcessTypeDetail> ListMachineProcessTypeDetails(string machineId, User systemOperator)
+	{
+		#region Permission validation
 
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		return _processTypeRepo.ListMachineProcessTypeDetails(machineId);
+	}
 	
 }

@@ -17,21 +17,22 @@ using SixLabors.ImageSharp;
 using EWP.SF.Common.Models.Catalogs;
 
 namespace EWP.SF.Item.BusinessLayer;
+
 public class OrderTransactionProductOperation : IOrderTransactionProductOperation
 {
-    private readonly IOrderTransactionProductRepo _orderTransactionProductRepo;
-    private readonly IApplicationSettings _applicationSettings;
+	private readonly IOrderTransactionProductRepo _orderTransactionProductRepo;
+	private readonly IApplicationSettings _applicationSettings;
 
-    private readonly IWorkOrderOperation _workOrderOperation;
+	private readonly IWorkOrderOperation _workOrderOperation;
 
-    private readonly IComponentOperation _componentOperation;
+	private readonly IComponentOperation _componentOperation;
 
 	public OrderTransactionProductOperation(IOrderTransactionProductRepo orderTransactionProductRepo, IApplicationSettings applicationSettings
 	, IWorkOrderOperation workOrderOperation, IComponentOperation componentOperation)
 	{
 		_orderTransactionProductRepo = orderTransactionProductRepo;
 		_applicationSettings = applicationSettings;
-	    _workOrderOperation = workOrderOperation;
+		_workOrderOperation = workOrderOperation;
 		_componentOperation = componentOperation;
 	}
 	/// <summary>
@@ -363,4 +364,5 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 		}
 		return returnValue;
 	}
+	
 }

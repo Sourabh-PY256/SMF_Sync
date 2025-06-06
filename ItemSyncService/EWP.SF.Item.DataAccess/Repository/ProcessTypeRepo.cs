@@ -14,23 +14,23 @@ namespace EWP.SF.Item.DataAccess;
 
 public class ProcessTypeRepo : IProcessTypeRepo
 {
-    private readonly string ConnectionString;
-    private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
-    private readonly string ConnectionStringReports;
-    private readonly string ConnectionStringLogs;
+	private readonly string ConnectionString;
+	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+	private readonly string ConnectionStringReports;
+	private readonly string ConnectionStringLogs;
 
-    private readonly string Database;
+	private readonly string Database;
 
-    public ProcessTypeRepo(IApplicationSettings applicationSettings)
-    {
-        ConnectionString = applicationSettings.GetConnectionString();
-        ConnectionStringReports = applicationSettings.GetReportsConnectionString();
-        ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
-        Database = applicationSettings.GetDatabaseFromConnectionString();
-    }
-    #region ProcessType
-    
-    public List<ProcessType> GetProcessType(string processTypeId, bool WithTool = false, DateTime? DeltaDate = null)
+	public ProcessTypeRepo(IApplicationSettings applicationSettings)
+	{
+		ConnectionString = applicationSettings.GetConnectionString();
+		ConnectionStringReports = applicationSettings.GetReportsConnectionString();
+		ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
+		Database = applicationSettings.GetDatabaseFromConnectionString();
+	}
+	#region ProcessType
+
+	public List<ProcessType> GetProcessType(string processTypeId, bool WithTool = false, DateTime? DeltaDate = null)
 	{
 		List<ProcessType> returnValue = [];
 		ProcessType element;
@@ -207,43 +207,89 @@ public class ProcessTypeRepo : IProcessTypeRepo
 		}
 		return returnValue;
 	}
-  /// <summary>
-    ///
-    /// </summary>
-    public ResponseData SaveSubOperationTypes_Bulk(string paramsJSON, User systemOperator)
-    {
-        ResponseData returnValue = new();
-        using (EWP_Connection connection = new(ConnectionString))
-        {
-            try
-            {
-                using EWP_Command command = new("SP_SF_operationsubtype_BLK", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                command.Parameters.Clear();
-                command.Parameters.AddCondition("_JSON", paramsJSON, !string.IsNullOrEmpty(paramsJSON), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Values"));
-                command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Operator"));
-                command.Parameters.AddCondition("_OperatorEmployee", () => systemOperator.EmployeeId, systemOperator is not null);
-                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+	/// <summary>
+	///
+	/// </summary>
+	public ResponseData SaveSubOperationTypes_Bulk(string paramsJSON, User systemOperator)
+	{
+		ResponseData returnValue = new();
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_operationsubtype_BLK", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_JSON", paramsJSON, !string.IsNullOrEmpty(paramsJSON), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Values"));
+				command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Operator"));
+				command.Parameters.AddCondition("_OperatorEmployee", () => systemOperator.EmployeeId, systemOperator is not null);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 
-                returnValue = new ResponseData
-                {
-                    IsSuccess = true
-                };
-            }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-        }
-        return returnValue;
-    }
+				returnValue = new ResponseData
+				{
+					IsSuccess = true
+				};
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+	/// <summary>
+	///
+	/// </summary>
+	public List<ProcessTypeDetail> ListMachineProcessTypeDetails(string machineId)
+	{
+		List<ProcessTypeDetail> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_MACHINE_PROCESSDEFAULT_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+
+				command.Parameters.AddWithValue("_MachineCode", machineId);
+				//Se requiere obtener la lista completa para no estar obteniendo registro por maquina ya que se realizan muchas peticiones a la bd
+				// command.Parameters.AddCondition("_MachineId", machineId, !string.IsNullOrEmpty(machineId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Machine"));
+
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					ProcessTypeDetail element = new()
+					{
+						Code = rdr["ParameterCode"].ToStr(),
+						ValueType = (ProcessTypeDetailSourceType)rdr["SourceType"].ToInt32(),
+						ValueSourceId = rdr["SourceValue"].ToStr()
+					};
+					(returnValue ??= []).Add(element);
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
 	
     #endregion ProcessType
 }

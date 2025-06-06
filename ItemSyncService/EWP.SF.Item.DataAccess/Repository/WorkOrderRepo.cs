@@ -82,30 +82,30 @@ public class WorkOrderRepo : IWorkOrderRepo
         return returnValue;
     }
     private static async Task ProcessToolValuesAsync(MySqlDataReader rdr, List<WorkOrder> returnValue, CancellationToken cancel)
-	{
-		// Get ordinals for ToolValues
-		int orderCodeOrdinal = rdr.GetOrdinal("OrderCode");
-		int toolIdOrdinal = rdr.GetOrdinal("ToolId");
-		int valueOrdinal = rdr.GetOrdinal("Value");
-		int codeOrdinal = rdr.GetOrdinal("Code");
+    {
+        // Get ordinals for ToolValues
+        int orderCodeOrdinal = rdr.GetOrdinal("OrderCode");
+        int toolIdOrdinal = rdr.GetOrdinal("ToolId");
+        int valueOrdinal = rdr.GetOrdinal("Value");
+        int codeOrdinal = rdr.GetOrdinal("Code");
 
-		while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
-		{
-			string id = rdr[orderCodeOrdinal].ToStr();
-			WorkOrder element = returnValue.Find(x => x.Id == id);
-			if (element is not null)
-			{
-				ToolValue toolValue = new()
-				{
-					ToolId = rdr[toolIdOrdinal].ToStr(),
-					Value = rdr[valueOrdinal].ToStr(),
-					Code = rdr[codeOrdinal].ToStr()
-				};
+        while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+        {
+            string id = rdr[orderCodeOrdinal].ToStr();
+            WorkOrder element = returnValue.Find(x => x.Id == id);
+            if (element is not null)
+            {
+                ToolValue toolValue = new()
+                {
+                    ToolId = rdr[toolIdOrdinal].ToStr(),
+                    Value = rdr[valueOrdinal].ToStr(),
+                    Code = rdr[codeOrdinal].ToStr()
+                };
 
-				element.ToolValues.Add(toolValue);
-			}
-		}
-	}
+                element.ToolValues.Add(toolValue);
+            }
+        }
+    }
     /// <summary>
     ///
     /// </summary>
@@ -472,173 +472,417 @@ public class WorkOrderRepo : IWorkOrderRepo
         }
     }
     private static async Task ProcessWorkOrderProcessesAsync(MySqlDataReader rdr, List<WorkOrder> returnValue, CancellationToken cancel)
+    {
+        // Get ordinals for WorkOrder Processes
+        int orderCodeOrdinal = rdr.GetOrdinal("OrderCode");
+        int operationNoOrdinal = rdr.GetOrdinal("OperationNo");
+        int operationTypeCodeOrdinal = rdr.GetOrdinal("OperationTypeCode");
+        int operationSubtypeCodeOrdinal = rdr.GetOrdinal("OperationSubtypeCode");
+        int stepOrdinal = rdr.GetOrdinal("Step");
+        int parentCodeOrdinal = rdr.GetOrdinal("ParentCode");
+        int machineCodeOrdinal = rdr.GetOrdinal("MachineCode");
+        int nameOrdinal = rdr.GetOrdinal("Name");
+        int isOutputOrdinal = rdr.GetOrdinal("IsOutput");
+        int outputItemCodeOrdinal = rdr.GetOrdinal("OutputItemCode");
+        int statusOrdinal = rdr.GetOrdinal("Status");
+        int totalOrdinal = rdr.GetOrdinal("Total");
+        int acceptedOrdinal = rdr.GetOrdinal("Accepted");
+        int rejectedOrdinal = rdr.GetOrdinal("Rejected");
+        int machineAcceptedOrdinal = rdr.GetOrdinal("MachineAccepted");
+        int machineRejectedOrdinal = rdr.GetOrdinal("MachineRejected");
+        int commentsOrdinal = rdr.GetOrdinal("Comments");
+        int originalMachineCodeOrdinal = rdr.GetOrdinal("OriginalMachineCode");
+        int machineStatuOrdinal = rdr.GetOrdinal("MachineStatus");
+        int lineNoOrdinal = rdr.GetOrdinal("LineNo");
+        int lineUIDOrdinal = rdr.GetOrdinal("LineUID");
+        int plannedSetupStartOrdinal = rdr.GetOrdinal("PlannedSetupStartDate");
+        int plannedSetupEndOrdinal = rdr.GetOrdinal("PlannedSetupEndDate");
+        int plannedStartDateOrdinal = rdr.GetOrdinal("PlannedStartDate");
+        int plannedEndDateOrdinal = rdr.GetOrdinal("PlannedEndDate");
+        int realStartDateOrdinal = rdr.GetOrdinal("RealStartDate");
+        int realEndDateOrdinal = rdr.GetOrdinal("RealEndDate");
+        int realStartDateUTCOrdinal = rdr.GetOrdinal("RealStartDateUTC");
+        int realEndDateUTCOrdinal = rdr.GetOrdinal("RealEndDateUTC");
+        int setupTimeOrdinal = rdr.GetOrdinal("SetupTime");
+        int execTimeOrdinal = rdr.GetOrdinal("ExecTime");
+        int waitTimeOrdinal = rdr.GetOrdinal("WaitTime");
+        int isBackflushOrdinal = rdr.GetOrdinal("IsBackflush");
+        int issuedTimeOrdinal = rdr.GetOrdinal("IssuedTime");
+        int classIdOrdinal = rdr.GetOrdinal("OperationClassId");
+        while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+        {
+            string id = rdr[orderCodeOrdinal].ToStr();
+            WorkOrder element = returnValue.Find(x => x.Id == id);
+            if (element is not null)
+            {
+                OrderProcess process = new()
+                {
+                    ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
+                    ProcessSubTypeId = rdr[operationSubtypeCodeOrdinal].ToStr(),
+                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    Step = rdr[stepOrdinal].ToInt32(),
+                    ProductionLineId = rdr[parentCodeOrdinal].ToStr(),
+                    MachineId = rdr[machineCodeOrdinal].ToStr(),
+                    OperationName = rdr[nameOrdinal].ToStr(),
+                    IsOutput = rdr[isOutputOrdinal].ToBool(),
+                    Output = rdr[outputItemCodeOrdinal].ToStr(),
+                    Status = (Status)rdr[statusOrdinal].ToInt32(),
+                    Total = rdr[totalOrdinal].ToDouble(),
+                    Received = rdr[acceptedOrdinal].ToDouble(),
+                    Rejected = rdr[rejectedOrdinal].ToDouble(),
+                    MachineReceived = rdr[machineAcceptedOrdinal].ToDouble(),
+                    MachineRejected = rdr[machineRejectedOrdinal].ToDouble(),
+                    Comments = rdr[commentsOrdinal].ToStr(),
+                    OriginalMachineId = rdr[originalMachineCodeOrdinal].ToStr(),
+                    MachineStatus = (Status)rdr[machineStatuOrdinal].ToInt32(),
+                    LineId = rdr[lineNoOrdinal].ToStr(),
+                    LineUID = rdr[lineUIDOrdinal].ToStr(),
+                    PlannedSetupStart = rdr[plannedSetupStartOrdinal].ToDate(),
+                    PlannedSetupEnd = rdr[plannedSetupEndOrdinal].ToDate(),
+                    SetupTime = rdr[setupTimeOrdinal].ToDouble(),
+                    ExecTime = rdr[execTimeOrdinal].ToDouble(),
+                    WaitTime = rdr[waitTimeOrdinal].ToDouble(),
+                    IssuedTime = rdr[issuedTimeOrdinal].ToDouble(),
+                    IsBackflush = rdr[isBackflushOrdinal].ToBool(),
+                    Class = rdr[classIdOrdinal].ToStr()
+                };
+                if (process.PlannedSetupEnd.HasValue && process.PlannedSetupEnd.Value.Year <= 1900)
+                {
+                    process.PlannedSetupEnd = null;
+                }
+
+                if (process.PlannedSetupStart.HasValue && process.PlannedSetupStart.Value.Year <= 1900)
+                {
+                    process.PlannedSetupStart = null;
+                }
+                if (rdr[plannedStartDateOrdinal].ToDate().Year > 1900)
+                {
+                    process.PlannedStart = rdr[plannedStartDateOrdinal].ToDate();
+                }
+                if (rdr[plannedEndDateOrdinal].ToDate().Year > 1900)
+                {
+                    process.PlannedEnd = rdr[plannedEndDateOrdinal].ToDate();
+                }
+
+                if (rdr[realStartDateOrdinal].ToDate().Year > 1900)
+                {
+                    process.RealStart = rdr[realStartDateOrdinal].ToDate();
+                    process.RealStartUTC = rdr[realStartDateUTCOrdinal].ToDate();
+                }
+                if (rdr[realEndDateOrdinal].ToDate().Year > 1900)
+                {
+                    process.RealEnd = rdr[realEndDateOrdinal].ToDate();
+                    process.RealEndUTC = rdr[realEndDateUTCOrdinal].ToDate();
+                }
+                element.Processes.Add(process);
+            }
+        }
+    }
+
+    private static async Task ProcessWorkOrderComponentsAsync(MySqlDataReader rdr, List<WorkOrder> returnValue, CancellationToken cancel)
+    {
+        // Get ordinals for WorkOrder Components
+        int orderCodeOrdinal = rdr.GetOrdinal("OrderCode");
+        int operationNoOrdinal = rdr.GetOrdinal("OperationNo");
+        int itemCodeOrdinal = rdr.GetOrdinal("ItemCode");
+        int itemNameOrdinal = rdr.GetOrdinal("ItemName");
+        int targetQtyOrdinal = rdr.GetOrdinal("TargetQty");
+        int targetUnitOrdinal = rdr.GetOrdinal("TargetUnit");
+        int inputQtyOrdinal = rdr.GetOrdinal("InputQty");
+        int inputUnitOrdinal = rdr.GetOrdinal("InputUnit");
+        int statusOrdinal = rdr.GetOrdinal("Status");
+        int warehouseCodeOrdinal = rdr.GetOrdinal("WarehouseCode");
+        int commentsOrdinal = rdr.GetOrdinal("Comments");
+        int operationTypeCodeOrdinal = rdr.GetOrdinal("OperationTypeCode");
+        int StepOrdinal = rdr.GetOrdinal("Step");
+        int LineNoOrdinal = rdr.GetOrdinal("LineNo");
+        int originalItemOrdinal = rdr.GetOrdinal("OriginalItemCode");
+        int isbackflushOrdinal = rdr.GetOrdinal("IsBackFlush");
+        int typeOrdinal = rdr.GetOrdinal("Type");
+        int materialImageOrdinal = rdr.GetOrdinal("MaterialImage");
+        int lineUIDOrdinal = rdr.GetOrdinal("LineUID");
+        int sourceOrdinal = rdr.GetOrdinal("Source");
+        int managedByOrdinal = rdr.GetOrdinal("ManagedBy");
+
+        while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+        {
+            string id = rdr[orderCodeOrdinal].ToStr();
+            WorkOrder element = returnValue.Find(x => x.Id == id);
+            if (element is not null)
+            {
+                OrderComponent component = new()
+                {
+                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    ComponentType = ComponentType.Material,
+                    SourceId = rdr[itemCodeOrdinal].ToStr(),
+                    ComponentName = rdr[itemNameOrdinal].ToStr(),
+                    ComponentCode = rdr[itemCodeOrdinal].ToStr(),
+                    TargetQty = rdr[targetQtyOrdinal].ToDouble(),
+                    TargetUnitId = rdr[targetUnitOrdinal].ToStr(),
+                    InputQty = rdr[inputQtyOrdinal].ToDouble(),
+                    InputUnitId = rdr[inputUnitOrdinal].ToStr(),
+                    Status = (Status)rdr[statusOrdinal].ToInt32(),
+                    WarehouseCode = rdr[warehouseCodeOrdinal].ToStr(),
+                    Comments = rdr[commentsOrdinal].ToStr(),
+                    ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
+                    Step = rdr[StepOrdinal].ToInt32(),
+                    SourceTypeId = "2",
+                    LineId = rdr[LineNoOrdinal].ToStr(),
+                    OriginalSourceId = rdr[originalItemOrdinal].ToStr(),
+                    IsBackflush = rdr[isbackflushOrdinal].ToBool(),
+                    MaterialType = rdr[typeOrdinal].ToInt32(),
+                    MaterialImage = rdr[materialImageOrdinal].ToStr(),
+                    LineUID = rdr[lineUIDOrdinal].ToStr(),
+                    Source = rdr[sourceOrdinal].ToStr(),
+                    ManagedBy = rdr[managedByOrdinal].ToStr(),
+                };
+
+                element.Components.Add(component);
+            }
+        }
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public List<ReturnMaterialContext> GetProductReturnContext(string workOrderId)
+    {
+        List<ReturnMaterialContext> returnValue = [];
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_ProductReturnContext", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+
+                command.Parameters.AddCondition("_OrderCode", workOrderId, !string.IsNullOrEmpty(workOrderId));
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int OrderCodeOrdinal = rdr.GetOrdinal("OrderCode");
+                int OperationNoOrdinal = rdr.GetOrdinal("OperationNo");
+                int MachineCodeOrdinal = rdr.GetOrdinal("MachineCode");
+                int OriginalMachineCodeOrdinal = rdr.GetOrdinal("OriginalMachineCode");
+                int ItemCodeOrdinal = rdr.GetOrdinal("ItemCode");
+                int StepOrdinal = rdr.GetOrdinal("Step");
+                int NameOrdinal = rdr.GetOrdinal("Name");
+                int ItemImageOrdinal = rdr.GetOrdinal("ItemImage");
+                int UnitOrdinal = rdr.GetOrdinal("Unit");
+                int BatchNumberOrdinal = rdr.GetOrdinal("BatchNumber");
+                int BinLocationCodeOrdinal = rdr.GetOrdinal("BinLocationCode");
+                int PalletOrdinal = rdr.GetOrdinal("Pallet");
+                int LineNoOrdinal = rdr.GetOrdinal("LineNo");
+                int QuantityOrdinal = rdr.GetOrdinal("Quantity");
+                int InventoryStatusCodeOrdinal = rdr.GetOrdinal("InventoryStatusCode");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    ReturnMaterialContext element = new()
+                    {
+                        WorkOrderId = rdr[OrderCodeOrdinal].ToStr(),
+                        ProcessId = rdr[OperationNoOrdinal].ToStr(),
+                        MachineId = rdr[MachineCodeOrdinal].ToStr(),
+                        OriginalMachineId = rdr[OriginalMachineCodeOrdinal].ToStr(),
+                        ComponentId = rdr[ItemCodeOrdinal].ToStr(),
+                        Step = rdr[StepOrdinal].ToInt32(),
+                        ComponentName = rdr[NameOrdinal].ToStr(),
+                        ComponentCode = rdr[ItemCodeOrdinal].ToStr(),
+                        ComponentImage = rdr[ItemImageOrdinal].ToStr(),
+                        ComponentUnit = rdr[UnitOrdinal].ToStr(),
+                        Lot = rdr[BatchNumberOrdinal].ToStr(),
+                        Location = rdr[BinLocationCodeOrdinal].ToStr(),
+                        Pallet = rdr[PalletOrdinal].ToStr(),
+                        LineId = rdr[LineNoOrdinal].ToStr(),
+                        Quantity = rdr[QuantityOrdinal].ToDouble(),
+                        InventoryStatus = rdr[InventoryStatusCodeOrdinal].ToStr()
+                    };
+                    returnValue.Add(element);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public WorkOrderResponse MergeWorkOrderChangeStatus(WorkOrderChangeStatus workorderInfo, User systemOperator, bool Validation, LevelMessage Level)
+    {
+        WorkOrderResponse returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Order_ChangeStatus_INS", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddWithValue("_IsValidation", Validation);
+                command.Parameters.AddCondition("_Id", workorderInfo.OrderId, !string.IsNullOrEmpty(workorderInfo.OrderId));
+                command.Parameters.AddCondition("_Code", workorderInfo.OrderCode, !string.IsNullOrEmpty(workorderInfo.OrderCode));
+                command.Parameters.AddWithValue("_Status", workorderInfo.Status);
+                command.Parameters.AddCondition("_User", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+                command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int ActionOrdinal = rdr.GetOrdinal("Action");
+                int IsSuccessOrdinal = rdr.GetOrdinal("IsSuccess");
+                int CodeOrdinal = rdr.GetOrdinal("Code");
+                int MessageOrdinal = rdr.GetOrdinal("Message");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    returnValue = new WorkOrderResponse
+                    {
+                        Action = (ActionDB)rdr[ActionOrdinal].ToInt32(),
+                        IsSuccess = rdr[IsSuccessOrdinal].ToInt32().ToBool(),
+                        Code = rdr[CodeOrdinal].ToStr(),
+                        Message = rdr[MessageOrdinal].ToStr(),
+                    };
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public WorkOrder GetWorkOrderByCode(string workOrderCode)
 	{
-		// Get ordinals for WorkOrder Processes
-		int orderCodeOrdinal = rdr.GetOrdinal("OrderCode");
-		int operationNoOrdinal = rdr.GetOrdinal("OperationNo");
-		int operationTypeCodeOrdinal = rdr.GetOrdinal("OperationTypeCode");
-		int operationSubtypeCodeOrdinal = rdr.GetOrdinal("OperationSubtypeCode");
-		int stepOrdinal = rdr.GetOrdinal("Step");
-		int parentCodeOrdinal = rdr.GetOrdinal("ParentCode");
-		int machineCodeOrdinal = rdr.GetOrdinal("MachineCode");
-		int nameOrdinal = rdr.GetOrdinal("Name");
-		int isOutputOrdinal = rdr.GetOrdinal("IsOutput");
-		int outputItemCodeOrdinal = rdr.GetOrdinal("OutputItemCode");
-		int statusOrdinal = rdr.GetOrdinal("Status");
-		int totalOrdinal = rdr.GetOrdinal("Total");
-		int acceptedOrdinal = rdr.GetOrdinal("Accepted");
-		int rejectedOrdinal = rdr.GetOrdinal("Rejected");
-		int machineAcceptedOrdinal = rdr.GetOrdinal("MachineAccepted");
-		int machineRejectedOrdinal = rdr.GetOrdinal("MachineRejected");
-		int commentsOrdinal = rdr.GetOrdinal("Comments");
-		int originalMachineCodeOrdinal = rdr.GetOrdinal("OriginalMachineCode");
-		int machineStatuOrdinal = rdr.GetOrdinal("MachineStatus");
-		int lineNoOrdinal = rdr.GetOrdinal("LineNo");
-		int lineUIDOrdinal = rdr.GetOrdinal("LineUID");
-		int plannedSetupStartOrdinal = rdr.GetOrdinal("PlannedSetupStartDate");
-		int plannedSetupEndOrdinal = rdr.GetOrdinal("PlannedSetupEndDate");
-		int plannedStartDateOrdinal = rdr.GetOrdinal("PlannedStartDate");
-		int plannedEndDateOrdinal = rdr.GetOrdinal("PlannedEndDate");
-		int realStartDateOrdinal = rdr.GetOrdinal("RealStartDate");
-		int realEndDateOrdinal = rdr.GetOrdinal("RealEndDate");
-		int realStartDateUTCOrdinal = rdr.GetOrdinal("RealStartDateUTC");
-		int realEndDateUTCOrdinal = rdr.GetOrdinal("RealEndDateUTC");
-		int setupTimeOrdinal = rdr.GetOrdinal("SetupTime");
-		int execTimeOrdinal = rdr.GetOrdinal("ExecTime");
-		int waitTimeOrdinal = rdr.GetOrdinal("WaitTime");
-		int isBackflushOrdinal = rdr.GetOrdinal("IsBackflush");
-		int issuedTimeOrdinal = rdr.GetOrdinal("IssuedTime");
-		int classIdOrdinal = rdr.GetOrdinal("OperationClassId");
-		while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+		WorkOrder returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
 		{
-			string id = rdr[orderCodeOrdinal].ToStr();
-			WorkOrder element = returnValue.Find(x => x.Id == id);
-			if (element is not null)
+			try
 			{
-				OrderProcess process = new()
+				using EWP_Command command = new("SP_SF_Order_Code_SEL", connection)
 				{
-					ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
-					ProcessSubTypeId = rdr[operationSubtypeCodeOrdinal].ToStr(),
-					ProcessId = rdr[operationNoOrdinal].ToStr(),
-					Step = rdr[stepOrdinal].ToInt32(),
-					ProductionLineId = rdr[parentCodeOrdinal].ToStr(),
-					MachineId = rdr[machineCodeOrdinal].ToStr(),
-					OperationName = rdr[nameOrdinal].ToStr(),
-					IsOutput = rdr[isOutputOrdinal].ToBool(),
-					Output = rdr[outputItemCodeOrdinal].ToStr(),
-					Status = (Status)rdr[statusOrdinal].ToInt32(),
-					Total = rdr[totalOrdinal].ToDouble(),
-					Received = rdr[acceptedOrdinal].ToDouble(),
-					Rejected = rdr[rejectedOrdinal].ToDouble(),
-					MachineReceived = rdr[machineAcceptedOrdinal].ToDouble(),
-					MachineRejected = rdr[machineRejectedOrdinal].ToDouble(),
-					Comments = rdr[commentsOrdinal].ToStr(),
-					OriginalMachineId = rdr[originalMachineCodeOrdinal].ToStr(),
-					MachineStatus = (Status)rdr[machineStatuOrdinal].ToInt32(),
-					LineId = rdr[lineNoOrdinal].ToStr(),
-					LineUID = rdr[lineUIDOrdinal].ToStr(),
-					PlannedSetupStart = rdr[plannedSetupStartOrdinal].ToDate(),
-					PlannedSetupEnd = rdr[plannedSetupEndOrdinal].ToDate(),
-					SetupTime = rdr[setupTimeOrdinal].ToDouble(),
-					ExecTime = rdr[execTimeOrdinal].ToDouble(),
-					WaitTime = rdr[waitTimeOrdinal].ToDouble(),
-					IssuedTime = rdr[issuedTimeOrdinal].ToDouble(),
-					IsBackflush = rdr[isBackflushOrdinal].ToBool(),
-					Class = rdr[classIdOrdinal].ToStr()
+					CommandType = CommandType.StoredProcedure
 				};
-				if (process.PlannedSetupEnd.HasValue && process.PlannedSetupEnd.Value.Year <= 1900)
-				{
-					process.PlannedSetupEnd = null;
-				}
+				command.Parameters.Clear();
 
-				if (process.PlannedSetupStart.HasValue && process.PlannedSetupStart.Value.Year <= 1900)
-				{
-					process.PlannedSetupStart = null;
-				}
-				if (rdr[plannedStartDateOrdinal].ToDate().Year > 1900)
-				{
-					process.PlannedStart = rdr[plannedStartDateOrdinal].ToDate();
-				}
-				if (rdr[plannedEndDateOrdinal].ToDate().Year > 1900)
-				{
-					process.PlannedEnd = rdr[plannedEndDateOrdinal].ToDate();
-				}
+				command.Parameters.AddCondition("_Order", workOrderCode, !string.IsNullOrEmpty(workOrderCode));
+				/*command.Parameters.AddNull("_Status");
+                command.Parameters.AddNull("_StartDate");
+                command.Parameters.AddNull("_EndDate");
+                command.Parameters.AddWithValue("_ListOnly", 0);*/
 
-				if (rdr[realStartDateOrdinal].ToDate().Year > 1900)
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				int OrderCodeOrdinal = rdr.GetOrdinal("OrderCode");
+
+				int ProductNameOrdinal = rdr.GetOrdinal("ProductName");
+				int ProductCodeOrdinal = rdr.GetOrdinal("ProductCode");
+				int ProductIdOrdinal = rdr.GetOrdinal("ProductId");
+				int PlannedQtyOrdinal = rdr.GetOrdinal("PlannedQty");
+				int PlannedStartDateUTCOrdinal = rdr.GetOrdinal("PlannedStartDateUTC");
+				int PlannedStartDateOrdinal = rdr.GetOrdinal("PlannedStartDate");
+				int PlannedEndDateOrdinal = rdr.GetOrdinal("PlannedEndDate");
+				int DueDateOrdinal = rdr.GetOrdinal("DueDate");
+				int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
+				int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
+				int StatusOrdinal = rdr.GetOrdinal("Status");
+				int AcceptedQtyOrdinal = rdr.GetOrdinal("AcceptedQty");
+				int RejectedQtyOrdinal = rdr.GetOrdinal("RejectedQty");
+				int ProductionLinesOrdinal = rdr.GetOrdinal("ProductionLines");
+				int HasAllocationOrdinal = rdr.GetOrdinal("HasAllocation");
+				int APSOrdinal = rdr.GetOrdinal("APS");
+				int WarehouseCodeOrdinal = rdr.GetOrdinal("WarehouseCode");
+				int OrderGroupOrdinal = rdr.GetOrdinal("OrderGroup");
+				int OrderTypeOrdinal = rdr.GetOrdinal("OrderType");
+				int FormulaOrdinal = rdr.GetOrdinal("Formula");
+				int CommentsOrdinal = rdr.GetOrdinal("Comments");
+				int SalesOrderOrdinal = rdr.GetOrdinal("SalesOrder");
+				int UnitOrdinal = rdr.GetOrdinal("Unit");
+				int UpdateDateOrdinal = rdr.GetOrdinal("UpdateDate");
+				int UpdateUserOrdinal = rdr.GetOrdinal("UpdateUser");
+				int RealStartDateOrdinal = rdr.GetOrdinal("RealStartDate");
+				int RealStartDateUTCOrdinal = rdr.GetOrdinal("RealStartDateUTC");
+				int RealEndDateOrdinal = rdr.GetOrdinal("RealEndDate");
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
 				{
-					process.RealStart = rdr[realStartDateOrdinal].ToDate();
-					process.RealStartUTC = rdr[realStartDateUTCOrdinal].ToDate();
+					returnValue = new WorkOrder
+					{
+						Id = rdr[OrderCodeOrdinal].ToStr(),
+						ExternalId = rdr[OrderCodeOrdinal].ToStr(),
+						OrderCode = rdr[OrderCodeOrdinal].ToStr(),
+						ProductName = rdr[ProductNameOrdinal].ToStr(),
+						ProductCode = rdr[ProductCodeOrdinal].ToStr(),
+						ProcessEntryId = rdr[ProductIdOrdinal].ToStr(),
+						PlannedQty = rdr[PlannedQtyOrdinal].ToDouble(),
+						PlannedStartUTC = rdr[PlannedStartDateUTCOrdinal].ToDate(),
+						PlannedStart = rdr[PlannedStartDateOrdinal].ToDate(),
+						PlannedEnd = rdr[PlannedEndDateOrdinal].ToDate(),
+						DueDate = rdr[DueDateOrdinal].ToDate(),
+						CreationDate = rdr[CreateDateOrdinal].ToDate(),
+						CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
+						Status = (Status)rdr[StatusOrdinal].ToInt32(),
+						ReceivedQty = rdr[AcceptedQtyOrdinal].ToDouble() + rdr[RejectedQtyOrdinal].ToDouble(),
+						AcceptedQty = rdr[AcceptedQtyOrdinal].ToDouble(),
+						RejectedQty = rdr[RejectedQtyOrdinal].ToDouble(),
+						ProductionLines = [.. rdr[ProductionLinesOrdinal].ToStr().Split(',')],
+						IsAllocated = rdr[HasAllocationOrdinal].ToBool(),
+						APS = rdr[APSOrdinal].ToBool(),
+						WarehouseId = rdr[WarehouseCodeOrdinal].ToStr(),
+						OrderGroup = rdr[OrderGroupOrdinal].ToStr(),
+						OrderType = rdr[OrderTypeOrdinal].ToStr(),
+						Formula = rdr[FormulaOrdinal].ToStr(),
+						Comments = rdr[CommentsOrdinal].ToStr(),
+						SalesOrder = rdr[SalesOrderOrdinal].ToStr(),
+						UnitId = rdr[UnitOrdinal].ToStr(),
+						Processes = [],
+						Components = [],
+						ToolValues = []
+					};
+
+					if (rdr[UpdateDateOrdinal].ToDate().Year > 1900)
+					{
+						returnValue.ModifyDate = rdr[UpdateDateOrdinal].ToDate();
+						returnValue.ModifiedBy = new User(rdr[UpdateUserOrdinal].ToInt32());
+					}
+					if (rdr[RealStartDateOrdinal].ToDate().Year > 1900)
+					{
+						returnValue.RealStartUTC = rdr[RealStartDateUTCOrdinal].ToDate();
+						returnValue.RealStart = rdr[RealStartDateOrdinal].ToDate();
+					}
+					if (rdr[RealEndDateOrdinal].ToDate().Year > 1900)
+					{
+						returnValue.RealEnd = rdr[RealEndDateOrdinal].ToDate();
+					}
+
+					returnValue ??= new WorkOrder();
 				}
-				if (rdr[realEndDateOrdinal].ToDate().Year > 1900)
-				{
-					process.RealEnd = rdr[realEndDateOrdinal].ToDate();
-					process.RealEndUTC = rdr[realEndDateUTCOrdinal].ToDate();
-				}
-				element.Processes.Add(process);
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 			}
 		}
-	}
-
-	private static async Task ProcessWorkOrderComponentsAsync(MySqlDataReader rdr, List<WorkOrder> returnValue, CancellationToken cancel)
-	{
-		// Get ordinals for WorkOrder Components
-		int orderCodeOrdinal = rdr.GetOrdinal("OrderCode");
-		int operationNoOrdinal = rdr.GetOrdinal("OperationNo");
-		int itemCodeOrdinal = rdr.GetOrdinal("ItemCode");
-		int itemNameOrdinal = rdr.GetOrdinal("ItemName");
-		int targetQtyOrdinal = rdr.GetOrdinal("TargetQty");
-		int targetUnitOrdinal = rdr.GetOrdinal("TargetUnit");
-		int inputQtyOrdinal = rdr.GetOrdinal("InputQty");
-		int inputUnitOrdinal = rdr.GetOrdinal("InputUnit");
-		int statusOrdinal = rdr.GetOrdinal("Status");
-		int warehouseCodeOrdinal = rdr.GetOrdinal("WarehouseCode");
-		int commentsOrdinal = rdr.GetOrdinal("Comments");
-		int operationTypeCodeOrdinal = rdr.GetOrdinal("OperationTypeCode");
-		int StepOrdinal = rdr.GetOrdinal("Step");
-		int LineNoOrdinal = rdr.GetOrdinal("LineNo");
-		int originalItemOrdinal = rdr.GetOrdinal("OriginalItemCode");
-		int isbackflushOrdinal = rdr.GetOrdinal("IsBackFlush");
-		int typeOrdinal = rdr.GetOrdinal("Type");
-		int materialImageOrdinal = rdr.GetOrdinal("MaterialImage");
-		int lineUIDOrdinal = rdr.GetOrdinal("LineUID");
-		int sourceOrdinal = rdr.GetOrdinal("Source");
-		int managedByOrdinal = rdr.GetOrdinal("ManagedBy");
-
-		while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
-		{
-			string id = rdr[orderCodeOrdinal].ToStr();
-			WorkOrder element = returnValue.Find(x => x.Id == id);
-			if (element is not null)
-			{
-				OrderComponent component = new()
-				{
-					ProcessId = rdr[operationNoOrdinal].ToStr(),
-					ComponentType = ComponentType.Material,
-					SourceId = rdr[itemCodeOrdinal].ToStr(),
-					ComponentName = rdr[itemNameOrdinal].ToStr(),
-					ComponentCode = rdr[itemCodeOrdinal].ToStr(),
-					TargetQty = rdr[targetQtyOrdinal].ToDouble(),
-					TargetUnitId = rdr[targetUnitOrdinal].ToStr(),
-					InputQty = rdr[inputQtyOrdinal].ToDouble(),
-					InputUnitId = rdr[inputUnitOrdinal].ToStr(),
-					Status = (Status)rdr[statusOrdinal].ToInt32(),
-					WarehouseCode = rdr[warehouseCodeOrdinal].ToStr(),
-					Comments = rdr[commentsOrdinal].ToStr(),
-					ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
-					Step = rdr[StepOrdinal].ToInt32(),
-					SourceTypeId = "2",
-					LineId = rdr[LineNoOrdinal].ToStr(),
-					OriginalSourceId = rdr[originalItemOrdinal].ToStr(),
-					IsBackflush = rdr[isbackflushOrdinal].ToBool(),
-					MaterialType = rdr[typeOrdinal].ToInt32(),
-					MaterialImage = rdr[materialImageOrdinal].ToStr(),
-					LineUID = rdr[lineUIDOrdinal].ToStr(),
-					Source = rdr[sourceOrdinal].ToStr(),
-					ManagedBy = rdr[managedByOrdinal].ToStr(),
-				};
-
-				element.Components.Add(component);
-			}
-		}
+		return returnValue;
 	}
 }

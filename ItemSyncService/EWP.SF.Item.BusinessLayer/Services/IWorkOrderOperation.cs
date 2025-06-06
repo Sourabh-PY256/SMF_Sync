@@ -10,4 +10,8 @@ public interface IWorkOrderOperation
     Task<double> GetTimezoneOffset(string offSetName = "");
     Task<List<WorkOrder>> GetWorkOrder(string workOrderId);
     List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level);
+    Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level);
+
+
+
 }

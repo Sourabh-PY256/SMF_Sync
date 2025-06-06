@@ -170,6 +170,22 @@ public class WarehouseOperation : IWarehouseOperation
         }
         return returntValue;
     }
+/// <summary>
+	///
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public List<Warehouse> ListWarehouse(User systemOperator, string WarehouseCode = "", DateTime? DeltaDate = null)
+	{
+		#region Permission validation
 
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		return _warehouseRepo.ListWarehouse(WarehouseCode, DeltaDate);
+	}
     #endregion Warehouse
 }

@@ -2,6 +2,7 @@ using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 
 namespace EWP.SF.Item.BusinessLayer;
+
 public interface IAssetOperation
 {
     Task<ResponseData> CreateFacility(Facility FacilityInfo, User systemOperator
@@ -24,4 +25,5 @@ public interface IAssetOperation
         , string Level = "Success"
         , bool NotifyOnce = true
         );
+        Task<List<ResponseData>> CreateAssetsExternal(List<AssetExternal> AssetsList, List<AssetExternal> AssetListOriginal, User user, bool Validate, string Level);
 }

@@ -17,4 +17,8 @@ public interface IEmployeeRepo
     List<EmployeeContractsDetail> CreateEmployeeContractsDetail(string employeeId, string XML, User systemOperator);
     List<EmployeeSkills> EmployeeSkillsList(string id);
     List<EmployeeContractsDetail> ContractsDetailList(string id);
+    Employee GetEmployee(string id);
+    ResponseData MRGEmployee(Employee employee, bool Validation, User systemOperator);
+
+    List<Employee> ListEmployees(string employeeId, string code, DateTime? DeltaDate = null);
 }
