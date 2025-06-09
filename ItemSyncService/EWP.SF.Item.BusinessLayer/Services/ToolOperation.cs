@@ -18,7 +18,7 @@ public class ToolOperation : IToolOperation
 
     private readonly IAttachmentOperation _attachmentOperation;
 
-    public ToolOperation(IToolRepo toolRepo,ICatalogRepo catalogRepo, IApplicationSettings applicationSettings
+    public ToolOperation(IToolRepo toolRepo, ICatalogRepo catalogRepo, IApplicationSettings applicationSettings
     , IProcessTypeOperation processTypeOperation, IAttachmentOperation attachmentOperation)
     {
 
@@ -192,48 +192,53 @@ public class ToolOperation : IToolOperation
 	/// </summary>
 	/// <exception cref="UnauthorizedAccessException"></exception>
 	public async Task<ResponseData> CreateToolType(ToolType toolTypeInfo, User systemOperator
-		, bool Validate = false, bool NotifyOnce = true)
-	{
-		ResponseData returnValue;
-		ToolType tooltype = null;
+        , bool Validate = false, bool NotifyOnce = true)
+    {
+        ResponseData returnValue;
+        ToolType tooltype = null;
 
-		#region Permission validation
+        #region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_TOOLTYPE_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+        // if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_TOOLTYPE_MANAGE))
+        // {
+        // 	throw new UnauthorizedAccessException(noPermission);
+        // }
 
-		#endregion Permission validation
+        #endregion Permission validation
 
-		returnValue = _toolRepo.CreateToolType(toolTypeInfo, systemOperator, Validate);
-		if (returnValue.IsSuccess)
-		{
-			tooltype = ListToolTypes(returnValue.Code).Find(static x => x.Status != Status.Failed);
-		}
-		if (!Validate && tooltype is not null)
-		{
-			// await tooltype.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
-			if (NotifyOnce)
-			{
-				await _attachmentOperation.SaveImageEntity("ToolingType", toolTypeInfo.Image, toolTypeInfo.Code, systemOperator).ConfigureAwait(false);
-				if (toolTypeInfo.AttachmentIds is not null)
-				{
-					foreach (string attachment in toolTypeInfo.AttachmentIds)
-					{
-						await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
-					}
-				}
-				// Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged
-				// 	, new { Catalog = Entities.ToolType, returnValue.Action, Data = tooltype }, returnValue.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
-			}
-		}
-		return returnValue;
-	}
+        returnValue = _toolRepo.CreateToolType(toolTypeInfo, systemOperator, Validate);
+        if (returnValue.IsSuccess)
+        {
+            tooltype = ListToolTypes(returnValue.Code).Find(static x => x.Status != Status.Failed);
+        }
+        if (!Validate && tooltype is not null)
+        {
+            // await tooltype.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+            if (NotifyOnce)
+            {
+                await _attachmentOperation.SaveImageEntity("ToolingType", toolTypeInfo.Image, toolTypeInfo.Code, systemOperator).ConfigureAwait(false);
+                if (toolTypeInfo.AttachmentIds is not null)
+                {
+                    foreach (string attachment in toolTypeInfo.AttachmentIds)
+                    {
+                        await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+                    }
+                }
+                // Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged
+                // 	, new { Catalog = Entities.ToolType, returnValue.Action, Data = tooltype }, returnValue.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
+            }
+        }
+        return returnValue;
+    }
 
     public List<ToolType> ListToolTypes(string ToolTypeCode, DateTime? DeltaDate = null) => _toolRepo.ListToolType(ToolTypeCode, DeltaDate);
+    
+    /// <summary>
+	///
+	/// </summary>
+	public List<Tool> ListTools(string ToolCode = "", DateTime? DeltaDate = null) => _toolRepo.ListTools(ToolCode, DeltaDate);
     /// <summary>
     ///
     /// </summary>
-    
+
 }

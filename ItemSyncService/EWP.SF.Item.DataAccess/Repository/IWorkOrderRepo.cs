@@ -12,6 +12,14 @@ public interface IWorkOrderRepo
 
     WorkOrderResponse MergeWorkOrderChangeStatus(WorkOrderChangeStatus workorderInfo, User systemOperator, bool Validation, LevelMessage Level);
     WorkOrder GetWorkOrderByCode(string workOrderCode);
+    WorkOrderResponse MergeWorkOrder(WorkOrder workorderInfo, User systemOperator, bool Validation, LevelMessage Level, ActionDB? mode = null, IntegrationSource intSrc = IntegrationSource.SF);
+    bool MergeWorkOrderProcesses(WorkOrder workorderInfo, string processXML, User systemOperator);
+    bool MergeWorkOrderComponents(WorkOrder workorderInfo, string componentJson, User systemOperator);
+    bool MergeWorkOrderTooling(WorkOrder workorderInfo, string toolingJson, User systemOperator);
+    bool MergeWorkOrderSubproducts(WorkOrder workorderInfo, string subproductXML, User systemOperator);
+    bool MergeWorkOrderToolValues(WorkOrder workorderInfo, string toolValuesXML, User systemOperator);
+    bool MergeWorkOrderLabor(WorkOrder workorderInfo, string JSONData, User systemOperator);
+
 
 
 }

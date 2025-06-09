@@ -7,6 +7,7 @@ using EWP.SF.Helper;
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 using EWP.SF.Common.Models.Catalogs;
+using System.Transactions;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -15,12 +16,27 @@ public class ComponentOperation : IComponentOperation
 {
 	private readonly IComponentRepo _componentRepo;
 
+	private readonly IDeviceOperation _deviceOperation;
+
 	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
 	private readonly IApplicationSettings _applicationSettings;
 
 	private readonly IWarehouseOperation _warehouseOperation;
 
+
+	private readonly IMeasureUnitOperation _measureUnitOperation;
+
 	private readonly IAttachmentOperation _attachmentOperation;
+
+	private readonly IProcessTypeOperation _processTypeOperation;
+
+	private readonly ICatalogRepo _catalogRepo;
+
+	private readonly IActivityOperation _activityOperation;
+	private readonly IToolOperation _toolOperation;
+	private readonly IDataImportOperation _dataImportOperation;
+
+	private readonly IInventoryOperation _inventoryOperation;
 
 	public ComponentOperation(IComponentRepo componentRepo, IApplicationSettings applicationSettings
 	, IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation)
@@ -34,7 +50,7 @@ public class ComponentOperation : IComponentOperation
 	public Component GetComponentByCode(string Code)
 	{
 		return _componentRepo.GetComponentByCode(Code);
-}
+	}
 	public async Task<List<ResponseData>> ListUpdateProduct(List<ProductExternal> itemList, List<ProductExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
 	{
 		List<ResponseData> returnValue = [];
@@ -46,12 +62,12 @@ public class ComponentOperation : IComponentOperation
 		if (itemList?.Count > 0)
 		{
 			// Catálogos Necesarios para validar productos
-			Machine[] machines = ListDevices(false, true, true);
-			List<Warehouse> warehouses = ListWarehouse(systemOperator);
-			List<MeasureUnit> units = GetMeasureUnits();
+			Machine[] machines = _deviceOperation.ListDevices(false, true, true);
+			List<Warehouse> warehouses = _warehouseOperation.ListWarehouse(systemOperator);
+			List<MeasureUnit> units = _measureUnitOperation.GetMeasureUnits();
 			MeasureUnit[] measures = [.. units.Where(x => x.IsProductionResult)];
 			// List<Component> allComponents = GetComponents(string.Empty, true);
-			List<ProcessType> processTypes = GetProcessTypes(string.Empty, systemOperator);
+			List<ProcessType> processTypes = _processTypeOperation.GetProcessTypes(string.Empty, systemOperator);
 			ProcessTypeSubtype[] subProcessTypes = [.. processTypes.SelectMany(c => c.SubTypes)];
 			bool MultiVersionEnabled = Config.Configuration["Product-Versioning"].ToBool();
 			bool MultiWarehouseEnabled = Config.Configuration["Product-MultiWarehouse"].ToBool();
@@ -251,7 +267,7 @@ public class ComponentOperation : IComponentOperation
 							operation.OperationLabor.ForEach(itm =>
 							{
 								countItems++;
-								CatProfile itemComp = (_componentRepo.GetCatalogProfile(itm.ProfileCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - Labor {1} : ProfileCode not found. ", operation.OperationNo, itm.ProfileCode));
+								CatProfile itemComp = (_catalogRepo.GetCatalogProfile(itm.ProfileCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - Labor {1} : ProfileCode not found. ", operation.OperationNo, itm.ProfileCode));
 							});
 						}
 						if (operation.OperationTools is not null)
@@ -260,7 +276,7 @@ public class ComponentOperation : IComponentOperation
 							operation.OperationTools.ForEach(itm =>
 							{
 								countItems++;
-								ToolType itemComp = (_componentRepo.ListToolType(itm.ToolingCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - ToolingType {1} : ToolingCode is invalid. ", operation.OperationNo, itm.ToolingCode));
+								ToolType itemComp = (_toolOperation.ListToolTypes(itm.ToolingCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - ToolingType {1} : ToolingCode is invalid. ", operation.OperationNo, itm.ToolingCode));
 							});
 						}
 						if (operation.OperationMachines is not null)
@@ -288,7 +304,7 @@ public class ComponentOperation : IComponentOperation
 									machine.MachineTools.ForEach(itm =>
 									{
 										countItems++;
-										Tool itemComp = _componentRepo.ListTools(itm.ToolingCode).FirstOrDefault() ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ToolintType {2} : Tooling Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ToolingCode));
+										Tool itemComp = _toolOperation.ListTools(itm.ToolingCode).FirstOrDefault() ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ToolintType {2} : Tooling Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ToolingCode));
 									});
 								}
 								if (machine.MachineTools is not null)
@@ -297,7 +313,7 @@ public class ComponentOperation : IComponentOperation
 									machine.MachineLabor.ForEach(itm =>
 									{
 										countItems++;
-										CatProfile itemComp = _componentRepo.GetCatalogProfile(itm.ProfileCode).Find(x => x.Status != Status.Failed) ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ProfileCode {2} :  Profile Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ProfileCode));
+										CatProfile itemComp = _catalogRepo.GetCatalogProfile(itm.ProfileCode).Find(x => x.Status != Status.Failed) ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ProfileCode {2} :  Profile Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ProfileCode));
 									});
 								}
 							});
@@ -495,18 +511,18 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (itmOperation.SlackTimeAftNextOp.HasValue)
 									{
-										prc.SlackTimeAfterPrevOp = Helpers.Common.SecondsToTimeString(itmOperation.SlackTimeAftNextOp.ToInt32(), true);
+										prc.SlackTimeAfterPrevOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeAftNextOp.ToInt32(), true);
 									}
 									else
 									{
-										prc.SlackTimeAfterPrevOp = Common.SecondsToTimeString(0, true);
+										prc.SlackTimeAfterPrevOp = Helper.Common.SecondsToTimeString(0, true);
 									}
 								}
 								else if (oldOperation is not null)
 								{
 									if (itmOperation.SlackTimeAftNextOp.HasValue && !isForcedEdit)
 									{
-										prc.SlackTimeAfterPrevOp = Common.SecondsToTimeString(itmOperation.SlackTimeAftNextOp.ToInt32(), true);
+										prc.SlackTimeAfterPrevOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeAftNextOp.ToInt32(), true);
 									}
 									else
 									{
@@ -518,18 +534,18 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (itmOperation.SlackTimeBefNextOp.HasValue)
 									{
-										prc.SlackTimeBeforeNextOp = Common.SecondsToTimeString(itmOperation.SlackTimeBefNextOp.ToInt32(), true);
+										prc.SlackTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeBefNextOp.ToInt32(), true);
 									}
 									else
 									{
-										prc.SlackTimeBeforeNextOp = Common.SecondsToTimeString(0, true);
+										prc.SlackTimeBeforeNextOp = Helper.Common.SecondsToTimeString(0, true);
 									}
 								}
 								else if (oldOperation is not null)
 								{
 									if (itmOperation.SlackTimeBefNextOp.HasValue && !isForcedEdit)
 									{
-										prc.SlackTimeBeforeNextOp = Common.SecondsToTimeString(itmOperation.SlackTimeBefNextOp.ToInt32(), true);
+										prc.SlackTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeBefNextOp.ToInt32(), true);
 									}
 									else
 									{
@@ -541,18 +557,18 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (itmOperation.MaxTimeBefNextOp.HasValue)
 									{
-										prc.MaxTimeBeforeNextOp = Common.SecondsToTimeString(itmOperation.MaxTimeBefNextOp.ToInt32(), true);
+										prc.MaxTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.MaxTimeBefNextOp.ToInt32(), true);
 									}
 									else
 									{
-										prc.MaxTimeBeforeNextOp = Common.SecondsToTimeString(0, true);
+										prc.MaxTimeBeforeNextOp = Helper.Common.SecondsToTimeString(0, true);
 									}
 								}
 								else if (oldOperation is not null)
 								{
 									if (itmOperation.MaxTimeBefNextOp.HasValue && !isForcedEdit)
 									{
-										prc.MaxTimeBeforeNextOp = Common.SecondsToTimeString(itmOperation.MaxTimeBefNextOp.ToInt32(), true);
+										prc.MaxTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.MaxTimeBefNextOp.ToInt32(), true);
 									}
 									else
 									{
@@ -564,18 +580,18 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (itmOperation.MaxOpSpanIncrease.HasValue)
 									{
-										prc.MaxOpSpanIncrease = SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
+										prc.MaxOpSpanIncrease = Helper.Common.SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
 									}
 									else
 									{
-										prc.MaxOpSpanIncrease = SecondsToTimeString(0, true);
+										prc.MaxOpSpanIncrease = Helper.Common.SecondsToTimeString(0, true);
 									}
 								}
 								else if (oldOperation is not null)
 								{
 									if (itmOperation.MaxOpSpanIncrease.HasValue && !isForcedEdit)
 									{
-										prc.MaxOpSpanIncrease = SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
+										prc.MaxOpSpanIncrease = Helper.Common.SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
 									}
 									else
 									{
@@ -664,7 +680,7 @@ public class ComponentOperation : IComponentOperation
 								// Tasks
 								if (itmOperation.Tasks?.Count > 0)
 								{
-									List<Activity> tasks = GetDataImportTasks(itmOperation, systemOperator);
+									List<Activity> tasks = await _dataImportOperation.GetDataImportTasks(itmOperation, systemOperator);
 									tasks ??= [];
 									if (!editMode)
 									{
@@ -708,7 +724,7 @@ public class ComponentOperation : IComponentOperation
 									});
 								}
 								// Machines
-								prc.AvailableDevices = GetDataImportAvailableDevices(itmOperation, oldOperation);
+								prc.AvailableDevices = _dataImportOperation.GetDataImportAvailableDevices(itmOperation, oldOperation);
 								if (prc.AvailableDevices?.Any(d => d.Selected) == false)
 								{
 									DeviceSpeed firstDevice = prc.AvailableDevices?.OrderBy(o => o.LineId)?.FirstOrDefault(x => x.Id != "00000000-0000-0000-0000-000000000000");
@@ -793,7 +809,7 @@ public class ComponentOperation : IComponentOperation
 									});
 								}
 								// Sub products
-								prc.Subproducts = await GetDataImportSubProducts(itmOperation).ConfigureAwait(false);
+								prc.Subproducts = await _dataImportOperation.GetDataImportSubProducts(itmOperation).ConfigureAwait(false);
 								if (editMode && oldOperation is not null && prc.Subproducts is not null)
 								{
 									prc.Subproducts.Where(m => string.IsNullOrEmpty(m.LineUID))?.ToList()?.ForEach(m =>
@@ -841,7 +857,7 @@ public class ComponentOperation : IComponentOperation
 					}
 
 					//TODO REVISAR LINE ID, AGREGAR VALIDACIONES MANDATORIO Y LLENAR LINEUID
-					pe.Tools = GetDataImportTooling(item, pe, systemOperator);
+					pe.Tools = await _dataImportOperation.GetDataImportTooling(item, pe, systemOperator);
 					if (editMode && pe.Tools is not null && oldTools is not null)
 					{
 						pe.Tools.Where(tooling => string.IsNullOrEmpty(tooling.LineUID))?.ToList()?.ForEach(tlng =>
@@ -872,7 +888,7 @@ public class ComponentOperation : IComponentOperation
 						});
 					}
 
-					pe.Labor = GetDataImportLabor(item, pe, systemOperator);
+					pe.Labor = _dataImportOperation.GetDataImportLabor(item, pe, systemOperator);
 					if (editMode && pe.Labor is not null && oldLabors is not null)
 					{
 						pe.Labor.Where(elem => string.IsNullOrEmpty(elem.LineUID))?.ToList()?.ForEach(lbr =>
@@ -902,7 +918,7 @@ public class ComponentOperation : IComponentOperation
 							}
 						});
 					}
-					pe.Components = await GetDataImportItems(item, pe, systemOperator).ConfigureAwait(false);
+					pe.Components = await _dataImportOperation.GetDataImportItems(item, pe, systemOperator).ConfigureAwait(false);
 					if (editMode && pe.Components is not null && oldComponents is not null)
 					{
 						pe.Components.Where(comp => string.IsNullOrEmpty(comp.LineUID))?.ToList()?.ForEach(cmp =>
@@ -947,7 +963,7 @@ public class ComponentOperation : IComponentOperation
 						{
 							if (!string.IsNullOrEmpty(tsk.Id) && string.Equals(tsk.Origin, "OPERATIONTYPE", StringComparison.OrdinalIgnoreCase))
 							{
-								Activity clonedActivity = await CloneActivity(new Activity(tsk.Id), systemOperator, "PRODUCT").ConfigureAwait(false);
+								Activity clonedActivity = await _activityOperation.CloneActivity(new Activity(tsk.Id), systemOperator, "PRODUCT").ConfigureAwait(false);
 								if (clonedActivity is not null)
 								{
 									tsk.Id = clonedActivity.Id;
@@ -1175,20 +1191,20 @@ public class ComponentOperation : IComponentOperation
 							if (string.IsNullOrEmpty(task.Id))
 							{
 								task.Origin = OriginActivity.Product.ToStr();
-								Activity newActivity = await CreateActivity(task, systemOperator).ConfigureAwait(false);
+								Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
 								if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 								{
 									task.Id = newActivity.Id;
-									_ = AssociateActivityProcessEntry(entryResult.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+									_ = _activityOperation.AssociateActivityProcessEntry(entryResult.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 								}
 							}
 							else
 							{
 								if (task.ActivityClassId > 0)
 								{
-									await UpdateActivity(task, systemOperator).ConfigureAwait(false);
+									await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
 								}
-								_ = AssociateActivityProcessEntry(entryResult.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+								_ = _activityOperation.AssociateActivityProcessEntry(entryResult.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 							}
 						}
 					}
@@ -1364,34 +1380,34 @@ public class ComponentOperation : IComponentOperation
 										if (string.IsNullOrEmpty(task.Id))
 										{
 											task.Origin = OriginActivity.Product.ToStr();
-											Activity newActivity = await CreateActivity(task, systemOperator).ConfigureAwait(false);
+											Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
 											if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 											{
-												_ = AssociateActivityProcessEntry(entryInfo.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 											}
 										}
 										else if (task.ManualDelete)
 										{
-											bool tempResult = RemoveActivityProcessEntryAssociation(entryInfo.Id, task.ProcessId, task.Id, systemOperator);
+											bool tempResult = _activityOperation.RemoveActivityProcessEntryAssociation(entryInfo.Id, task.ProcessId, task.Id, systemOperator);
 										}
 										else
 										{
 											if (task.ActivityClassId > 0)
 											{
-												await UpdateActivity(task, systemOperator).ConfigureAwait(false);
+												await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
 											}
 											if (!string.IsNullOrEmpty(task.Id) && string.Equals(task.Origin.ToStr(), "OPERATIONTYPE", StringComparison.OrdinalIgnoreCase))
 											{
-												Activity clonedActivity = await CloneActivity(new Activity(task.Id), systemOperator, "PRODUCT").ConfigureAwait(false);
+												Activity clonedActivity = await _activityOperation.CloneActivity(new Activity(task.Id), systemOperator, "PRODUCT").ConfigureAwait(false);
 												if (clonedActivity is not null)
 												{
 													task.Id = clonedActivity.Id;
 												}
-												_ = AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 											}
 											else
 											{
-												_ = AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 											}
 										}
 									}
@@ -1521,23 +1537,23 @@ public class ComponentOperation : IComponentOperation
 										if (string.IsNullOrEmpty(task.Id))
 										{
 											task.Origin = OriginActivity.Product.ToString();
-											Activity newActivity = await CreateActivity(task, systemOperator).ConfigureAwait(false);
+											Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
 											if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 											{
-												_ = AssociateActivityProcessEntry(entryInfo.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 											}
 										}
 										else if (task.ManualDelete)
 										{
-											bool tempResult = RemoveActivityProcessEntryAssociation(entryInfo.Id, task.ProcessId, task.Id, systemOperator);
+											bool tempResult = _activityOperation.RemoveActivityProcessEntryAssociation(entryInfo.Id, task.ProcessId, task.Id, systemOperator);
 										}
 										else
 										{
 											if (task.ActivityClassId > 0)
 											{
-												await UpdateActivity(task, systemOperator).ConfigureAwait(false);
+												await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
 											}
-											_ = AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+											_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 										}
 									}
 								}
@@ -1622,6 +1638,421 @@ public class ComponentOperation : IComponentOperation
 		}
 		return returnValue;
 	}
+	/// <summary>
+	///
+	/// </summary>
+	public void ValidateOpcenterRules(ProcessEntry entryInfo, User SystemOperator)
+	{
+		string OpcLicenseType = Config.Configuration["OPC-LicenseType"].ToStr();
+		if (!string.Equals(OpcLicenseType, "ULTIMATE", StringComparison.OrdinalIgnoreCase))
+		{
+			entryInfo.Labor ??= [];
+			entryInfo.Tools ??= [];
 
+			int duplicados = entryInfo.Labor.Where(x => !string.IsNullOrEmpty(x.MachineId)).Select(x => new { x.ProcessId, x.MachineId }).Concat(entryInfo.Tools.Where(x => !string.IsNullOrEmpty(x.MachineId)).Select(x => new { x.ProcessId, x.MachineId })).GroupBy(x => new { x.MachineId, x.ProcessId }).Where(g => g.Count() > 1).Select(y => y.Key).Count();
+
+			if (duplicados > 0)
+			{
+				throw new Exception("OPCenter license Type does not allow more than one Labor/Tool per Operation");
+			}
+		}
+
+		Machine[] machines = _deviceOperation.ListDevices(false, true, true);
+		Warehouse warehouse = _warehouseOperation.ListWarehouse(SystemOperator).Where(w => w.WarehouseId == entryInfo.Warehouse).FirstOrDefault(x => x.Status != Status.Failed);
+		if (warehouse is not null)
+		{
+			int wrongDevices = entryInfo.Processes
+				.SelectMany(x => x.AvailableDevices)
+				.Where(x => !string.IsNullOrEmpty(x.Id) && x.Id != "00000000-0000-0000-0000-000000000000")
+				.Select(x => new
+				{
+					x.Id,
+					Device = machines
+					.FirstOrDefault(y => y.Id == x.Id && y.FacilityCode == warehouse.FacilityCode)
+				})
+				.Count(x => x.Device is null);
+			if (wrongDevices > 0)
+			{
+				throw new Exception("One or more machines don't belong to Warehouse's facility");
+			}
+		}
+	}
+	/// <summary>
+	///
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public async Task<List<ProcessEntry>> GetProcessEntry(string code, string warehouse, int? version, int? sequence, User systemOperator)
+	{
+		#region Permission validation
+
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		return await _componentRepo.ListProcessEntry(code, warehouse, version, sequence).ConfigureAwait(false);
+	}
+	/// <summary>
+	///
+	/// </summary>
+	public async Task<Component[]> GetComponents(string componentId, bool ignoreImages = false, string filter = "")
+	{
+		List<Component> returnValue;
+		if (!string.IsNullOrEmpty(filter))
+		{
+			returnValue = await _componentRepo.ListComponents(componentId, true, filter).ConfigureAwait(false);
+		}
+		else if (!string.IsNullOrEmpty(componentId))
+		{
+			returnValue = await _componentRepo.ListComponents(componentId, false, string.Empty).ConfigureAwait(false);
+		}
+		else
+		{
+			returnValue = await _componentRepo.ListComponents(componentId, true, filter).ConfigureAwait(false);
+		}
+		return returnValue?.ToArray();
+	}
+	/// <summary>
+	///
+	/// </summary>
+	public async Task<List<ResponseData>> ListUpdateComponent(List<ComponentExternal> itemList, User systemOperator, bool Validate, LevelMessage Level)
+	{
+		List<ResponseData> returnValue = [];
+		ResponseData MessageError;
+		List<MeasureUnit> unitsList = _measureUnitOperation.GetMeasureUnits();
+		bool NotifyOnce = true;
+		if (itemList?.Count > 0)
+		{
+			NotifyOnce = itemList.Count == 1;
+			int Line = 0;
+			string BaseId = string.Empty;
+			foreach (ComponentExternal item in itemList)
+			{
+				Line++;
+				try
+				{
+					Component OriginalComponent = (await GetComponents(item.ItemCode).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
+					bool editMode = OriginalComponent is not null;
+					BaseId = item.ItemCode;
+					List<ValidationResult> results = [];
+					ValidationContext context = new(item, null, null);
+
+					if (!Validator.TryValidateObject(item, context, results))
+					{
+						throw new Exception($"{results[0]}");
+					}
+
+					Status status = string.Equals(item.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase) ? Status.Active : Status.Disabled;
+
+					if (!editMode && status == Status.Disabled)
+					{
+						throw new Exception("Cannot import a disabled Item");
+					}
+					Component itemInfo = new()
+					{
+						Code = item.ItemCode,
+						Name = !string.IsNullOrEmpty(item.ItemName) ? item.ItemName : item.ItemCode,
+						Status = status,
+						ComponentType = ComponentType.Material
+					};
+
+					if (!string.IsNullOrEmpty(item.InventoryUoM))
+					{
+						MeasureUnit unitInventory = unitsList.Find(unit => string.Equals(unit.Code.Trim(), item.InventoryUoM.Trim(), StringComparison.OrdinalIgnoreCase) && unit.Status == Status.Active && unit.IsProductionResult);
+						if (unitInventory is not null)
+						{
+							itemInfo.UnitInventory = unitInventory.Id;
+						}
+						else
+						{
+							throw new Exception("Item InventoryUoM is invalid");
+						}
+					}
+					if (!string.IsNullOrEmpty(item.ProductionUoM))
+					{
+						MeasureUnit unitProduction = unitsList.Find(unit => string.Equals(unit.Code.Trim(), item.ProductionUoM.Trim(), StringComparison.OrdinalIgnoreCase) && unit.Status == Status.Active && unit.IsProductionResult);
+						if (unitProduction is not null)
+						{
+							itemInfo.UnitProduction = unitProduction.Id;
+						}
+						else
+						{
+							throw new Exception("Item ProductionUoM is invalid");
+						}
+					}
+					else
+					{
+						itemInfo.UnitProduction = itemInfo.UnitInventory;
+					}
+
+					if (!string.IsNullOrEmpty(item.ManagedBy))
+					{
+						int managedById = 0;
+						switch (item.ManagedBy.Trim().ToUpperInvariant())
+						{
+							case "NONE":
+								managedById = 1; // NO MANAGEMENT
+								break;
+
+							case "BATCH":
+								managedById = 2; // BATCH
+								break;
+
+							case "SERIAL":
+								managedById = 3; // SERIE
+								break;
+						}
+						itemInfo.ManagedBy = managedById;
+					}
+					else
+					{
+						itemInfo.ManagedBy = 1; // NO MANAGEMENT
+					}
+					if (!string.IsNullOrEmpty(item.Type))
+					{
+						int typeId = 0;
+						switch (item.Type.Trim().ToUpperInvariant())
+						{
+							case "PURCHASE":
+								typeId = 1; // NO PURCHASE
+								break;
+
+							case "PRODUCTION":
+								typeId = 2; // PRODUCTION
+								break;
+						}
+						itemInfo.Type = typeId;
+					}
+					if (!string.IsNullOrEmpty(item.ItemGroupCode))
+					{
+						Inventory inventoryInfo = _inventoryOperation.GetInventory(item.ItemGroupCode);
+						if (inventoryInfo is not null && inventoryInfo.Code.Trim() == item.ItemGroupCode.Trim())
+						{
+							itemInfo.InventoryId = inventoryInfo.InventoryId;
+						}
+						else
+						{
+							throw new Exception("Invalid Item Group Code");
+						}
+					}
+
+					if (editMode)
+					{
+						if (string.IsNullOrEmpty(item.ProductionUoM))
+						{
+							itemInfo.UnitProduction = OriginalComponent.UnitProduction;
+						}
+						if (string.IsNullOrEmpty(item.InventoryUoM))
+						{
+							itemInfo.UnitInventory = OriginalComponent.UnitInventory;
+						}
+						itemInfo.UnitTypes = OriginalComponent.UnitTypes;
+					}
+
+					// returnValue.Add(BrokerDAL.MergeComponent(itemInfo, systemOperator, Validate, Level));
+					ResponseData response = await MergeComponent(itemInfo, systemOperator, Validate).ConfigureAwait(false);
+					returnValue.Add(response);
+				}
+				catch (Exception ex)
+				{
+					MessageError = new ResponseData
+					{
+						Id = BaseId,
+						Message = ex.Message,
+						Code = "Line:" + Line.ToStr()
+					};
+					returnValue.Add(MessageError);
+				}
+			}
+		}
+		if (!Validate)
+		{
+			// if (!NotifyOnce)
+			// {
+			// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Item, Action = ActionDB.IntegrateAll.ToStr() });
+			// }
+			returnValue = Level switch
+			{
+				LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
+				LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
+				_ => returnValue
+			};
+		}
+		return returnValue;
+	}
+/// <summary>
+	/// Merges an Item  into the system.
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public async Task<ResponseData> MergeComponent(Component componentInfo, User systemOperator, bool Validate = false, string Level = "Success", bool NotifyOnce = true)
+	{
+		ResponseData returnValue = null;
+
+		#region Permission validation
+
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(noPermission);
+		// }
+
+		#endregion Permission validation
+
+		if (componentInfo.ComponentType == ComponentType.Product && componentInfo.ProcessEntry is not null)
+		{
+			ProcessEntry entryInfo = componentInfo.ProcessEntry;
+			//Validando Duplicados OPCenter
+			ValidateOpcenterRules(entryInfo, systemOperator);
+			ProcessEntry entryResult = _componentRepo.CreateProcessEntry(entryInfo, systemOperator);
+			if (!string.IsNullOrEmpty(entryResult.Id))
+			{
+				List<SubProduct> AllSubProducts = [];
+				foreach (ProcessEntryProcess x in entryInfo.Processes.Where(static x => x.Subproducts is not null).ToList())
+				{
+					foreach (SubProduct z in x.Subproducts)
+					{
+						z.ProcessId = x.ProcessId;
+					}
+					AllSubProducts.AddRange(x.Subproducts);
+				}
+
+				string jsonOperations = JsonConvert.SerializeObject(entryInfo.Processes);
+				string jsonSubProducts = string.Empty;
+
+				if (AllSubProducts.Count > 0)
+				{
+					jsonSubProducts = JsonConvert.SerializeObject(AllSubProducts);
+				}
+				_ = (entryInfo.Components?.RemoveAll(static x => x.ComponentType == 0));
+
+				string jsonMaterials = JsonConvert.SerializeObject(entryInfo.Components);
+				string jsonAlternativeMaterials = string.Empty;
+				List<AlternativeComponent> AllAlternatives = [];
+				foreach (ProcessEntryComponent x in entryInfo.Components)
+				{
+					if (x.Alternatives is not null)
+					{
+						foreach (AlternativeComponent z in x.Alternatives)
+						{
+							z.ProcessId = x.ProcessId;
+							z.ComponentId = x.ComponentId;
+						}
+						AllAlternatives.AddRange(x.Alternatives);
+					}
+				}
+				if (AllAlternatives.Count > 0)
+				{
+					jsonAlternativeMaterials = JsonConvert.SerializeObject(AllAlternatives);
+				}
+
+				// Todo POner Tasks nueva version
+				bool tempDetail = _componentRepo.SaveProductDetails(entryInfo, jsonOperations, jsonMaterials, jsonAlternativeMaterials, jsonSubProducts, systemOperator);
+
+				componentInfo.ProcessEntryId = entryResult.Id;
+				returnValue = _componentRepo.MergeComponent(componentInfo, systemOperator, Validate);
+				if (string.IsNullOrEmpty(componentInfo.Id))
+				{
+					componentInfo.Id = returnValue.Id;
+				}
+			}
+
+			if (!string.IsNullOrEmpty(entryResult.Id) && entryResult.Tasks is not null)
+			{
+				foreach (Activity task in entryResult.Tasks)
+				{
+					if (string.IsNullOrEmpty(task.Id))
+					{
+						task.Origin = OriginActivity.Product.ToStr();
+						Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
+						if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
+						{
+							task.Id = newActivity.Id;
+							_activityOperation.AssociateActivityProcessEntry(entryResult.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+						}
+					}
+					else
+					{
+						if (task.ActivityClassId > 0)
+						{
+							await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
+						}
+						_activityOperation.AssociateActivityProcessEntry(entryResult.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+					}
+				}
+			}
+
+			if (!string.IsNullOrEmpty(entryResult.Id) && entryResult.Labor is not null)
+			{
+				foreach (ProcessEntryLabor x in entryResult.Labor)
+				{
+					if (string.IsNullOrEmpty(x.LaborId))
+					{
+						x.LaborId = x.Id;
+					}
+				}
+				_componentRepo.MergeProcessEntryLabor(entryResult.Id, JsonConvert.SerializeObject(entryResult.Labor), systemOperator);
+			}
+
+			if (!string.IsNullOrEmpty(entryResult.Id) && entryResult.Tools is not null)
+			{
+				foreach (ProcessEntryTool x in entryResult.Tools)
+				{
+					if (string.IsNullOrEmpty(x.ToolId))
+					{
+						x.ToolId = x.Id;
+					}
+				}
+				_componentRepo.MergeProcessEntryTools(entryResult.Id, JsonConvert.SerializeObject(entryResult.Tools), systemOperator);
+			}
+
+			foreach (ProcessEntryProcess x in entryResult.Processes)
+			{
+				if (x.Attributes is not null)
+				{
+					foreach (ProcessEntryAttribute z in x.Attributes)
+					{
+						z.ProcessId = x.ProcessId;
+					}
+				}
+				else
+				{
+					x.Attributes = [];
+				}
+			}
+			List<ProcessEntryAttribute> attrs = [.. entryResult.Processes.SelectMany(static x => x.Attributes)];
+			if (!string.IsNullOrEmpty(entryResult.Id) && attrs is not null)
+			{
+				attrs.ForEach(static x => { if (string.IsNullOrEmpty(x.AttributeId)) { x.AttributeId = x.Id; } });
+				_componentRepo.MergeProcessEntryAttributes(entryResult.Id, JsonConvert.SerializeObject(attrs), systemOperator);
+			}
+		}
+		else
+		{
+			returnValue = _componentRepo.MergeComponent(componentInfo, systemOperator, Validate);
+		}
+
+		if (!Validate && returnValue?.IsSuccess == true)
+		{
+			Component ObjItem = _componentRepo.GetComponentByCode(returnValue.Code);
+			returnValue.Id = ObjItem.Id;
+			returnValue.Entity = ObjItem;
+			if (NotifyOnce)
+			{
+				await _attachmentOperation.SaveImageEntity("Item", componentInfo.Image, componentInfo.Code, systemOperator).ConfigureAwait(false);
+				if (componentInfo.AttachmentIds is not null)
+				{
+					foreach (string attachment in componentInfo.AttachmentIds)
+					{
+						await _attachmentOperation.AttachmentSync(attachment, returnValue.Code, systemOperator).ConfigureAwait(false);
+					}
+				}
+				//Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Item, returnValue.Action, Data = ObjItem }, returnValue.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
+			}
+			//await ObjItem.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+		}
+
+		return returnValue;
+	}
 
 }

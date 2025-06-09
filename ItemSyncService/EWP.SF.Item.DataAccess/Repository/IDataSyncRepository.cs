@@ -20,6 +20,7 @@ public interface IDataSyncRepository
     List<DataSyncErp> ListDataSyncERP(string Id = "", EnableType GetInstances = EnableType.Yes);
     Task<List<DataSyncService>> GetBackgroundService(string backgroundService, string httpMethod, CancellationToken cancellationToken = default);
     bool UpdateDataSyncServiceExecution(string Id, DateTime ExecutionDate);
+    List<DefaultMappingEntityObject> ListDefaultMappingEntityObject(string Entity);
     DataSyncErpAuth GetDataSyncServiceErpToken(string ErpCode);
 
     bool InsertDataSyncServiceErpToken(DataSyncErpAuth TokenInfo);

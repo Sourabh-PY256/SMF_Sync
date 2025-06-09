@@ -17,6 +17,7 @@ using SixLabors.ImageSharp;
 using EWP.SF.Common.Models.Catalogs;
 
 namespace EWP.SF.Item.BusinessLayer;
+
 public class ActivityOperation : IActivityOperation
 {
     private readonly IActivityRepo _activityRepo;
@@ -25,6 +26,8 @@ public class ActivityOperation : IActivityOperation
     private readonly IAttachmentOperation _attachmentOperation;
 
     private readonly IProcedureOperation _procedureOperation;
+
+    private readonly IProcedureRepo _procedureRepo;
 
     public ActivityOperation(IActivityRepo activityRepo, IApplicationSettings applicationSettings
     , IAttachmentOperation attachmentOperation, IProcedureOperation procedureOperation)
@@ -35,7 +38,7 @@ public class ActivityOperation : IActivityOperation
         _procedureOperation = procedureOperation;
     }
     #region Activity
-    
+
     public async Task<Activity> CreateActivity(Activity activityInfo, User systemOperator)
     {
         Activity returnValue = null;
@@ -343,6 +346,57 @@ public class ActivityOperation : IActivityOperation
         //await activityInfo.Log(EntityLogType.Delete, systemOperator).ConfigureAwait(false);
         return returnValue;
     }
+    /// <summary>
+	/// Associates an activity with a process entry.
+	/// </summary>
+	public bool AssociateActivityProcessEntry(string ProcessEntryId, string ProcessId, string ActivityId, int triggerId, int sortId, bool isMandatory, string rawMaterials, User systemOperator) => _activityRepo.AssociateActivityProcessEntry(ProcessEntryId, ProcessId, ActivityId, triggerId, sortId, isMandatory, rawMaterials, systemOperator);
+
+    /// <summary>
+	/// Clones an existing activity.
+	/// </summary>
+	public async Task<Activity> CloneActivity(Activity request, User systemOperator, string Origin)
+    {
+        Activity returnValue = null;
+        Procedure returnProcedure = _procedureRepo.GetProcedure(null, request.Id, null);
+        if (returnProcedure is not null)
+        {
+            returnProcedure.ActivityId = Guid.NewGuid().ToStr();
+
+            string newId = _activityRepo.CloneActivityProcessMaster(request.Id, returnProcedure.ActivityId, Origin);
+            if (newId is not null && !string.IsNullOrEmpty(newId))
+            {
+                returnValue = (Activity)request.Clone();
+                returnValue.Id = newId;
+
+                //await request.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            string newId = _activityRepo.CloneActivityProcessMaster(request.Id, Guid.NewGuid().ToStr(), Origin);
+            if (newId is not null && !string.IsNullOrEmpty(newId))
+            {
+                returnValue = (Activity)request.Clone();
+                returnValue.Id = newId;
+                //await request.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	/// Removes the association between an activity and a process entry.
+	/// </summary>
+	public bool RemoveActivityProcessEntryAssociation(string ProcessEntryId, string ProcessId, string ActivityId, User systemOperator) => _activityRepo.RemoveActivityProcessEntryAssociation(ProcessEntryId, ProcessId, ActivityId, systemOperator);
+
+    /// <summary>
+	/// Associates an activity with a work order.
+	/// </summary>
+	public bool AssociateActivityWorkOrder(string WorkOrderId, string ProcessId, string MachineId, string ActivityId, int triggerId, int sortId, bool isMandatory, string rawMaterials, User systemOperator) => _activityRepo.AssociateActivityWorkOrder(WorkOrderId, ProcessId, MachineId, ActivityId, triggerId, sortId, isMandatory, rawMaterials, systemOperator);
+
+	/// <summary>
+	/// Removes the association between an activity and a work order.
+	/// </summary>
+	public bool RemoveActivityWorkOrderAssociation(string WorkOrderId, string ProcessId, string MachineId, string ActivityId, User systemOperator) => _activityRepo.RemoveActivityWorkOrderAssociation(WorkOrderId, ProcessId, MachineId, ActivityId, systemOperator);
 
     #endregion Activity
 }

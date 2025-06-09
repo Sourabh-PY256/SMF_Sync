@@ -11,6 +11,9 @@ public interface IWorkOrderOperation
     Task<List<WorkOrder>> GetWorkOrder(string workOrderId);
     List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level);
     Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level);
+    Task<List<WorkOrderResponse>> ListUpdateWorkOrder(List<WorkOrderExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, bool isDataSynced = false);
+    void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset);
+
 
 
 

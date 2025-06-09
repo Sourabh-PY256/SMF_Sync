@@ -13,7 +13,8 @@ public interface IProcedureOperation
         bool Validate = false,
         bool NotifyOnce = true);
 
-    
+
     Task<List<ResponseData>> ProcessMasterInsExternalSync(List<ProcedureExternalSync> listProcedures
     , List<ProcedureExternalSync> listProceduresOriginal, User systemOperator, bool Validate, LevelMessage Level = 0);
+    Procedure GetProcessByProcessCodeVersion(string Code, int Version);
 }

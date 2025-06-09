@@ -1,7 +1,6 @@
 using System.Data;
 using System.Globalization;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.EntityLogger;
 using EWP.SF.Helper;
 using MySqlConnector;
 using EWP.SF.Item.BusinessEntities;
@@ -460,44 +459,384 @@ public class ActivityRepo : IActivityRepo
         }
         return returnValue;
     }
-     public bool ActivityItemInsByXML(User systemOperator, string xmlComponents)
+    public bool ActivityItemInsByXML(User systemOperator, string xmlComponents)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_activity_item_Ins", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+                command.CommandTimeout = 30000;
+                _ = command.Parameters.AddWithValue("_Operator", systemOperator.Id);
+                _ = command.Parameters.AddWithValue("_XmlComponents", xmlComponents);
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    //returnValue = new ResponseData()
+                    //{
+                    //    Id = rdr["Id"].ToStr(),
+                    //    Action = (ActionDB)rdr["Action"].ToInt32(),
+                    //    IsSuccess = rdr["IsSuccess"].ToInt32().ToBool(),
+                    //    Code = rdr["Code"].ToStr(),
+                    //    Version = rdr["Version"].ToInt32(),
+                    //    Message = rdr["Message"].ToStr(),
+
+                    //};
+                }
+                returnValue = true;
+            }
+            catch (Exception ex)
+            {
+                //logger.Error(ex);
+                returnValue = false;
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public List<ActivityClass> ListActivityClasses()
+    {
+        List<ActivityClass> returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_ActivityClass_SEL", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int ClassIdOrdinal = rdr.GetOrdinal("ClassId");
+                int ClassNameOrdinal = rdr.GetOrdinal("ClassName");
+                int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
+                int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
+                int StatusOrdinal = rdr.GetOrdinal("Status");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    ActivityClass element = new()
+                    {
+                        Id = rdr[ClassIdOrdinal].ToInt32(),
+                        Name = rdr[ClassNameOrdinal].ToStr(),
+                        CreationDate = rdr[CreateDateOrdinal].ToDate(),
+                        CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
+                        Status = (Status)rdr[StatusOrdinal].ToInt32()
+                    };
+                    if (returnValue.IsNull())
+                    {
+                        returnValue = [];
+                    }
+                    returnValue.Add(element);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public List<ActivityType> ListActivityTypes()
+    {
+        List<ActivityType> returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_ActivityType_SEL", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int CodeOrdinal = rdr.GetOrdinal("Code");
+                int ClassIdOrdinal = rdr.GetOrdinal("ClassId");
+                int NameOrdinal = rdr.GetOrdinal("Name");
+                int IsDowntimeOrdinal = rdr.GetOrdinal("IsDowntime");
+                int AffectsOeeOrdinal = rdr.GetOrdinal("AffectsOee");
+                int HasInterventionOrdinal = rdr.GetOrdinal("HasIntervention");
+                int HasSourceOrdinal = rdr.GetOrdinal("HasSource");
+                int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
+                int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
+                int StatusOrdinal = rdr.GetOrdinal("Status");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    ActivityType element = new()
+                    {
+                        Id = rdr[CodeOrdinal].ToStr(),
+                        ClassId = rdr[ClassIdOrdinal].ToInt32(),
+                        Name = rdr[NameOrdinal].ToStr(),
+                        IsDowntime = rdr[IsDowntimeOrdinal].ToBool(),
+                        AffectsOee = rdr[AffectsOeeOrdinal].ToBool(),
+                        HasIntervention = rdr[HasInterventionOrdinal].ToBool(),
+                        HasSource = rdr[HasSourceOrdinal].ToBool(),
+                        CreationDate = rdr[CreateDateOrdinal].ToDate(),
+                        CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
+                        Status = (Status)rdr[StatusOrdinal].ToInt32()
+                    };
+                    if (returnValue.IsNull())
+                    {
+                        returnValue = [];
+                    }
+                    returnValue.Add(element);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public List<ActivitySource> ListActivitySources()
+    {
+        List<ActivitySource> returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_ActivitySource_SEL", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int SourceCodeOrdinal = rdr.GetOrdinal("SourceCode");
+                int NameOrdinal = rdr.GetOrdinal("Name");
+                int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
+                int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
+                int StatusOrdinal = rdr.GetOrdinal("Status");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    ActivitySource element = new()
+                    {
+                        Id = rdr[SourceCodeOrdinal].ToStr(),
+                        Name = rdr[NameOrdinal].ToStr(),
+                        CreationDate = rdr[CreateDateOrdinal].ToDate(),
+                        CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
+                        Status = (Status)rdr[StatusOrdinal].ToInt32()
+                    };
+
+                    if (returnValue.IsNull())
+                    {
+                        returnValue = [];
+                    }
+                    returnValue.Add(element);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public List<Intervention> ListActivityInterventions()
+    {
+        List<Intervention> returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Intervention_SEL", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int InterventionIdOrdinal = rdr.GetOrdinal("InterventionId");
+                int NameOrdinal = rdr.GetOrdinal("Name");
+                int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
+                int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
+                int StatusOrdinal = rdr.GetOrdinal("Status");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    Intervention element = new()
+                    {
+                        Id = rdr[InterventionIdOrdinal].ToStr(),
+                        Name = rdr[NameOrdinal].ToStr(),
+                        CreationDate = rdr[CreateDateOrdinal].ToDate(),
+                        CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
+                        Status = (Status)rdr[StatusOrdinal].ToInt32()
+                    };
+                    if (returnValue.IsNull())
+                    {
+                        returnValue = [];
+                    }
+                    returnValue.Add(element);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public string CloneActivityProcessMaster(string ActivityId, string ActivityIdNew, string Origin)
+    {
+        string returnValue = string.Empty;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_ProcessDuplicate_INS", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+                command.Parameters.AddWithValue("_ActivityId", ActivityId);
+                command.Parameters.AddWithValue("_ActivityIdNew", ActivityIdNew);
+                command.Parameters.AddWithValue("_Origin", Origin);
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    returnValue = rdr["ActivityIdNew"].ToStr();
+                }
+            }
+            catch (Exception ex)
+            {
+                //logger.Error(ex);
+
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public bool AssociateActivityProcessEntry(string ProcessEntryId, string ProcessId, string ActivityId, int TriggerId, int SortId, bool isMandatory, string RawMaterials, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Product_Task_INS", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+                command.Parameters.AddCondition("_ProductId", ProcessEntryId, !string.IsNullOrEmpty(ProcessEntryId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Type Id"));
+                command.Parameters.AddCondition("_OperationNo", ProcessId, !string.IsNullOrEmpty(ProcessId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
+                command.Parameters.AddCondition("_ActivityId", ActivityId, !string.IsNullOrEmpty(ActivityId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Activity Id"));
+                command.Parameters.AddWithValue("_TriggerId", TriggerId);
+                command.Parameters.AddWithValue("_IsMandatory", isMandatory);
+                command.Parameters.AddWithValue("_SortId", SortId);
+                command.Parameters.AddWithValue("_Operator", systemOperator.Id);
+                command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public bool RemoveActivityProcessEntryAssociation(string ProcessEntryId, string ProcessId, string ActivityId, User systemOperator)
 	{
 		bool returnValue = false;
 		using (EWP_Connection connection = new(ConnectionString))
 		{
 			try
 			{
-				using EWP_Command command = new("SP_SF_activity_item_Ins", connection)
+				using EWP_Command command = new("SP_SF_Product_Task_DEL", connection)
 				{
 					CommandType = CommandType.StoredProcedure
 				};
 				command.Parameters.Clear();
-				command.CommandTimeout = 30000;
-				_ = command.Parameters.AddWithValue("_Operator", systemOperator.Id);
-				_ = command.Parameters.AddWithValue("_XmlComponents", xmlComponents);
-
+				command.Parameters.AddCondition("_ProductId", ProcessEntryId, !string.IsNullOrEmpty(ProcessEntryId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Entry Id"));
+				command.Parameters.AddCondition("_OperationNo", ProcessId, !string.IsNullOrEmpty(ProcessId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
+				command.Parameters.AddCondition("_ActivityId", ActivityId, !string.IsNullOrEmpty(ActivityId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Activity Id"));
+				command.Parameters.AddWithValue("_Operator", systemOperator.Id);
 				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-
-				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
-				{
-					//returnValue = new ResponseData()
-					//{
-					//    Id = rdr["Id"].ToStr(),
-					//    Action = (ActionDB)rdr["Action"].ToInt32(),
-					//    IsSuccess = rdr["IsSuccess"].ToInt32().ToBool(),
-					//    Code = rdr["Code"].ToStr(),
-					//    Version = rdr["Version"].ToInt32(),
-					//    Message = rdr["Message"].ToStr(),
-
-					//};
-				}
+				command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 				returnValue = true;
 			}
-			catch (Exception ex)
+			catch
 			{
-				//logger.Error(ex);
-				returnValue = false;
 				throw;
 			}
 			finally
@@ -507,5 +846,83 @@ public class ActivityRepo : IActivityRepo
 		}
 		return returnValue;
 	}
+/// <summary>
+	///
+	/// </summary>
+	public bool AssociateActivityWorkOrder(string WorkOrderId, string ProcessId, string MachineId, string ActivityId, int TriggerId, int sortId, bool isMandatory, string RawMaterials, User systemOperator)
+	{
+		bool returnValue = false;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Order_Task_INS", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_OrderCode", WorkOrderId, !string.IsNullOrEmpty(WorkOrderId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Type Id"));
+				command.Parameters.AddCondition("_OperationNo", ProcessId, !string.IsNullOrEmpty(ProcessId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
+				command.Parameters.AddWithValue("_MachineCode", MachineId.ToStr());
+				command.Parameters.AddCondition("_ActivityId", ActivityId, !string.IsNullOrEmpty(ActivityId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Activity Id"));
+				command.Parameters.AddWithValue("_TriggerId", TriggerId);
+				command.Parameters.AddWithValue("_SortId", sortId);
+				command.Parameters.AddWithValue("_IsMandatory", isMandatory.ToInt32());
+				command.Parameters.AddWithValue("_Operator", systemOperator.Id);
+				command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				returnValue = true;
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
+	/// <summary>
+	///
+	/// </summary>
+	public bool RemoveActivityWorkOrderAssociation(string WorkOrderId, string ProcessId, string MachineId, string ActivityId, User systemOperator)
+	{
+		bool returnValue = false;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Order_Task_DEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_OrderCode", WorkOrderId, !string.IsNullOrEmpty(WorkOrderId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Work Order Id"));
+				command.Parameters.AddCondition("_OperationNo", ProcessId, !string.IsNullOrEmpty(ProcessId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
+				command.Parameters.AddWithValue("_MachineId", MachineId.ToStr());
+				command.Parameters.AddCondition("_ActivityId", ActivityId, !string.IsNullOrEmpty(ActivityId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Activity Id"));
+				command.Parameters.AddWithValue("_Operator", systemOperator.Id);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				returnValue = true;
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+    
+
     #endregion Activity
 }

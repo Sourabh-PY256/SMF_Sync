@@ -675,7 +675,7 @@ public class DataSyncRepository : IDataSyncRepository
 		}
 	}
 
-/// <summary>
+	/// <summary>
 	/// List the data synchronization ERP information.
 	/// </summary>
 	public List<DataSyncErp> ListDataSyncERP(string Id = "", EnableType GetInstances = EnableType.Yes)
@@ -754,5 +754,52 @@ public class DataSyncRepository : IDataSyncRepository
 		}
 		return returnValue;
 	}
+	/// <summary>
+	///
+	/// </summary>
+	public List<DefaultMappingEntityObject> ListDefaultMappingEntityObject(string Entity)
+	{
+		List<DefaultMappingEntityObject> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_DataSync_Default_Mapping_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_Entity", Entity, !string.IsNullOrEmpty(Entity), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Entity"));
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				if (rdr.HasRows)
+				{
+					while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+					{
+						DefaultMappingEntityObject element = new()
+						{
+							Id = rdr["Id"].ToStr(),
+							Name = rdr["Name"].ToStr()
+						};
+						(returnValue ??= []).Add(element);
+					}
+				}
+				else
+				{
+					returnValue = [];
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
 
 }

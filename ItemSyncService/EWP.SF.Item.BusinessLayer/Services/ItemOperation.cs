@@ -8,11 +8,6 @@ using System.Transactions;
 
 using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
-using System.Xml.Serialization;
-using System.Text;
-using Range = EWP.SF.Common.Models.Range;
-using SixLabors.ImageSharp;
-using EWP.SF.Common.Models.Catalogs;
 using EWP.SF.Item.DataAccess;
 
 namespace EWP.SF.Item.BusinessLayer;

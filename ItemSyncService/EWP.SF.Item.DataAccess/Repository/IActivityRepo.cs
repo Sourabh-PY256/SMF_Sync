@@ -24,4 +24,15 @@ public interface IActivityRepo
     bool DeleteActivity(Activity activityInfo, User systemOperator);
     MessageBroker ActivityMergeSchedule(Activity activityInfo, User systemOperator);
     bool ActivityItemInsByXML(User systemOperator, string xmlComponents);
+    string CloneActivityProcessMaster(string ActivityId, string ActivityIdNew, string Origin);
+
+    List<ActivityType> ListActivityTypes();
+    List<ActivityClass> ListActivityClasses();
+    List<ActivitySource> ListActivitySources();
+    List<Intervention> ListActivityInterventions();
+    bool AssociateActivityProcessEntry(string ProcessEntryId, string ProcessId, string ActivityId, int TriggerId, int SortId, bool isMandatory, string RawMaterials, User systemOperator);
+    bool RemoveActivityProcessEntryAssociation(string ProcessEntryId, string ProcessId, string ActivityId, User systemOperator);
+
+    bool AssociateActivityWorkOrder(string WorkOrderId, string ProcessId, string MachineId, string ActivityId, int TriggerId, int SortId, bool isMandatory, string RawMaterials, User systemOperator);
+    bool RemoveActivityWorkOrderAssociation(string WorkOrderId, string ProcessId, string MachineId, string ActivityId, User systemOperator);
 }

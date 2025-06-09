@@ -14,6 +14,8 @@ public class InventoryOperation : IInventoryOperation
 
     private readonly IAttachmentOperation _attachmentOperation;
 
+    private const string noPermission = "User doesn't have permission for this action";
+
     public InventoryOperation(IInventoryRepo inventoryRepo, IApplicationSettings applicationSettings
     , IAttachmentOperation attachmentOperation)
     {
@@ -148,6 +150,38 @@ public class InventoryOperation : IInventoryOperation
 
         return _inventoryRepo.ListInventory(InventoryCode, DeltaDate);
     }
-    
+
     #endregion Inventorys
+    #region SalesOrder
+
+	/// <summary>
+	/// Obtiene la lista de "demand"
+	/// </summary>
+	/// <param name="Id"></param>
+	/// <param name="SalesOrder"></param>
+	/// <param name="CustomerCode"></param>
+	/// <param name="systemOperator">User</param>
+	/// <param name="getAsMasterDetail"></param>
+	/// <param name="DeltaDate"></param>
+	/// <exception cref="Exception"></exception>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public SaleOrder[] ListSalesOrder(string Id, string SalesOrder, string CustomerCode, User systemOperator, bool getAsMasterDetail = false, DateTime? DeltaDate = null)
+	{
+		#region Permission validation
+
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_SALESORDER_LST))
+		{
+			throw new UnauthorizedAccessException(noPermission);
+		}
+
+		#endregion Permission validation
+
+		List<SaleOrder> data = _inventoryRepo.ListSalesOrder(Id, SalesOrder, CustomerCode, DeltaDate);
+		// si es false, se mantienen solos los datos generales (el detalle tiene todos los datos)
+		return !getAsMasterDetail
+			? [.. data.SelectMany(static x => x.Detail)]
+			: [.. data];
+	}
+
+	#endregion SalesOrder
 }

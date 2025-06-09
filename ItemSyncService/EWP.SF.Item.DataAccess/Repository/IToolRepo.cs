@@ -7,5 +7,6 @@ public interface IToolRepo
 {
     List<ToolType> ListToolType(string ToolTypeCode, DateTime? DeltaDate = null);
     ResponseData CreateToolType(ToolType toolTypeInfo, User systemOperator, bool Validation);
+    List<Tool> ListTools(string ToolCode, DateTime? DeltaDate = null);
     
 }

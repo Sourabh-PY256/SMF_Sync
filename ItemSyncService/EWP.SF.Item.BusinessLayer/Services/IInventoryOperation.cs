@@ -11,5 +11,8 @@ public interface IInventoryOperation
     Task<ResponseData> MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true);
 
     List<Inventory> ListInventory(User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null);
-    
+
+    Inventory GetInventory(string Code);
+    SaleOrder[] ListSalesOrder(string Id, string SalesOrder, string CustomerCode, User systemOperator, bool getAsMasterDetail = false, DateTime? DeltaDate = null);
+
 }

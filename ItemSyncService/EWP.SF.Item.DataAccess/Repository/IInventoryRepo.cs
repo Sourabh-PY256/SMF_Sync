@@ -16,4 +16,5 @@ public interface IInventoryRepo
     Inventory GetInventory(string Code);
     List<Inventory> ListInventory(string Code = "", DateTime? DeltaDate = null);
     ResponseData MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validation);
+    List<SaleOrder> ListSalesOrder(string Id, string SalesOrder, string CustomerCode, DateTime? DeltaDate = null);
 }

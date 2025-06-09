@@ -171,5 +171,83 @@ public class ToolRepo : IToolRepo
 		}
 		return returnValue;
 	}
+	/// <summary>
+	///
+	/// </summary>
+	public List<Tool> ListTools(string ToolCode, DateTime? DeltaDate = null)
+	{
+		List<Tool> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Tooling_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddWithValue("_ToolingCode", ToolCode);
+				command.Parameters.AddCondition("_DeltaDate", DeltaDate, DeltaDate.HasValue);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					Tool element = new()
+					{
+						Id = rdr["Code"].ToStr(),
+						ToolingTypeCode = rdr["ToolingTypeCode"].ToStr(),
+						Code = rdr["Code"].ToStr(),
+						Name = rdr["Name"].ToStr(),
+						Icon = rdr["Icon"].ToStr(),
+						Image = rdr["Image"].ToStr(),
+						CreationDate = rdr["CreateDate"].ToDate(),
+						CreatedBy = new User(rdr["CreateUser"].ToInt32()),
+						Status = (Status)rdr["Status"].ToInt32(),
+
+						Details = []
+					};
+
+					if (rdr["UpdateDate"].ToDate().Year > 1900)
+					{
+						element.ModifyDate = rdr["UpdateDate"].ToDate();
+						element.ModifiedBy = new User(rdr["UpdateUser"].ToInt32());
+					}
+
+					(returnValue ??= []).Add(element);
+				}
+
+				rdr.NextResultAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					string ToolingCode = rdr["ToolingCode"].ToStr();
+					Tool element = returnValue.Find(x => x.Code == ToolingCode);
+					if (element is not null)
+					{
+						ToolDetail detail = new()
+						{
+							ProcessCode = rdr["ParameterCode"].ToStr(),
+							Type = (ToolParamType)rdr["ParamType"].ToInt32(),
+							Source = rdr["ParamSource"].ToStr(),
+							Value = rdr["ParamValue"].ToStr(),
+							StandardValue = rdr["StandardValue"].ToStr()
+						};
+						element.Details.Add(detail);
+					}
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
     #endregion Tool
 }   

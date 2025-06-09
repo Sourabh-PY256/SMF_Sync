@@ -768,110 +768,395 @@ public class WorkOrderRepo : IWorkOrderRepo
 	///
 	/// </summary>
 	public WorkOrder GetWorkOrderByCode(string workOrderCode)
+    {
+        WorkOrder returnValue = null;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Order_Code_SEL", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_Order", workOrderCode, !string.IsNullOrEmpty(workOrderCode));
+                /*command.Parameters.AddNull("_Status");
+                command.Parameters.AddNull("_StartDate");
+                command.Parameters.AddNull("_EndDate");
+                command.Parameters.AddWithValue("_ListOnly", 0);*/
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+                int OrderCodeOrdinal = rdr.GetOrdinal("OrderCode");
+
+                int ProductNameOrdinal = rdr.GetOrdinal("ProductName");
+                int ProductCodeOrdinal = rdr.GetOrdinal("ProductCode");
+                int ProductIdOrdinal = rdr.GetOrdinal("ProductId");
+                int PlannedQtyOrdinal = rdr.GetOrdinal("PlannedQty");
+                int PlannedStartDateUTCOrdinal = rdr.GetOrdinal("PlannedStartDateUTC");
+                int PlannedStartDateOrdinal = rdr.GetOrdinal("PlannedStartDate");
+                int PlannedEndDateOrdinal = rdr.GetOrdinal("PlannedEndDate");
+                int DueDateOrdinal = rdr.GetOrdinal("DueDate");
+                int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
+                int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
+                int StatusOrdinal = rdr.GetOrdinal("Status");
+                int AcceptedQtyOrdinal = rdr.GetOrdinal("AcceptedQty");
+                int RejectedQtyOrdinal = rdr.GetOrdinal("RejectedQty");
+                int ProductionLinesOrdinal = rdr.GetOrdinal("ProductionLines");
+                int HasAllocationOrdinal = rdr.GetOrdinal("HasAllocation");
+                int APSOrdinal = rdr.GetOrdinal("APS");
+                int WarehouseCodeOrdinal = rdr.GetOrdinal("WarehouseCode");
+                int OrderGroupOrdinal = rdr.GetOrdinal("OrderGroup");
+                int OrderTypeOrdinal = rdr.GetOrdinal("OrderType");
+                int FormulaOrdinal = rdr.GetOrdinal("Formula");
+                int CommentsOrdinal = rdr.GetOrdinal("Comments");
+                int SalesOrderOrdinal = rdr.GetOrdinal("SalesOrder");
+                int UnitOrdinal = rdr.GetOrdinal("Unit");
+                int UpdateDateOrdinal = rdr.GetOrdinal("UpdateDate");
+                int UpdateUserOrdinal = rdr.GetOrdinal("UpdateUser");
+                int RealStartDateOrdinal = rdr.GetOrdinal("RealStartDate");
+                int RealStartDateUTCOrdinal = rdr.GetOrdinal("RealStartDateUTC");
+                int RealEndDateOrdinal = rdr.GetOrdinal("RealEndDate");
+
+                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+                {
+                    returnValue = new WorkOrder
+                    {
+                        Id = rdr[OrderCodeOrdinal].ToStr(),
+                        ExternalId = rdr[OrderCodeOrdinal].ToStr(),
+                        OrderCode = rdr[OrderCodeOrdinal].ToStr(),
+                        ProductName = rdr[ProductNameOrdinal].ToStr(),
+                        ProductCode = rdr[ProductCodeOrdinal].ToStr(),
+                        ProcessEntryId = rdr[ProductIdOrdinal].ToStr(),
+                        PlannedQty = rdr[PlannedQtyOrdinal].ToDouble(),
+                        PlannedStartUTC = rdr[PlannedStartDateUTCOrdinal].ToDate(),
+                        PlannedStart = rdr[PlannedStartDateOrdinal].ToDate(),
+                        PlannedEnd = rdr[PlannedEndDateOrdinal].ToDate(),
+                        DueDate = rdr[DueDateOrdinal].ToDate(),
+                        CreationDate = rdr[CreateDateOrdinal].ToDate(),
+                        CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
+                        Status = (Status)rdr[StatusOrdinal].ToInt32(),
+                        ReceivedQty = rdr[AcceptedQtyOrdinal].ToDouble() + rdr[RejectedQtyOrdinal].ToDouble(),
+                        AcceptedQty = rdr[AcceptedQtyOrdinal].ToDouble(),
+                        RejectedQty = rdr[RejectedQtyOrdinal].ToDouble(),
+                        ProductionLines = [.. rdr[ProductionLinesOrdinal].ToStr().Split(',')],
+                        IsAllocated = rdr[HasAllocationOrdinal].ToBool(),
+                        APS = rdr[APSOrdinal].ToBool(),
+                        WarehouseId = rdr[WarehouseCodeOrdinal].ToStr(),
+                        OrderGroup = rdr[OrderGroupOrdinal].ToStr(),
+                        OrderType = rdr[OrderTypeOrdinal].ToStr(),
+                        Formula = rdr[FormulaOrdinal].ToStr(),
+                        Comments = rdr[CommentsOrdinal].ToStr(),
+                        SalesOrder = rdr[SalesOrderOrdinal].ToStr(),
+                        UnitId = rdr[UnitOrdinal].ToStr(),
+                        Processes = [],
+                        Components = [],
+                        ToolValues = []
+                    };
+
+                    if (rdr[UpdateDateOrdinal].ToDate().Year > 1900)
+                    {
+                        returnValue.ModifyDate = rdr[UpdateDateOrdinal].ToDate();
+                        returnValue.ModifiedBy = new User(rdr[UpdateUserOrdinal].ToInt32());
+                    }
+                    if (rdr[RealStartDateOrdinal].ToDate().Year > 1900)
+                    {
+                        returnValue.RealStartUTC = rdr[RealStartDateUTCOrdinal].ToDate();
+                        returnValue.RealStart = rdr[RealStartDateOrdinal].ToDate();
+                    }
+                    if (rdr[RealEndDateOrdinal].ToDate().Year > 1900)
+                    {
+                        returnValue.RealEnd = rdr[RealEndDateOrdinal].ToDate();
+                    }
+
+                    returnValue ??= new WorkOrder();
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public bool MergeWorkOrderProcesses(WorkOrder workorderInfo, string processXML, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Order_Operation_MRG", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_OrderCode", workorderInfo.Id, !string.IsNullOrEmpty(workorderInfo.Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Id"));
+                command.Parameters.AddCondition("_JSON", processXML, !string.IsNullOrEmpty(processXML));
+                command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+                command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public bool MergeWorkOrderComponents(WorkOrder workorderInfo, string componentJson, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Order_Op_Items_MRG", connection)
+                {
+                    CommandType = CommandType.StoredProcedure,
+                    CommandTimeout = 120000
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_OrderCode", workorderInfo.Id, !string.IsNullOrEmpty(workorderInfo.Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Id"));
+                command.Parameters.AddCondition("_JSON", componentJson, !string.IsNullOrEmpty(componentJson));
+                command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+                command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public bool MergeWorkOrderTooling(WorkOrder workorderInfo, string toolingJson, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_OrderTooling_INS", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_OrderCode", workorderInfo.Id, !string.IsNullOrEmpty(workorderInfo.Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Id"));
+                command.Parameters.AddCondition("_JSON", toolingJson, !string.IsNullOrEmpty(toolingJson));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public bool MergeWorkOrderSubproducts(WorkOrder workorderInfo, string subproductXML, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Order_ByProduct_INS", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_OrderCode", workorderInfo.Id, !string.IsNullOrEmpty(workorderInfo.Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Id"));
+                command.Parameters.AddCondition("_JSON", subproductXML, !string.IsNullOrEmpty(subproductXML));
+                command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+                command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public bool MergeWorkOrderToolValues(WorkOrder workorderInfo, string toolValuesXML, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_Order_ToolValue_MRG", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_OrderCode", workorderInfo.Id, !string.IsNullOrEmpty(workorderInfo.Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Id"));
+                command.Parameters.AddCondition("_XML", toolValuesXML, !string.IsNullOrEmpty(toolValuesXML));
+                command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public bool MergeWorkOrderLabor(WorkOrder workorderInfo, string JSONData, User systemOperator)
+    {
+        bool returnValue = false;
+        using (EWP_Connection connection = new(ConnectionString))
+        {
+            try
+            {
+                using EWP_Command command = new("SP_SF_OrderLabor_INS", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
+                command.Parameters.Clear();
+
+                command.Parameters.AddCondition("_OrderCode", workorderInfo.Id, !string.IsNullOrEmpty(workorderInfo.Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Order Id"));
+                command.Parameters.AddWithValue("_JSON", JSONData);
+
+                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                returnValue = true;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+        }
+        return returnValue;
+    }
+    /// <summary>
+	///
+	/// </summary>
+	public WorkOrderResponse MergeWorkOrder(WorkOrder workorderInfo, User systemOperator, bool Validation, LevelMessage Level, ActionDB? mode = null, IntegrationSource intSrc = IntegrationSource.SF)
 	{
-		WorkOrder returnValue = null;
+		WorkOrderResponse returnValue = null;
 		using (EWP_Connection connection = new(ConnectionString))
 		{
 			try
 			{
-				using EWP_Command command = new("SP_SF_Order_Code_SEL", connection)
+				using EWP_Command command = new("SP_SF_Order_MRG", connection)
 				{
 					CommandType = CommandType.StoredProcedure
 				};
 				command.Parameters.Clear();
 
-				command.Parameters.AddCondition("_Order", workOrderCode, !string.IsNullOrEmpty(workOrderCode));
-				/*command.Parameters.AddNull("_Status");
-                command.Parameters.AddNull("_StartDate");
-                command.Parameters.AddNull("_EndDate");
-                command.Parameters.AddWithValue("_ListOnly", 0);*/
-
+				command.Parameters.AddCondition("_OrderCode", workorderInfo.OrderCode, !string.IsNullOrEmpty(workorderInfo.OrderCode));
+				command.Parameters.AddCondition("_ProductId", workorderInfo.ProcessEntryId, !string.IsNullOrEmpty(workorderInfo.ProcessEntryId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Product"));
+				command.Parameters.AddCondition("_PlannedStart", workorderInfo.PlannedStart, workorderInfo.PlannedStart.Year > 1900);
+				command.Parameters.AddCondition("_PlannedEnd", workorderInfo.PlannedEnd, workorderInfo.PlannedEnd.Year > 1900);
+				command.Parameters.AddWithValue("_PlannedQty", workorderInfo.PlannedQty);
+				command.Parameters.AddCondition("_RealStart", workorderInfo.RealStart, workorderInfo.RealStart.Year > 1900);
+				command.Parameters.AddCondition("_RealEnd", workorderInfo.RealEnd, workorderInfo.RealEnd.Year > 1900);
+				command.Parameters.AddWithValue("_Status", workorderInfo.Status.ToInt32());
+				command.Parameters.AddWithValue("_OrderType", workorderInfo.OrderType);
+				command.Parameters.AddWithValue("_Formula", workorderInfo.Formula);
+				command.Parameters.AddWithValue("_OrderGroup", workorderInfo.OrderGroup);
+				command.Parameters.AddWithValue("_SalesOrder", workorderInfo.SalesOrder);
+				command.Parameters.AddWithValue("_Comments", workorderInfo.Comments);
+				command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+				command.Parameters.AddWithValue("_IsValidation", Validation);
+				command.Parameters.AddWithValue("_Level", Level);
+				command.Parameters.AddCondition("_DueDate", workorderInfo.DueDate, workorderInfo.DueDate.Year > 1900);
+				command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+				command.Parameters.AddCondition("_Priority", workorderInfo.Priority, !string.IsNullOrEmpty(workorderInfo.Priority));
+				command.Parameters.AddWithValue("_Origin", intSrc.ToInt32());
+				command.Parameters.AddCondition("_OrderSource", workorderInfo.OrderSource, !string.IsNullOrEmpty(workorderInfo.OrderSource));
+				command.Parameters.AddCondition("_LotNo", workorderInfo.LotNo, !string.IsNullOrEmpty(workorderInfo.LotNo));
 				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 
-				int OrderCodeOrdinal = rdr.GetOrdinal("OrderCode");
-
-				int ProductNameOrdinal = rdr.GetOrdinal("ProductName");
-				int ProductCodeOrdinal = rdr.GetOrdinal("ProductCode");
-				int ProductIdOrdinal = rdr.GetOrdinal("ProductId");
-				int PlannedQtyOrdinal = rdr.GetOrdinal("PlannedQty");
-				int PlannedStartDateUTCOrdinal = rdr.GetOrdinal("PlannedStartDateUTC");
-				int PlannedStartDateOrdinal = rdr.GetOrdinal("PlannedStartDate");
-				int PlannedEndDateOrdinal = rdr.GetOrdinal("PlannedEndDate");
-				int DueDateOrdinal = rdr.GetOrdinal("DueDate");
-				int CreateDateOrdinal = rdr.GetOrdinal("CreateDate");
-				int CreateUserOrdinal = rdr.GetOrdinal("CreateUser");
-				int StatusOrdinal = rdr.GetOrdinal("Status");
-				int AcceptedQtyOrdinal = rdr.GetOrdinal("AcceptedQty");
-				int RejectedQtyOrdinal = rdr.GetOrdinal("RejectedQty");
-				int ProductionLinesOrdinal = rdr.GetOrdinal("ProductionLines");
-				int HasAllocationOrdinal = rdr.GetOrdinal("HasAllocation");
-				int APSOrdinal = rdr.GetOrdinal("APS");
-				int WarehouseCodeOrdinal = rdr.GetOrdinal("WarehouseCode");
-				int OrderGroupOrdinal = rdr.GetOrdinal("OrderGroup");
-				int OrderTypeOrdinal = rdr.GetOrdinal("OrderType");
-				int FormulaOrdinal = rdr.GetOrdinal("Formula");
-				int CommentsOrdinal = rdr.GetOrdinal("Comments");
-				int SalesOrderOrdinal = rdr.GetOrdinal("SalesOrder");
-				int UnitOrdinal = rdr.GetOrdinal("Unit");
-				int UpdateDateOrdinal = rdr.GetOrdinal("UpdateDate");
-				int UpdateUserOrdinal = rdr.GetOrdinal("UpdateUser");
-				int RealStartDateOrdinal = rdr.GetOrdinal("RealStartDate");
-				int RealStartDateUTCOrdinal = rdr.GetOrdinal("RealStartDateUTC");
-				int RealEndDateOrdinal = rdr.GetOrdinal("RealEndDate");
-
 				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
 				{
-					returnValue = new WorkOrder
+					returnValue = new WorkOrderResponse
 					{
-						Id = rdr[OrderCodeOrdinal].ToStr(),
-						ExternalId = rdr[OrderCodeOrdinal].ToStr(),
-						OrderCode = rdr[OrderCodeOrdinal].ToStr(),
-						ProductName = rdr[ProductNameOrdinal].ToStr(),
-						ProductCode = rdr[ProductCodeOrdinal].ToStr(),
-						ProcessEntryId = rdr[ProductIdOrdinal].ToStr(),
-						PlannedQty = rdr[PlannedQtyOrdinal].ToDouble(),
-						PlannedStartUTC = rdr[PlannedStartDateUTCOrdinal].ToDate(),
-						PlannedStart = rdr[PlannedStartDateOrdinal].ToDate(),
-						PlannedEnd = rdr[PlannedEndDateOrdinal].ToDate(),
-						DueDate = rdr[DueDateOrdinal].ToDate(),
-						CreationDate = rdr[CreateDateOrdinal].ToDate(),
-						CreatedBy = new User(rdr[CreateUserOrdinal].ToInt32()),
-						Status = (Status)rdr[StatusOrdinal].ToInt32(),
-						ReceivedQty = rdr[AcceptedQtyOrdinal].ToDouble() + rdr[RejectedQtyOrdinal].ToDouble(),
-						AcceptedQty = rdr[AcceptedQtyOrdinal].ToDouble(),
-						RejectedQty = rdr[RejectedQtyOrdinal].ToDouble(),
-						ProductionLines = [.. rdr[ProductionLinesOrdinal].ToStr().Split(',')],
-						IsAllocated = rdr[HasAllocationOrdinal].ToBool(),
-						APS = rdr[APSOrdinal].ToBool(),
-						WarehouseId = rdr[WarehouseCodeOrdinal].ToStr(),
-						OrderGroup = rdr[OrderGroupOrdinal].ToStr(),
-						OrderType = rdr[OrderTypeOrdinal].ToStr(),
-						Formula = rdr[FormulaOrdinal].ToStr(),
-						Comments = rdr[CommentsOrdinal].ToStr(),
-						SalesOrder = rdr[SalesOrderOrdinal].ToStr(),
-						UnitId = rdr[UnitOrdinal].ToStr(),
-						Processes = [],
-						Components = [],
-						ToolValues = []
+						Action = (ActionDB)rdr["Action"].ToInt32(),
+						IsSuccess = rdr["IsSuccess"].ToInt32().ToBool(),
+						Code = rdr["Code"].ToStr(),
+						Message = rdr["Message"].ToStr(),
 					};
+				}
 
-					if (rdr[UpdateDateOrdinal].ToDate().Year > 1900)
-					{
-						returnValue.ModifyDate = rdr[UpdateDateOrdinal].ToDate();
-						returnValue.ModifiedBy = new User(rdr[UpdateUserOrdinal].ToInt32());
-					}
-					if (rdr[RealStartDateOrdinal].ToDate().Year > 1900)
-					{
-						returnValue.RealStartUTC = rdr[RealStartDateUTCOrdinal].ToDate();
-						returnValue.RealStart = rdr[RealStartDateOrdinal].ToDate();
-					}
-					if (rdr[RealEndDateOrdinal].ToDate().Year > 1900)
-					{
-						returnValue.RealEnd = rdr[RealEndDateOrdinal].ToDate();
-					}
-
-					returnValue ??= new WorkOrder();
+				if (mode == ActionDB.Create)
+				{
+					workorderInfo.Id = workorderInfo.OrderCode;
+					returnValue.WorkOrder = workorderInfo;
 				}
 			}
 			catch
@@ -885,4 +1170,5 @@ public class WorkOrderRepo : IWorkOrderRepo
 		}
 		return returnValue;
 	}
+
 }
