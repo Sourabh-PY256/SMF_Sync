@@ -16,10 +16,8 @@ public class ItemOperation : IItemOperation
 {
     private readonly IItemRepo _itemRepo;
     private readonly IInventoryOperation _inventoryOperation;
-    private readonly IApplicationSettings _applicationSettings;
 
-    public ItemOperation(IItemRepo itemRepo, IInventoryOperation inventoryOperation,
-     IApplicationSettings applicationSettings)
+    public ItemOperation(IItemRepo itemRepo, IInventoryOperation inventoryOperation)
     {
         _itemRepo = itemRepo;
         _inventoryOperation = inventoryOperation;

@@ -2,19 +2,18 @@
 using EWP.SF.Item.DataAccess;
 using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Models;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class DataSyncServiceOperation : IDataSyncServiceOperation
 {
     private readonly IDataSyncRepository _dataSyncRepository;
-    private readonly IApplicationSettings _applicationSettings;
 
-    public DataSyncServiceOperation(IDataSyncRepository dataSyncRepository, IApplicationSettings applicationSettings)
+
+    public DataSyncServiceOperation(IDataSyncRepository dataSyncRepository)
     {
         _dataSyncRepository = dataSyncRepository;
-        _applicationSettings = applicationSettings;
     }
 
     #region DataSync
@@ -60,7 +59,7 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
         throw new NotImplementedException();
     }
 
-    public  Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false)
+    public Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false)
     {
         return _dataSyncRepository.GetTimezones(currentValues);
     }
@@ -72,7 +71,7 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 	public List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes) => _dataSyncRepository.ListDataSyncERP(id, getInstances);
 
 
-   
-    
+
+
     #endregion DataSync
 }

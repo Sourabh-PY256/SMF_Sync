@@ -2,20 +2,19 @@ using EWP.SF.Common.Models;
 using EWP.SF.Item.DataAccess;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
+using EWP.SF.Common.Constants;
 namespace EWP.SF.Item.BusinessLayer;
 
 public class SchedulingShiftStatusOperation : ISchedulingShiftStatusOperation
 {
     private readonly ISchedulingShiftStatusRepo _schedulingShiftStatusRepo;
-    private readonly IApplicationSettings _applicationSettings;
     private readonly IAttachmentOperation _attachmentOperation;
 
-    public SchedulingShiftStatusOperation(ISchedulingShiftStatusRepo schedulingShiftStatusRepo, IApplicationSettings applicationSettings,
+    public SchedulingShiftStatusOperation(ISchedulingShiftStatusRepo schedulingShiftStatusRepo,
      IAttachmentOperation attachmentOperation)
     {
         _schedulingShiftStatusRepo = schedulingShiftStatusRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
     }
 
@@ -42,10 +41,10 @@ public class SchedulingShiftStatusOperation : ISchedulingShiftStatusOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
-        // {
-        //     throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
+        {
+            throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -66,7 +65,7 @@ public class SchedulingShiftStatusOperation : ISchedulingShiftStatusOperation
                 if (!Validate)
                 {
                     scheduleLog = _schedulingShiftStatusRepo.GetSchedulingShiftStatus(item.Code, item.Type).FirstOrDefault();
-                    //await scheduleLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+                    await scheduleLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
                 }
 
                 if (NotifyOnce && !Validate)

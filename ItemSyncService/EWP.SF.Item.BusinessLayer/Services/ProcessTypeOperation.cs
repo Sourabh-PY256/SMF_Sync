@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using EWP.SF.Common.Constants;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
@@ -23,10 +24,10 @@ public class ProcessTypeOperation : IProcessTypeOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code is Permissions.CP_MACHINE_EDIT or Permissions.CP_PROCESS_TYPE_MANAGE or Permissions.RPT_MACHINEDETAILS_VW))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code is Permissions.CP_MACHINE_EDIT or Permissions.CP_PROCESS_TYPE_MANAGE or Permissions.RPT_MACHINEDETAILS_VW))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -139,10 +140,10 @@ public class ProcessTypeOperation : IProcessTypeOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 

@@ -3,7 +3,8 @@ using EWP.SF.Item.DataAccess;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
+using EWP.SF.Common.Constants;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -11,16 +12,14 @@ namespace EWP.SF.Item.BusinessLayer;
 public class AssetOperation : IAssetOperation
 {
     private readonly IAssetRepo _assetRepo;
-    private readonly IApplicationSettings _applicationSettings;
     private readonly IAttachmentOperation _attachmentOperation;
     private readonly IActivityOperation _activityOperation;
     private readonly ISchedulingCalendarShiftsOperation _schedulingCalendarShiftsOperation;
 
-    public AssetOperation(IAssetRepo assetRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
+    public AssetOperation(IAssetRepo assetRepo, IAttachmentOperation attachmentOperation,
      IActivityOperation activityOperation, ISchedulingCalendarShiftsOperation  schedulingCalendarShiftsOperation )
     {
         _assetRepo = assetRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
         _activityOperation = activityOperation;
         _schedulingCalendarShiftsOperation =  schedulingCalendarShiftsOperation;
@@ -248,10 +247,10 @@ public class AssetOperation : IAssetOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_PRODUCTIONLINE_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_PRODUCTIONLINE_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -265,10 +264,10 @@ public class AssetOperation : IAssetOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_PRODUCTIONLINE_CREATE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_PRODUCTIONLINE_CREATE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -337,10 +336,10 @@ public class AssetOperation : IAssetOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_PRODUCTIONLINE_DELETE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_PRODUCTIONLINE_DELETE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -363,10 +362,10 @@ public class AssetOperation : IAssetOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.ASS_WORKCENTER_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.ASS_WORKCENTER_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -441,10 +440,10 @@ public class AssetOperation : IAssetOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.ASS_FLOOR_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.ASS_FLOOR_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -522,10 +521,10 @@ public class AssetOperation : IAssetOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.ASS_FACILITY_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.ASS_FACILITY_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 

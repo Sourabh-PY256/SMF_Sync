@@ -1,9 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿
+using EWP.SF.Common.Constants;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
-using EWP.SF.Common.ResponseModels;
-using EWP.SF.Helper;
-using Newtonsoft.Json;
 
 namespace EWP.SF.Item.BusinessLayer;
 public class ProductionLinesOperation : IProductionLinesOperation
@@ -34,10 +32,10 @@ public class ProductionLinesOperation : IProductionLinesOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_PRODUCTIONLINE_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_PRODUCTIONLINE_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -126,10 +124,10 @@ public class ProductionLinesOperation : IProductionLinesOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_PRODUCTIONLINE_DELETE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_PRODUCTIONLINE_DELETE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 

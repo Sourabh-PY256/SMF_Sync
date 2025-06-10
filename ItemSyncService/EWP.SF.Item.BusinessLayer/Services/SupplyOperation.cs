@@ -4,6 +4,7 @@ using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using System.ComponentModel.DataAnnotations;
 using EWP.SF.Item.DataAccess;
+using EWP.SF.Common.Constants;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -11,18 +12,18 @@ namespace EWP.SF.Item.BusinessLayer;
 
 public class SupplyOperation : ISupplyOperation
 {
-    private readonly ISupplyRepo _supplyRepo;
-    private readonly IApplicationSettings _applicationSettings;
-
+	private readonly ISupplyRepo _supplyRepo;
     private readonly IWarehouseOperation _warehouseOperation;
+	private readonly IComponentOperation _componentOperation;
 
-    public SupplyOperation(ISupplyRepo supplyRepo, IApplicationSettings applicationSettings
-    , IWarehouseOperation warehouseOperation)
-    {
-        _supplyRepo = supplyRepo;
-        _applicationSettings = applicationSettings;
-        _warehouseOperation = warehouseOperation;
-    }
+	public SupplyOperation(ISupplyRepo supplyRepo
+	, IWarehouseOperation warehouseOperation
+	, IComponentOperation componentOperation)
+	{
+		_supplyRepo = supplyRepo;
+		_warehouseOperation = warehouseOperation;
+		_componentOperation = componentOperation;
+	}
 
 	/// <summary>
 	///
@@ -32,10 +33,10 @@ public class SupplyOperation : ISupplyOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -52,10 +53,10 @@ public class SupplyOperation : ISupplyOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -120,7 +121,7 @@ public class SupplyOperation : ISupplyOperation
 					string itemName = null;
 					if (!editMode)
 					{
-						Component ObjItem = BrokerDAL.GetComponentByCode(supply.ItemCode);
+						Component ObjItem = _componentOperation.GetComponentByCode(supply.ItemCode);
 						if (ObjItem is not null)
 						{
 							if (ObjItem.Status == Status.Failed)

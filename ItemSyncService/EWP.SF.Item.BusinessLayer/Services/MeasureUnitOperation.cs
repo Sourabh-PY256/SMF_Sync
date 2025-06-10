@@ -1,27 +1,21 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using EWP.SF.Common.Models.Catalogs;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using EWP.SF.Common.Models;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class MeasureUnitOperation : IMeasureUnitOperation
 {
     private readonly IMeasureUnitRepo _measureUnitRepo;
-    private readonly IApplicationSettings _applicationSettings;
-
-    private readonly IProcessTypeOperation _processTypeOperation;
 
     private readonly IAttachmentOperation _attachmentOperation;
 
-    public MeasureUnitOperation(IMeasureUnitRepo measureUnitRepo, IApplicationSettings applicationSettings
-    , IProcessTypeOperation processTypeOperation, IAttachmentOperation attachmentOperation)
+    public MeasureUnitOperation(IMeasureUnitRepo measureUnitRepo,IAttachmentOperation attachmentOperation)
     {
         _measureUnitRepo = measureUnitRepo;
-        _applicationSettings = applicationSettings;
-        _processTypeOperation = processTypeOperation;
         _attachmentOperation = attachmentOperation;
     }
 
@@ -40,10 +34,10 @@ public class MeasureUnitOperation : IMeasureUnitOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_MEASUREUNIT_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_MEASUREUNIT_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -51,7 +45,7 @@ public class MeasureUnitOperation : IMeasureUnitOperation
 		if (!Validate && returnValue is not null)
 		{
 			MeasureUnit ObjMeasureUnit = GetMeasureUnits(null, returnValue.Code).Find(static x => x.Status != Status.Failed);
-			//await ObjMeasureUnit.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+			await ObjMeasureUnit.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
 			if (NotifyOnce)
 			{
 				await _attachmentOperation.SaveImageEntity("UnitMeasure", measureUnitInfo.Image, measureUnitInfo.Code, systemOperator).ConfigureAwait(false);

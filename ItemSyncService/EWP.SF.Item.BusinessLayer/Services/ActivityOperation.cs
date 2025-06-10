@@ -21,7 +21,7 @@ namespace EWP.SF.Item.BusinessLayer;
 public class ActivityOperation : IActivityOperation
 {
     private readonly IActivityRepo _activityRepo;
-    private readonly IApplicationSettings _applicationSettings;
+
 
     private readonly IAttachmentOperation _attachmentOperation;
 
@@ -30,12 +30,13 @@ public class ActivityOperation : IActivityOperation
     private readonly IProcedureRepo _procedureRepo;
 
     public ActivityOperation(IActivityRepo activityRepo, IApplicationSettings applicationSettings
-    , IAttachmentOperation attachmentOperation, IProcedureOperation procedureOperation)
+    , IAttachmentOperation attachmentOperation, IProcedureOperation procedureOperation,
+    IProcedureRepo procedureRepo)
     {
         _activityRepo = activityRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
         _procedureOperation = procedureOperation;
+        _procedureRepo = procedureRepo;
     }
     #region Activity
 

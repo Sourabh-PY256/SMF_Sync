@@ -3,11 +3,12 @@ using EWP.SF.Item.DataAccess;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
 using System.Xml.Serialization;
 using SixLabors.ImageSharp;
 using EWP.SF.Common.Models.Catalogs;
 using Newtonsoft.Json;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
@@ -16,18 +17,18 @@ public class EmployeeOperation : IEmployeeOperation
     private readonly IEmployeeRepo _employeeRepo;
     private readonly ICatalogRepo _catalogRepo;
     private readonly ISchedulingRepo _schedulingRepo;
-    private readonly IApplicationSettings _applicationSettings;
     private readonly IAttachmentOperation _attachmentOperation;
     private readonly IActivityOperation _activityOperation;
     private readonly ISchedulingCalendarShiftsOperation _schedulingCalendarShiftsOperation;
 
-    public EmployeeOperation(IEmployeeRepo employeeRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
+    public EmployeeOperation(IEmployeeRepo employeeRepo, IAttachmentOperation attachmentOperation,
      IActivityOperation activityOperation,
-     ICatalogRepo catalogRepo, ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation)
+     ICatalogRepo catalogRepo, ISchedulingRepo schedulingRepo,
+     ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation)
     {
         _employeeRepo = employeeRepo;
         _catalogRepo = catalogRepo;
-        _applicationSettings = applicationSettings;
+        _schedulingRepo = schedulingRepo;
         _attachmentOperation = attachmentOperation;
         _activityOperation = activityOperation;
         _schedulingCalendarShiftsOperation = schedulingCalendarShiftsOperation;
@@ -189,10 +190,10 @@ public class EmployeeOperation : IEmployeeOperation
         List<EmployeeContractsDetail> responseEmployeeContractsDetail = [];
         Employee employeeLog = null;
         const int Line = 0;
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.HR_EMPLOYEE_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.HR_EMPLOYEE_MANAGE))
+        {
+            throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
         NotifyOnce = requestValue.Count == 1;
         foreach (Employee item in requestValue)
         {
@@ -305,13 +306,13 @@ public class EmployeeOperation : IEmployeeOperation
                 }
 
                 //Valid insert detalle tables
-                //if ()
+                // if ()
                 //    continue;
-                // if (!Validate)
-                // {
-                // 	employeeLog = _employeeRepo.ListEmployees(null, item.Code).Find(x => x.Status != Status.Failed);
-                // 	await employeeLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
-                // }
+                if (!Validate)
+                {
+                    employeeLog = _employeeRepo.ListEmployees(null, item.Code).Find(x => x.Status != Status.Failed);
+                    await employeeLog.Log(responseMessage.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+                }
 
                 if (!Validate)
                 {
@@ -332,7 +333,7 @@ public class EmployeeOperation : IEmployeeOperation
                         //     {
                         //         result = await CreateUserTraining2(employeeLog.Email, employeeLog.Code, employeeLog.Name, employeeLog.LastName).ConfigureAwait(false);
                         //     }
-                        // }
+                        // }Need to discuss
                     }
                     catch (Exception ex)
                     {
@@ -380,18 +381,18 @@ public class EmployeeOperation : IEmployeeOperation
 	/// </summary>
 	/// <exception cref="UnauthorizedAccessException"></exception>
 	public List<Employee> GetEmployees(string id, string code, User systemOperator, DateTime? DeltaDate = null)
-	{
-		#region Permission validation
+    {
+        #region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code is Permissions.PRD_ORDERPROGRESS_MANAGE or Permissions.HR_EMPLOYEE_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+        if (!systemOperator.Permissions.Any(static x => x.Code is Permissions.PRD_ORDERPROGRESS_MANAGE or Permissions.HR_EMPLOYEE_MANAGE))
+        {
+            throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
-		#endregion Permission validation
+        #endregion Permission validation
 
-		return _employeeRepo.ListEmployees(id, code, DeltaDate);
-	}
+        return _employeeRepo.ListEmployees(id, code, DeltaDate);
+    }
     /// <summary>
     ///
     /// </summary>

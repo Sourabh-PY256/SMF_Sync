@@ -4,22 +4,24 @@ using EWP.SF.Common.ResponseModels;
 using Newtonsoft.Json;
 using EWP.SF.Helper;
 using System.ComponentModel.DataAnnotations;
+using EWP.SF.Common.Constants;
 
 
 namespace EWP.SF.Item.BusinessLayer;
 
 
-public class DemandOperation : IDemandOperation{
-    private readonly IDemandRepo _demandRepo;
+public class DemandOperation : IDemandOperation
+{
+	private readonly IDemandRepo _demandRepo;
 
-     private readonly IMeasureUnitOperation _measureUnitOperation;
+	private readonly IMeasureUnitOperation _measureUnitOperation;
 
-    public DemandOperation(IDemandRepo demandRepo,IMeasureUnitOperation measureUnitOperation)
-    {
-        _demandRepo = demandRepo;
-        _measureUnitOperation = measureUnitOperation;
-    }
-/// <summary>
+	public DemandOperation(IDemandRepo demandRepo, IMeasureUnitOperation measureUnitOperation)
+	{
+		_demandRepo = demandRepo;
+		_measureUnitOperation = measureUnitOperation;
+	}
+	/// <summary>
 	///
 	/// </summary>
 	/// <exception cref="UnauthorizedAccessException"></exception>
@@ -27,16 +29,16 @@ public class DemandOperation : IDemandOperation{
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
 		return await _demandRepo.ListDemand(OrderNumber).ConfigureAwait(false);
 	}
-    /// <summary>
+	/// <summary>
 	///
 	/// </summary>
 	public async Task<List<ResponseData>> ListUpdateDemandBulk(List<DemandExternal> demandList, List<DemandExternal> demandListOriginal, User systemOperator, bool Validate, LevelMessage Level)

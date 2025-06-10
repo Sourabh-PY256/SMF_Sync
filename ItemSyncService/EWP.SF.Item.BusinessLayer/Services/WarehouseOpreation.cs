@@ -4,6 +4,7 @@ using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using System.ComponentModel.DataAnnotations;
 using EWP.SF.Item.DataAccess;
+using EWP.SF.Common.Constants;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -12,16 +13,10 @@ namespace EWP.SF.Item.BusinessLayer;
 public class WarehouseOperation : IWarehouseOperation
 {
     private readonly IWarehouseRepo _warehouseRepo;
-    private readonly IApplicationSettings _applicationSettings;
 
-    private readonly IAttachmentOperation _attachmentOperation;
-
-    public WarehouseOperation(IWarehouseRepo warehouseRepo, IApplicationSettings applicationSettings
-    , IAttachmentOperation attachmentOperation)
+    public WarehouseOperation(IWarehouseRepo warehouseRepo)
     {
         _warehouseRepo = warehouseRepo;
-        _applicationSettings = applicationSettings;
-        _attachmentOperation = attachmentOperation;
     }
     #region Warehouse
 
@@ -36,10 +31,10 @@ public class WarehouseOperation : IWarehouseOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }discuss mario
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -178,10 +173,10 @@ public class WarehouseOperation : IWarehouseOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 

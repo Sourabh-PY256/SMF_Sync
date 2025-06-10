@@ -14,47 +14,54 @@ using System.Text.RegularExpressions;
 
 namespace EWP.SF.Item.BusinessLayer;
 
-public class DataImportOperation : IDataImportOperation
+public  class DataImportOperation : IDataImportOperation
 {
-	private readonly IComponentRepo _componentRepo;
 
 	private readonly IComponentOperation _componentOperation;
 
 	private readonly IDeviceOperation _deviceOperation;
-
-	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
-	private readonly IApplicationSettings _applicationSettings;
-
-	private readonly IWarehouseOperation _warehouseOperation;
-
-
 	private readonly IMeasureUnitOperation _measureUnitOperation;
-
-	private readonly IAttachmentOperation _attachmentOperation;
-
 	private readonly IProcessTypeOperation _processTypeOperation;
-
 	private readonly ICatalogRepo _catalogRepo;
-
-	private readonly IActivityOperation _activityOperation;
 	private readonly IToolOperation _toolOperation;
-	private readonly IAttachmentRepo _attachmentRepo;
 	private readonly IActivityRepo _activityRepo;
 	private readonly IMachineRepo _machineRepo;
 	private readonly IDataSyncRepository _dataSyncRepository;
 	private readonly IProcedureOperation _procedureOperation;
 	private readonly IDataImportRepo _dataImportRepo;
 
+	public DataImportOperation(
+	IComponentOperation componentOperation,
+	IMeasureUnitOperation measureUnitOperation,
+	IProcessTypeOperation processTypeOperation,
+	ICatalogRepo catalogRepo,
+	IDeviceOperation deviceOperation,
+	IToolOperation toolOperation,
+	IActivityRepo activityRepo,
+	IMachineRepo machineRepo,
+	IDataSyncRepository dataSyncRepository,
+	IProcedureOperation procedureOperation,
+	IDataImportRepo dataImportRepo){
+		_componentOperation = componentOperation;
+		_measureUnitOperation = measureUnitOperation;
+		_processTypeOperation = processTypeOperation;
+		_catalogRepo = catalogRepo;
+		_deviceOperation = deviceOperation;
+		_toolOperation = toolOperation;
+		_activityRepo = activityRepo;
+		_machineRepo = machineRepo;
+		_dataSyncRepository = dataSyncRepository;
+		_procedureOperation = procedureOperation;
+		_dataImportRepo = dataImportRepo;
 
-	public DataImportOperation(IComponentRepo componentRepo, IApplicationSettings applicationSettings
-	, IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation)
-	{
-		_componentRepo = componentRepo;
-		_applicationSettings = applicationSettings;
-		_attachmentOperation = attachmentOperation;
-		_warehouseOperation = warehouseOperation;
-		_dataSyncServiceOperation = dataSyncServiceOperation;
 	}
+    // [GeneratedRegex(@"^[a-zA-Z0-9_. |]*$")]
+	// private static partial Regex MyRegex4();
+	// private static Regex MyRegexDataImport() => MyRegex4();
+ private static Regex MyRegexDataImport()
+{
+    return new Regex(@"^[a-zA-Z0-9_. |]*$", RegexOptions.Compiled);
+}
 	/// <summary>
 	///
 	/// </summary>
@@ -342,7 +349,7 @@ public class DataImportOperation : IDataImportOperation
 		return tasks;
 	}
 
-	private List<DeviceSpeed> GetDataImportAvailableDevices(ProductOperation operationType, ProcessEntryProcess oldOperation = null)
+	public List<DeviceSpeed> GetDataImportAvailableDevices(ProductOperation operationType, ProcessEntryProcess oldOperation = null)
 	{
 		List<DeviceSpeed> returnValue = [];
 		List<Machine> machines = _machineRepo.ListMachines();
@@ -395,7 +402,7 @@ public class DataImportOperation : IDataImportOperation
 		return returnValue;
 	}
 
-	private async Task<List<SubProduct>> GetDataImportSubProducts(ProductOperation operationType)
+	public  async Task<List<SubProduct>> GetDataImportSubProducts(ProductOperation operationType)
 	{
 		List<SubProduct> returnValue = [];
 		List<MeasureUnit> units = _measureUnitOperation.GetMeasureUnits()?.Where(x => x.IsProductionResult && x.Status != Status.Failed).ToList();
@@ -425,7 +432,7 @@ public class DataImportOperation : IDataImportOperation
 		return returnValue;
 	}
 
-	private static List<ProcessEntryAttribute> GetDataImportAttributes(ProductOperation operationType)
+	public  List<ProcessEntryAttribute> GetDataImportAttributes(ProductOperation operationType)
 	{
 		List<ProcessEntryAttribute> returnValue = [];
 
@@ -1006,7 +1013,5 @@ public class DataImportOperation : IDataImportOperation
 		return returnValue;
 	}
 
-	[GeneratedRegex(@"^[a-zA-Z0-9_. |]*$")]
-	private static partial Regex MyRegex4();
-	private static Regex MyRegexDataImport() => MyRegex4();
+
 }

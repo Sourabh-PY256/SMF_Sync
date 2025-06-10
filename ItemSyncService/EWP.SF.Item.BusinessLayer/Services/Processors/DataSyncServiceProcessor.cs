@@ -63,10 +63,11 @@ public class DataSyncServiceProcessor
 	IInventoryStatusOperation _inventoryStatusOperation;
 
 	IDeviceOperation _deviceOperation;
+	IDataSyncServiceOperation _dataSyncServiceOperation;
 
 
- 
-	
+
+
 
 	public DataSyncServiceProcessor(ILogger<DataSyncServiceProcessor> logger,
 	IDataSyncServiceOperation operations, IAttachmentOperation attachmentOperation,
@@ -79,9 +80,20 @@ public class DataSyncServiceProcessor
 	IDemandOperation demandOperation)
 	{
 		_logger = logger;
-		_operations = operations;
-		//_systemOperator = _operations.GetUserWithoutValidations(new User(-1)).ConfigureAwait(false).GetAwaiter().GetResult();
+		_dataSyncServiceOperation = operations;
+		//_systemOperator = _dataSyncServiceOperation.GetUserWithoutValidations(new User(-1)).ConfigureAwait(false).GetAwaiter().GetResult();
 		ContextCache.ERPOffset = null;
+		_attachmentOperation = attachmentOperation;
+		_itemOperation = itemOperation;
+		_activityOperation = activityOperation;
+		_componentOperation = componentOperation;
+		_workOrderOperation = workOrderOperation;
+		_orderTransactionProductOperation = orderTransactionProductOperation;
+		_orderTransactionMaterialOperation = orderTransactionMaterialOperation;
+		_warehouseOperation = warehouseOperation;
+		_binLocationOperation = binLocationOperation;
+		_demandOperation = demandOperation;
+		
 
 	}
 

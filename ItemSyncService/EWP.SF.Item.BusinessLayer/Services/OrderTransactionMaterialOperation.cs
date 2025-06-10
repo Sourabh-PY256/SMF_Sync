@@ -1,36 +1,23 @@
 ﻿using EWP.SF.Common.Models;
-using EWP.SF.Item.DataAccess;
-using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
-using System.Transactions;
-
-
-using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
-using System.Xml.Serialization;
-using System.Text;
-using Range = EWP.SF.Common.Models.Range;
-using SixLabors.ImageSharp;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperation
 {
     private readonly IOrderTransactionMaterialRepo _orderTransactionMaterialRepo;
-    private readonly IApplicationSettings _applicationSettings;
-
     private readonly IWorkOrderOperation _workOrderOperation;
 
     private readonly IComponentOperation _componentOperation;
 
-	public OrderTransactionMaterialOperation(IOrderTransactionMaterialRepo orderTransactionMaterialRepo, IApplicationSettings applicationSettings
+	public OrderTransactionMaterialOperation(IOrderTransactionMaterialRepo orderTransactionMaterialRepo
 	, IWorkOrderOperation workOrderOperation, IComponentOperation componentOperation)
 	{
 		_orderTransactionMaterialRepo = orderTransactionMaterialRepo;
-		_applicationSettings = applicationSettings;
 	    _workOrderOperation = workOrderOperation;
 		_componentOperation = componentOperation;
 	}
@@ -42,10 +29,10 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 

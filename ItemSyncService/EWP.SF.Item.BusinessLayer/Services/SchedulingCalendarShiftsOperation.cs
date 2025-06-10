@@ -1,18 +1,17 @@
 using EWP.SF.Common.Models;
 using EWP.SF.Item.DataAccess;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class SchedulingCalendarShiftsOperation : ISchedulingCalendarShiftsOperation
 {
     private readonly ISchedulingCalendarShiftsRepo _schedulingclandarShiftsRepo;
-    private readonly IApplicationSettings _applicationSettings;
 
-    public SchedulingCalendarShiftsOperation(ISchedulingCalendarShiftsRepo schedulingclandarShiftsRepo, IApplicationSettings applicationSettings)
+    public SchedulingCalendarShiftsOperation(ISchedulingCalendarShiftsRepo schedulingclandarShiftsRepo)
     {
         _schedulingclandarShiftsRepo = schedulingclandarShiftsRepo;
-        _applicationSettings = applicationSettings;
     }
 
     #region SchedulingCalendarShifts
@@ -28,10 +27,10 @@ public class SchedulingCalendarShiftsOperation : ISchedulingCalendarShiftsOperat
 
         string errores = string.Empty;
         bool esNuevo = true;
-        //if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
-        //{
-        //    throw new UnauthorizedAccessException(noPermission);
-        //}
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
+        {
+           throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -120,10 +119,10 @@ public class SchedulingCalendarShiftsOperation : ISchedulingCalendarShiftsOperat
         #region Permission validation
 
         string errores = string.Empty;
-        //if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
-        //{
-        //    throw new UnauthorizedAccessException(noPermission);
-        //}
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.CP_SCHEDULING_SHIFT_STATUS_MANAGE))
+        {
+           throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 

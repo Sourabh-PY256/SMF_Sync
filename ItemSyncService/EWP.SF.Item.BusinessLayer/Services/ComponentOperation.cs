@@ -8,6 +8,7 @@ using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 using EWP.SF.Common.Models.Catalogs;
 using System.Transactions;
+using EWP.SF.Common.Constants;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -17,35 +18,36 @@ public class ComponentOperation : IComponentOperation
 	private readonly IComponentRepo _componentRepo;
 
 	private readonly IDeviceOperation _deviceOperation;
-
 	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
-	private readonly IApplicationSettings _applicationSettings;
-
 	private readonly IWarehouseOperation _warehouseOperation;
-
-
 	private readonly IMeasureUnitOperation _measureUnitOperation;
-
 	private readonly IAttachmentOperation _attachmentOperation;
-
 	private readonly IProcessTypeOperation _processTypeOperation;
-
 	private readonly ICatalogRepo _catalogRepo;
-
 	private readonly IActivityOperation _activityOperation;
 	private readonly IToolOperation _toolOperation;
 	private readonly IDataImportOperation _dataImportOperation;
-
 	private readonly IInventoryOperation _inventoryOperation;
 
-	public ComponentOperation(IComponentRepo componentRepo, IApplicationSettings applicationSettings
-	, IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation)
+	public ComponentOperation(IComponentRepo componentRepo
+	, IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation,
+	 IDataSyncServiceOperation dataSyncServiceOperation
+	 , IMeasureUnitOperation measureUnitOperation, IProcessTypeOperation processTypeOperation
+	 , ICatalogRepo catalogRepo, IActivityOperation activityOperation, IToolOperation toolOperation
+	 , IDataImportOperation dataImportOperation, IInventoryOperation inventoryOperation, IDeviceOperation deviceOperation)
 	{
 		_componentRepo = componentRepo;
-		_applicationSettings = applicationSettings;
 		_attachmentOperation = attachmentOperation;
 		_warehouseOperation = warehouseOperation;
 		_dataSyncServiceOperation = dataSyncServiceOperation;
+		_measureUnitOperation = measureUnitOperation;
+		_processTypeOperation = processTypeOperation;
+		_catalogRepo = catalogRepo;
+		_activityOperation = activityOperation;
+		_toolOperation = toolOperation;
+		_dataImportOperation = dataImportOperation;
+		_inventoryOperation = inventoryOperation;
+		_deviceOperation = deviceOperation;
 	}
 	public Component GetComponentByCode(string Code)
 	{
@@ -680,7 +682,7 @@ public class ComponentOperation : IComponentOperation
 								// Tasks
 								if (itmOperation.Tasks?.Count > 0)
 								{
-									List<Activity> tasks = await _dataImportOperation.GetDataImportTasks(itmOperation, systemOperator);
+									List<Activity> tasks =  _dataImportOperation.GetDataImportTasks(itmOperation, systemOperator);
 									tasks ??= [];
 									if (!editMode)
 									{
@@ -857,7 +859,7 @@ public class ComponentOperation : IComponentOperation
 					}
 
 					//TODO REVISAR LINE ID, AGREGAR VALIDACIONES MANDATORIO Y LLENAR LINEUID
-					pe.Tools = await _dataImportOperation.GetDataImportTooling(item, pe, systemOperator);
+					pe.Tools =  _dataImportOperation.GetDataImportTooling(item, pe, systemOperator);
 					if (editMode && pe.Tools is not null && oldTools is not null)
 					{
 						pe.Tools.Where(tooling => string.IsNullOrEmpty(tooling.LineUID))?.ToList()?.ForEach(tlng =>
@@ -1058,10 +1060,10 @@ public class ComponentOperation : IComponentOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -1271,7 +1273,7 @@ public class ComponentOperation : IComponentOperation
 				// {
 				// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
 				// }
-				// await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+				 await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
 			}
 			else
 			{
@@ -1465,7 +1467,7 @@ public class ComponentOperation : IComponentOperation
 								// {
 								// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
 								// }
-								// await componentInfo.ProcessEntry.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
+								 await componentInfo.ProcessEntry.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
 							}
 						}
 						else
@@ -1614,7 +1616,7 @@ public class ComponentOperation : IComponentOperation
 								// {
 								// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
 								// }
-								// await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+								 await componentInfo.ProcessEntry.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
 							}
 						}
 					}
@@ -1685,10 +1687,10 @@ public class ComponentOperation : IComponentOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -1892,10 +1894,10 @@ public class ComponentOperation : IComponentOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -2049,10 +2051,28 @@ public class ComponentOperation : IComponentOperation
 				}
 				//Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Item, returnValue.Action, Data = ObjItem }, returnValue.Action != ActionDB.IntegrateAll ? systemOperator.TimeZoneOffset : 0);
 			}
-			//await ObjItem.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+			await ObjItem.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
 		}
 
 		return returnValue;
 	}
+	/// <summary>
+	///
+	/// </summary>
+	/// <exception cref="UnauthorizedAccessException"></exception>
+	public async Task<List<ProcessEntry>> GetProcessEntryById(string id, User systemOperator)
+	{
+		#region Permission validation
+
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
+
+		#endregion Permission validation
+
+		return await _componentRepo.ListProcessEntry(null, null, 0, 0, id).ConfigureAwait(false);
+	}
+
 
 }

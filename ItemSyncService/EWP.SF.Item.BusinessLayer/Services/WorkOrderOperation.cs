@@ -11,35 +11,25 @@ using System.Xml.Serialization;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Net;
+using EWP.SF.Common.Constants;
 using EWP.SF.Item.BusinessEntities;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class WorkOrderOperation : IWorkOrderOperation
 {
-	private const string noPermission = "User doesn't have permission for this action";
-	
-	private const string BadParams = "One or more parameters are empty or invalid";
 	private readonly IWorkOrderRepo _workOrderRepo;
-
-	private readonly ICatalogRepo _catalogRepo;
-	private readonly IApplicationSettings _applicationSettings;
-
 	private readonly IMeasureUnitOperation _measureUnitOperation;
 	private readonly IWarehouseOperation _warehouseOperation;
-
 	private readonly IEmployeeOperation _employeeOperation;
-
-	IOrderTransactionProductRepo _orderTransactionProductRepo;
+	private readonly  IOrderTransactionProductRepo _orderTransactionProductRepo;
 	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
 	private readonly IProcessTypeOperation _processTypeOperation;
 	private readonly IComponentOperation _componentOperation;
 	private readonly IActivityOperation _activityOperation;
 	private readonly IDataImportOperation _dataImportOperation;
 	private readonly IInventoryOperation _inventoryOperation;
-
 	private readonly IMachineRepo _machineRepo;
-
 	private readonly IToolOperation _toolOperation;
 	private readonly IDeviceOperation _deviceOperation;
 	private readonly ILaborRepo _laborRepo;
@@ -47,16 +37,27 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 	public WorkOrderOperation(IWorkOrderRepo workOrderRepo, ICatalogRepo catalogRepo, IApplicationSettings applicationSettings
 	, IMeasureUnitOperation measureUnitOperation, IEmployeeOperation employeeOperation
-	, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation)
+	, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation
+	, IOrderTransactionProductRepo orderTransactionProductRepo, IProcessTypeOperation processTypeOperation
+	, IComponentOperation componentOperation, IActivityOperation activityOperation
+	, IDataImportOperation dataImportOperation, IInventoryOperation inventoryOperation
+	, IMachineRepo machineRepo, IToolOperation toolOperation, IDeviceOperation deviceOperation, ILaborRepo laborRepo)
 	{
-
 		_workOrderRepo = workOrderRepo;
-		_catalogRepo = catalogRepo;
-		_applicationSettings = applicationSettings;
 		_measureUnitOperation = measureUnitOperation;
 		_warehouseOperation = warehouseOperation;
 		_employeeOperation = employeeOperation;
 		_dataSyncServiceOperation = dataSyncServiceOperation;
+		_orderTransactionProductRepo = orderTransactionProductRepo;
+		_processTypeOperation = processTypeOperation;
+		_componentOperation = componentOperation;
+		_activityOperation = activityOperation;
+		_dataImportOperation = dataImportOperation;
+		_inventoryOperation = inventoryOperation;
+		_machineRepo = machineRepo;
+		_toolOperation = toolOperation;
+		_deviceOperation = deviceOperation;
+		_laborRepo = laborRepo;
 	}
 	private static string RemoveXMLHeader(string xml) => xml.Replace("'", "´").Replace("<?xml version=\"1.0\"?>", "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>");
 	/// <summary>
@@ -562,10 +563,10 @@ public class WorkOrderOperation : IWorkOrderOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_ORDERPROGRESS_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_ORDERPROGRESS_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -579,10 +580,10 @@ public class WorkOrderOperation : IWorkOrderOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -1135,7 +1136,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 											com.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
 											com.LaborId == labor.ProfileCode
 										);
-										Labor currentLabor = _laborRepo.ListLabors(systemOperator)?.Find(lb => string.Equals(lb.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
+										//Remove Parameter Synstem Operator
+										Labor currentLabor = _laborRepo.ListLabors()?.Find(lb => string.Equals(lb.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
 										if (currentLabor is not null)
 										{
 											newLabor.LaborId = labor.ProfileCode;
@@ -1352,7 +1354,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_WORKORDER_MANAGE))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
 		}
 
 		#endregion Permission validation
@@ -1372,7 +1374,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 				{
 					if (workOrderInfo.Processes is null)
 					{
-						throw new Exception(BadParams);
+						throw new Exception(ErrorMessage.BadParams);
 					}
 					LevelMessage objLevel = Enum.Parse<LevelMessage>(Level);
 					returnValue = _workOrderRepo.MergeWorkOrder(workOrderInfo, systemOperator, Validate, objLevel, mode, intSrc);
@@ -1494,7 +1496,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 							}
 						}
 					}
-					//await returnValue.WorkOrder.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+					await returnValue.WorkOrder.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
 				}
 				else
 				{
@@ -1585,7 +1587,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						if (wo is not null)
 						{
 							rv = wo.Tasks;
-							//await wo.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
+							await wo.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
 						}
 						else
 						{
@@ -2009,7 +2011,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public  void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset)
+	public 
+	 void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset)
 	{
 		if (order is not null)
 		{

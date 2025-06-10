@@ -4,23 +4,19 @@ using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
 using System.ComponentModel.DataAnnotations;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class InventoryOperation : IInventoryOperation
 {
-    private readonly IInventoryRepo _inventoryRepo;
-    private readonly IApplicationSettings _applicationSettings;
-
+    private readonly IInventoryRepo _inventoryRepo;  
     private readonly IAttachmentOperation _attachmentOperation;
 
-    private const string noPermission = "User doesn't have permission for this action";
-
-    public InventoryOperation(IInventoryRepo inventoryRepo, IApplicationSettings applicationSettings
+    public InventoryOperation(IInventoryRepo inventoryRepo
     , IAttachmentOperation attachmentOperation)
     {
         _inventoryRepo = inventoryRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
     }
 
@@ -109,10 +105,10 @@ public class InventoryOperation : IInventoryOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -120,7 +116,7 @@ public class InventoryOperation : IInventoryOperation
         if (!Validate && returnValue is not null)
         {
             Inventory ObjInventory = ListInventory(systemOperator, returnValue.Code).Find(x => x.Status != Status.Failed);
-            //await ObjInventory.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+            await ObjInventory.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             if (NotifyOnce)
             {
                 _ = await _attachmentOperation.SaveImageEntity("ItemGroup", InventoryInfo.Image, InventoryInfo.Code, systemOperator).ConfigureAwait(false);
@@ -141,10 +137,10 @@ public class InventoryOperation : IInventoryOperation
     {
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -171,7 +167,7 @@ public class InventoryOperation : IInventoryOperation
 
 		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_SALESORDER_LST))
 		{
-			throw new UnauthorizedAccessException(noPermission);
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
 		}
 
 		#endregion Permission validation

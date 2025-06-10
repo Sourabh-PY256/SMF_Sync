@@ -4,13 +4,13 @@ using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using EWP.SF.Common.Models;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class LotSerialStatusOperation : ILotSerialStatusOperation
 {
     private readonly ILotSerialStatusRepo _lotSerialStatusRepo;
-    private readonly IApplicationSettings _applicationSettings;
 
     private readonly IAttachmentOperation _attachmentOperation;
 
@@ -18,7 +18,6 @@ public class LotSerialStatusOperation : ILotSerialStatusOperation
     ,IAttachmentOperation attachmentOperation)
     {
         _lotSerialStatusRepo = lotSerialStatusRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
     }
 
@@ -30,10 +29,10 @@ public class LotSerialStatusOperation : ILotSerialStatusOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -50,10 +49,10 @@ public class LotSerialStatusOperation : ILotSerialStatusOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -61,8 +60,8 @@ public class LotSerialStatusOperation : ILotSerialStatusOperation
 		returnValue = _lotSerialStatusRepo.MergeLotSerialStatus(LotSerialStatusInfo, systemOperator, Validate);
 		if (!Validate && returnValue is not null)
 		{
-			//LotSerialStatus ObjLotSerialStatus = ListLotSerialStatus(systemOperator, returnValue.Code).Find(static x => x.Status != Status.Failed);
-			//await ObjLotSerialStatus.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+			LotSerialStatus ObjLotSerialStatus = ListLotSerialStatus(systemOperator, returnValue.Code).Find(static x => x.Status != Status.Failed);
+			await ObjLotSerialStatus.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
 			await _attachmentOperation.SaveImageEntity("LotSerialStatus", LotSerialStatusInfo.Image, LotSerialStatusInfo.Code, systemOperator).ConfigureAwait(false);
 			if (LotSerialStatusInfo.AttachmentIds is not null)
 			{

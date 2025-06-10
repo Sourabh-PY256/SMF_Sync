@@ -1,20 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-using EWP.SF.Common.Models.Catalogs;
+﻿
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.Models.Sensors;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class OEEOperation : IOEEOperation
 {
-	private readonly IOEERepo _oeeRepo;
-	private const string noPermission = "User doesn't have permission for this action";
-	private readonly IApplicationSettings _applicationSettings;
-
-	private readonly IProcessTypeOperation _processTypeOperation;
+	private readonly IOEERepo _oeeRepo;	private readonly IProcessTypeOperation _processTypeOperation;
 
 	private readonly IAttachmentOperation _attachmentOperation;
 
@@ -22,7 +17,6 @@ public class OEEOperation : IOEEOperation
 	, IProcessTypeOperation processTypeOperation, IAttachmentOperation attachmentOperation)
 	{
 		_oeeRepo = oeeRepo;
-		_applicationSettings = applicationSettings;
 		_processTypeOperation = processTypeOperation;
 		_attachmentOperation = attachmentOperation;
 	}
@@ -41,7 +35,7 @@ public class OEEOperation : IOEEOperation
 
 			if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
 			{
-				throw new UnauthorizedAccessException(noPermission);
+				throw new UnauthorizedAccessException(ErrorMessage.noPermission);
 			}
 
 			#endregion Permission validation
@@ -59,7 +53,7 @@ public class OEEOperation : IOEEOperation
 
 			if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
 			{
-				throw new UnauthorizedAccessException(noPermission);
+				throw new UnauthorizedAccessException(ErrorMessage.noPermission);
 			}
 
 			#endregion Permission validation
@@ -79,7 +73,7 @@ public class OEEOperation : IOEEOperation
 
 			if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
 			{
-				throw new UnauthorizedAccessException(noPermission);
+				throw new UnauthorizedAccessException(ErrorMessage.noPermission);
 			}
 
 			#endregion Permission validation
@@ -111,7 +105,7 @@ public class OEEOperation : IOEEOperation
 
 			if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
 			{
-				throw new UnauthorizedAccessException(noPermission);
+				throw new UnauthorizedAccessException(ErrorMessage.noPermission);
 			}
 
 			#endregion Permission validation
@@ -134,7 +128,7 @@ public class OEEOperation : IOEEOperation
 		/// <summary>
 		///
 		/// </summary>
-		public Task<OEEModel> GetLiveOEEAsync(string machineid, DateTime? startDate) => _oeeRepo.GetLiveOee(machineid, startDate);
+		public Task<OEEModel> GetLiveOEEAsync(string machineid, DateTime? startDate) => _oeeRepo.GetLiveOee(machineid, startDate,default);
 
 		/// <summary>
 		///

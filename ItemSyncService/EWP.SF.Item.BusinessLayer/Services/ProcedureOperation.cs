@@ -613,7 +613,7 @@ public class ProcedureOperation : IProcedureOperation
             };
 
             listAttachmentRequest.Add(objAdd);
-            List<AttachmentResponse> result = await SaveAttachment(listAttachmentRequest, systemOperator).ConfigureAwait(false);
+            List<AttachmentResponse> result = await _attachmentOperation.SaveAttachment(listAttachmentRequest, systemOperator).ConfigureAwait(false);
             if (result?.Count > 0)
             {
                 sectionAdd.Attachment = new()

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using EWP.SF.Common.Constants;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.Models.Catalogs;
@@ -9,19 +10,12 @@ namespace EWP.SF.Item.BusinessLayer;
 public class ProfileOperation : IProfileOperation
 {
     private readonly ICatalogRepo _profileRepo;
-    private readonly IApplicationSettings _applicationSettings;
     private readonly IAttachmentOperation _attachmentOperation;
-    private readonly IActivityOperation _activityOperation;
-    private readonly ISchedulingCalendarShiftsOperation _schedulingCalendarShiftsOperation;
 
-    public ProfileOperation(ICatalogRepo profileRepo, IApplicationSettings applicationSettings, IAttachmentOperation attachmentOperation,
-     IActivityOperation activityOperation, ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation)
+    public ProfileOperation(ICatalogRepo profileRepo, IAttachmentOperation attachmentOperation)
     {
         _profileRepo = profileRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
-        _activityOperation = activityOperation;
-        _schedulingCalendarShiftsOperation = schedulingCalendarShiftsOperation;
         ;
     }
 	/// <summary>
@@ -34,10 +28,10 @@ public class ProfileOperation : IProfileOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(x => x.Code.Equals(Permissions.CAT_CATALOGS_MANAGE, StringComparison.Ordinal)))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(x => x.Code.Equals(Permissions.CAT_CATALOGS_MANAGE, StringComparison.Ordinal)))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -67,7 +61,7 @@ public class ProfileOperation : IProfileOperation
 		if (!Validate && returnValue is not null)
 		{
 			CatProfile ObjProfile = _profileRepo.GetCatalogProfile().Where(x => x.Code == returnValue.Code).FirstOrDefault(x => x.Status != Status.Failed);
-			//await ObjProfile.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+			await ObjProfile.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
 			if (NotifyOnce)
 			{
 				await _attachmentOperation.SaveImageEntity("Position", ProfileInfo.Image, returnValue.Code, systemOperator).ConfigureAwait(false);

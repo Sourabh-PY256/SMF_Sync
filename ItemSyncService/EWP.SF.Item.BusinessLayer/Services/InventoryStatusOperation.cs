@@ -4,21 +4,20 @@ using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
 using System.ComponentModel.DataAnnotations;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class InventoryStatusOperation : IInventoryStatusOperation
 {
     private readonly IInventoryStatusRepo _inventoryStatusRepo;
-    private readonly IApplicationSettings _applicationSettings;
 
     private readonly IAttachmentOperation _attachmentOperation;
 
-    public InventoryStatusOperation(IInventoryStatusRepo inventoryStatusRepo, IApplicationSettings applicationSettings
+    public InventoryStatusOperation(IInventoryStatusRepo inventoryStatusRepo
     , IAttachmentOperation attachmentOperation)
     {
         _inventoryStatusRepo = inventoryStatusRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
     }
 
@@ -30,10 +29,10 @@ public class InventoryStatusOperation : IInventoryStatusOperation
 	{
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -50,10 +49,10 @@ public class InventoryStatusOperation : IInventoryStatusOperation
 
 		#region Permission validation
 
-		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		// {
-		// 	throw new UnauthorizedAccessException(noPermission);
-		// }
+		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		{
+			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		}
 
 		#endregion Permission validation
 
@@ -62,7 +61,7 @@ public class InventoryStatusOperation : IInventoryStatusOperation
 		if (!Validate && returnValue is not null)
 		{
 			InventoryStatus ObjInventoryStatus = ListInventoryStatus(systemOperator, returnValue.Code).Find(static x => x.Status != Status.Failed);
-			// await ObjInventoryStatus.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+			await ObjInventoryStatus.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
 			if (NotifyOnce)
 			{
 				await _attachmentOperation.SaveImageEntity("inventorystatus", InventoryStatusInfo.Image, InventoryStatusInfo.Code, systemOperator).ConfigureAwait(false);

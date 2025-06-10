@@ -28,6 +28,8 @@ public interface IProcedureRepo
     Procedure GetProcedure(string ProcedureId, string ActivityId = null, string Instance = null);
 
     ResponseData ProcessMasterIns(Procedure ProcessMaster, User User, bool IsValidation = false);
+    List<ProcedureVersion> ListProcedureVersionsByCode(string ProcedureId);
+    ProcessMasterVersionresult GetProcessVersion(string Code, int Version);
 
 
 

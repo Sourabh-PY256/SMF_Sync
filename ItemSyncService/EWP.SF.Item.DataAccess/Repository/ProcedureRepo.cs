@@ -8,31 +8,31 @@ using EWP.SF.Item.BusinessEntities;
 using EWP.SF.ConnectionModule;
 using System.Text;
 
-using Newtonsoft.Json;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using Range = EWP.SF.Common.Models.Range;
+using System.Text.Json;
 
 namespace EWP.SF.Item.DataAccess;
 
 public class ProcedureRepo : IProcedureRepo
 {
-    private readonly string ConnectionString;
-    private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
-    private readonly string ConnectionStringReports;
-    private readonly string ConnectionStringLogs;
+	private readonly string ConnectionString;
+	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+	private readonly string ConnectionStringReports;
+	private readonly string ConnectionStringLogs;
 
-    private readonly string Database;
+	private readonly string Database;
 
-    public ProcedureRepo(IApplicationSettings applicationSettings)
-    {
-        ConnectionString = applicationSettings.GetConnectionString();
-        ConnectionStringReports = applicationSettings.GetReportsConnectionString();
-        ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
-        Database = applicationSettings.GetDatabaseFromConnectionString();
-    }
-    #region Procedure
-  
+	public ProcedureRepo(IApplicationSettings applicationSettings)
+	{
+		ConnectionString = applicationSettings.GetConnectionString();
+		ConnectionStringReports = applicationSettings.GetReportsConnectionString();
+		ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
+		Database = applicationSettings.GetDatabaseFromConnectionString();
+	}
+	#region Procedure
+
 	public ResponseData ProcessMasterInsByXML(Procedure procesInfo
 	, string xmlSections
 	, string xmlInstructions
@@ -494,5 +494,104 @@ public class ProcedureRepo : IProcedureRepo
 		}
 		return returnValue;
 	}
+	/// <summary>
+	///
+	/// </summary>
+	public List<ProcedureVersion> ListProcedureVersionsByCode(string ProcedureId)
+
+	{
+		List<ProcedureVersion> returnValue = null;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_ProcedureVersionsByCode_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddWithValue("_Code", ProcedureId);
+
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					ProcedureVersion element = new()
+					{
+						ProcedureId = rdr["Id"].ToStr(),
+						ProcedureIdOrigin = rdr["ProcedureIdOrigin"].ToStr(),
+						Code = rdr["Code"].ToStr(),
+						Name = rdr["Name"].ToStr(),
+						Status = rdr["Status"].ToInt32(),
+						StatusDescription = rdr["StatusDescription"].ToStr(),
+						Version = rdr["Version"].ToInt32(),
+						Description = rdr["Description"].ToStr(),
+						Date = rdr["Date"].ToDate(),
+						IsActivityUsed = rdr["Date"].ToInt32().ToBool(),
+					};
+
+					(returnValue ??= []).Add(element);
+				}
+			}
+			catch (Exception ex)
+			{
+				//logger.Error(ex);
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+	/// <summary>
+	///
+	/// </summary>
+	public ProcessMasterVersionresult GetProcessVersion(string Code, int Version)
+
+	{
+		ProcessMasterVersionresult returnValue = null;
+
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_ProcedureVersionByCode_SEL", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddWithValue("_Code", Code);
+				command.Parameters.AddWithValue("_Version", Version);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					returnValue = new()
+					{
+						ProcedureId = rdr["Id"].ToStr(),
+						ProcedureIdOrigin = rdr["ProcedureIdOrigin"].ToStr(),
+						Status = rdr["Status"].ToInt32(),
+						Version = rdr["Version"].ToInt32(),
+						EarlierVersion = rdr["EarlierVersion"].ToInt32(),
+					};
+				}
+			}
+			catch (Exception ex)
+			{
+				//logger.Error(ex);
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+
+		return returnValue;
+	}
+
     #endregion Procedure
 }

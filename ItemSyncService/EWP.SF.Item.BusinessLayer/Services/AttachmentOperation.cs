@@ -1,17 +1,13 @@
 using EWP.SF.Item.DataAccess;
 using EWP.SF.Common.Models;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
 using SixLabors.ImageSharp;
 
 namespace EWP.SF.Item.BusinessLayer;
 
 public class AttachmentOperation : IAttachmentOperation
 {
-#if RELEASE
-    private string FullAttachmentPath => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, Config.Configuration["PathAttachment"]));
-#else
-    private string FullAttachmentPath => _applicationSettings.GetAppSetting("DebugAttachmentPath").ToStr();
-#endif
+
     private readonly IAttachmentRepo _attachmentRepo;
     private readonly IApplicationSettings _applicationSettings;
 
@@ -21,7 +17,11 @@ public class AttachmentOperation : IAttachmentOperation
         _applicationSettings = applicationSettings;
     }
 
-
+#if RELEASE
+    private string FullAttachmentPath => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, Config.Configuration["PathAttachment"]));
+#else
+    private string FullAttachmentPath => _applicationSettings.GetAppSetting("DebugAttachmentPath").ToStr();
+#endif
     #region Attachment
     /// <summary>
 	///
@@ -116,14 +116,14 @@ public class AttachmentOperation : IAttachmentOperation
 
         return returnValue;
     }
-/// <summary>
-	/// Save Attachment External by sync
-	/// </summary>
-	public async Task<List<AttachmentExternalResponse>> AttachmentSyncSel(List<AttachmentExternal> listAttachments
-	, User systemOperator)
-	{
-		return await _attachmentRepo.AttachmentSyncSel(listAttachments, systemOperator).ConfigureAwait(false);
-	}
+    /// <summary>
+    /// Save Attachment External by sync
+    /// </summary>
+    public async Task<List<AttachmentExternalResponse>> AttachmentSyncSel(List<AttachmentExternal> listAttachments
+    , User systemOperator)
+    {
+        return await _attachmentRepo.AttachmentSyncSel(listAttachments, systemOperator).ConfigureAwait(false);
+    }
     public async Task<bool> AttachmentSync(string AttachmentId, string AuxId, User systemOperator)
     {
         string ResultAttachmentId = await _attachmentRepo.AttachmentSync(AttachmentId, AuxId, systemOperator).ConfigureAwait(false);
@@ -191,10 +191,10 @@ public class AttachmentOperation : IAttachmentOperation
         }
         return true;
     }
-private static bool IsValidBase64(string base64)
-	{
-		Span<byte> buffer = new(new byte[base64.Length]);
-		return Convert.TryFromBase64String(base64, buffer, out _);
-	}
+    private static bool IsValidBase64(string base64)
+    {
+        Span<byte> buffer = new(new byte[base64.Length]);
+        return Convert.TryFromBase64String(base64, buffer, out _);
+    }
     #endregion Attachment
 }

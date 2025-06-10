@@ -1,11 +1,10 @@
 using EWP.SF.Common.Models;
 using EWP.SF.Item.DataAccess;
-using EWP.SF.Item.BusinessEntities;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Helper;	
+using EWP.SF.Helper;
 using System.ComponentModel.DataAnnotations;
+using EWP.SF.Common.Constants;
 
 
 namespace EWP.SF.Item.BusinessLayer;
@@ -13,17 +12,15 @@ namespace EWP.SF.Item.BusinessLayer;
 public class BinLocationOperation : IBinLocationOperation
 {
     private readonly IBinLocationRepo _binLocationRepo;
-    private readonly IApplicationSettings _applicationSettings;
 
     private readonly IWarehouseOperation _warehouseOperation;
 
     private readonly IAttachmentOperation _attachmentOperation;
 
-    public BinLocationOperation(IBinLocationRepo binLocationRepo, IApplicationSettings applicationSettings
+    public BinLocationOperation(IBinLocationRepo binLocationRepo
     , IAttachmentOperation attachmentOperation, IWarehouseOperation warehouseOperation)
     {
         _binLocationRepo = binLocationRepo;
-        _applicationSettings = applicationSettings;
         _attachmentOperation = attachmentOperation;
         _warehouseOperation = warehouseOperation;
     }
@@ -127,10 +124,10 @@ public class BinLocationOperation : IBinLocationOperation
     {
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -143,10 +140,10 @@ public class BinLocationOperation : IBinLocationOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -154,7 +151,7 @@ public class BinLocationOperation : IBinLocationOperation
         if (!Validate && returnValue is not null)
         {
             BinLocation ObjBinLocation = ListBinLocation(systemOperator, returnValue.Code).Find(x => x.Status != Status.Failed);
-            //await ObjBinLocation.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+            await ObjBinLocation.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             _ = await _attachmentOperation.SaveImageEntity("BinLocation", BinLocationInfo.Image, ObjBinLocation.LocationCode, systemOperator).ConfigureAwait(false);
             if (BinLocationInfo.AttachmentIds is not null)
             {

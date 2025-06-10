@@ -4,6 +4,7 @@ using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using EWP.SF.Common.Models;
+using EWP.SF.Common.Constants;
 
 namespace EWP.SF.Item.BusinessLayer;
 
@@ -199,10 +200,10 @@ public class ToolOperation : IToolOperation
 
         #region Permission validation
 
-        // if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_TOOLTYPE_MANAGE))
-        // {
-        // 	throw new UnauthorizedAccessException(noPermission);
-        // }
+        if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_TOOLTYPE_MANAGE))
+        {
+        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        }
 
         #endregion Permission validation
 
@@ -213,7 +214,7 @@ public class ToolOperation : IToolOperation
         }
         if (!Validate && tooltype is not null)
         {
-            // await tooltype.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
+            await tooltype.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             if (NotifyOnce)
             {
                 await _attachmentOperation.SaveImageEntity("ToolingType", toolTypeInfo.Image, toolTypeInfo.Code, systemOperator).ConfigureAwait(false);
