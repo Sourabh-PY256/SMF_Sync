@@ -3,10 +3,10 @@
     <Project Path="SharedService/EWP.SF.Common/EWP.SF.Common.csproj" />
     <Project Path="SharedService/EWP.SF.Helper/EWP.SF.Helper.csproj" />
   </Folder>
-  <Folder Name="/ItemSyncService/">
-    <Project Path="ItemSyncService/EWP.SF.Item.API/EWP.SF.Item.API.csproj" />
-    <Project Path="ItemSyncService/EWP.SF.Item.BusinessEntities/EWP.SF.Item.BusinessEntities.csproj" />
-    <Project Path="ItemSyncService/EWP.SF.Item.BusinessLayer/EWP.SF.Item.BusinessLayer.csproj" />
-    <Project Path="ItemSyncService/EWP.SF.Item.DataAccess/EWP.SF.Item.DataAccess.csproj" />
+  <Folder Name="/KafkaSyncService/">
+    <Project Path="KafkaSyncService/EWP.SF.KafkaSync.API/EWP.SF.KafkaSync.API.csproj" />
+    <Project Path="KafkaSyncService/EWP.SF.KafkaSync.BusinessEntities/EWP.SF.KafkaSync.BusinessEntities.csproj" />
+    <Project Path="KafkaSyncService/EWP.SF.KafkaSync.BusinessLayer/EWP.SF.KafkaSync.BusinessLayer.csproj" />
+    <Project Path="KafkaSyncService/EWP.SF.KafkaSync.DataAccess/EWP.SF.KafkaSync.DataAccess.csproj" />
   </Folder>
 </Solution>
