@@ -17,7 +17,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 public  class DataImportOperation : IDataImportOperation
 {
 
-	private readonly IComponentOperation _componentOperation;
+	//private readonly IComponentOperation _componentOperation;
 
 	private readonly IDeviceOperation _deviceOperation;
 	private readonly IMeasureUnitOperation _measureUnitOperation;
@@ -31,7 +31,7 @@ public  class DataImportOperation : IDataImportOperation
 	private readonly IDataImportRepo _dataImportRepo;
 
 	public DataImportOperation(
-	IComponentOperation componentOperation,
+	//IComponentOperation componentOperation,
 	IMeasureUnitOperation measureUnitOperation,
 	IProcessTypeOperation processTypeOperation,
 	ICatalogRepo catalogRepo,
@@ -42,7 +42,7 @@ public  class DataImportOperation : IDataImportOperation
 	IDataSyncRepository dataSyncRepository,
 	IProcedureOperation procedureOperation,
 	IDataImportRepo dataImportRepo){
-		_componentOperation = componentOperation;
+		//_componentOperation = componentOperation;
 		_measureUnitOperation = measureUnitOperation;
 		_processTypeOperation = processTypeOperation;
 		_catalogRepo = catalogRepo;
@@ -406,29 +406,29 @@ public  class DataImportOperation : IDataImportOperation
 	{
 		List<SubProduct> returnValue = [];
 		List<MeasureUnit> units = _measureUnitOperation.GetMeasureUnits()?.Where(x => x.IsProductionResult && x.Status != Status.Failed).ToList();
-		foreach (ProductOperationByProduct material in operationType.OperationByProducts)
-		{
-			Component origComponent = (await _componentOperation.GetComponents(material.ItemCode).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
-			if (origComponent is not null)
-			{
-				MeasureUnit origUnit = units.Find(zx => zx.Code == material.InventoryUoM) ?? throw new ResponseDataException("InventoryUOM '" + material.InventoryUoM + "' does not exist");
-				returnValue.Add(new SubProduct
-				{
-					ComponentId = origComponent.Id,
-					Name = origComponent.Name,
-					Code = material.ItemCode,
-					Factor = material.Quantity,
-					WarehouseCode = material.WarehouseCode,
-					UnitId = origUnit.Code,
-					LineId = material.LineID.ToStr(),
-					Comments = material.Comments
-				});
-			}
-			else
-			{
-				throw new ResponseDataException("ItemCode '" + material.ItemCode + "' does not exist");
-			}
-		}
+		// foreach (ProductOperationByProduct material in operationType.OperationByProducts)
+		// {
+		// 	Component origComponent = (await _componentOperation.GetComponents(material.ItemCode).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
+		// 	if (origComponent is not null)
+		// 	{
+		// 		MeasureUnit origUnit = units.Find(zx => zx.Code == material.InventoryUoM) ?? throw new ResponseDataException("InventoryUOM '" + material.InventoryUoM + "' does not exist");
+		// 		returnValue.Add(new SubProduct
+		// 		{
+		// 			ComponentId = origComponent.Id,
+		// 			Name = origComponent.Name,
+		// 			Code = material.ItemCode,
+		// 			Factor = material.Quantity,
+		// 			WarehouseCode = material.WarehouseCode,
+		// 			UnitId = origUnit.Code,
+		// 			LineId = material.LineID.ToStr(),
+		// 			Comments = material.Comments
+		// 		});
+		// 	}
+		// 	else
+		// 	{
+		// 		throw new ResponseDataException("ItemCode '" + material.ItemCode + "' does not exist");
+		// 	}
+		// }Discuss With MArio
 		return returnValue;
 	}
 
@@ -984,6 +984,7 @@ public  class DataImportOperation : IDataImportOperation
 
 				if (op.OperationItems is not null)
 				{
+					/*
 					foreach (ProductOperationItem itm in op.OperationItems)
 					{
 						Component opComp = (await _componentOperation.GetComponents(itm.ItemCode, true).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
@@ -1003,7 +1004,8 @@ public  class DataImportOperation : IDataImportOperation
 							throw new Exception(string.Format("Operation {0} Item code {1} is invalid", op.OperationType, itm.ItemCode));
 						}
 					}
-				}
+				
+				*/}
 			}
 			else
 			{

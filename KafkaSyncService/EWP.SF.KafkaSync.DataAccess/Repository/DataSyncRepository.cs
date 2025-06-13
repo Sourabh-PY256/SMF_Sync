@@ -800,6 +800,72 @@ public class DataSyncRepository : IDataSyncRepository
 		}
 		return returnValue;
 	}
+/// <summary>
+	/// Insert the data synchronization service log.
+	/// </summary>
+	public async Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo, CancellationToken cancel = default)
+	{
+		string returnValue = string.Empty;
+
+		await using EWP_Connection connection = new(ConnectionStringLogs);
+		{
+			await connection.OpenAsync(cancel).ConfigureAwait(false);
+
+			await using EWP_Command command = new("SP_SF_DataSync_Execution_Log_INS", connection)
+			{
+				CommandType = CommandType.StoredProcedure
+			};
+
+			await using (command.ConfigureAwait(false))
+			{
+				command.Parameters.Clear();
+
+				if (string.IsNullOrEmpty(logInfo.Id))
+				{
+					command.Parameters.AddNull("_Id");
+				}
+				else
+				{
+					command.Parameters.AddWithValue("_Id", logInfo.Id);
+				}
+
+				command.Parameters.AddWithValue("_Database", Database);
+				command.Parameters.AddWithValue("_ServiceInstanceId", logInfo.ServiceInstanceId);
+				command.Parameters.AddWithValue("_ExecutionInitDate", logInfo.ExecutionInitDate);
+				command.Parameters.AddWithValue("_SfProcessDate", logInfo.SfProcessDate);
+				command.Parameters.AddWithValue("_ExecutionFinishDate", logInfo.ExecutionFinishDate);
+				command.Parameters.AddWithValue("_FailedRecords", logInfo.FailedRecords);
+				command.Parameters.AddWithValue("_SuccessRecords", logInfo.SuccessRecords);
+				command.Parameters.AddWithValue("_ErpReceivedJson", logInfo.ErpReceivedJson);
+				command.Parameters.AddWithValue("_SfMappedJson", logInfo.SfMappedJson);
+				command.Parameters.AddWithValue("_SfResponseJson", logInfo.SfResponseJson);
+				command.Parameters.AddWithValue("_ServiceException", logInfo.ServiceException);
+				command.Parameters.AddWithValue("_ExecutionOrigin", logInfo.ExecutionOrigin);
+				command.Parameters.AddWithValue("_LogUser", logInfo.LogUser);
+				command.Parameters.AddWithValue("_LogEmployee", logInfo.LogEmployee);
+				command.Parameters.AddCondition("_EndpointUrl", logInfo.EndpointUrl, !string.IsNullOrEmpty(logInfo.EndpointUrl));
+
+				try
+				{
+					MySqlDataReader rdr = await command.ExecuteReaderAsync(cancel).ConfigureAwait(false);
+					await using (rdr.ConfigureAwait(false))
+					{
+						if (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+						{
+							returnValue = rdr["Id"].ToStr();
+						}
+					}
+				}
+				catch
+				{
+					// You can add logging here if necessary
+					throw;
+				}
+
+				return returnValue;
+			}
+		}
+	}
 
 
 }

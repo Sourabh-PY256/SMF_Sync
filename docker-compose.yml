@@ -1,36 +1,41 @@
 version: '3'
 services:
   zookeeper:
-    image: zookeeper:3.9.1
-    environment:
-      ZOO_MY_ID: 1
-      ZOO_PORT: 2181
+    image: bitnami/zookeeper:3.9
+    container_name: zookeeper
     ports:
       - "2181:2181"
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
     networks:
       - kafka-net
 
   kafka:
-    image: apache/kafka:3.7.0
+    image: bitnami/kafka:3.7
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      
+      
+
+      
     networks:
       - kafka-net
 
-  item-sync-service:
+  kafka-sync-service:
     build:
       context: .
-      dockerfile: ItemSyncService/Dockerfile
-    container_name: item-sync-service
+      dockerfile: KafkaSyncService/Dockerfile
+    container_name: kafka-sync-service
     ports:
       - "8080:8080"
       - "5000:5000"  # Remote debugging port
@@ -38,9 +43,9 @@ services:
       - kafka
     environment:
       - KafkaSettings__BootstrapServers=kafka:29092
-      - KafkaSettings__GroupId=ewp-sf-item-group
-      - KafkaSettings__Topics__ItemSync=item-sync-topic
-      - KafkaSettings__Topics__ItemUpdates=item-updates-topic
+      - KafkaSettings__GroupId=ewp-sf-kafka-group
+      - KafkaSettings__Topics__KafkaSync=kafka-sync-topic
+      - KafkaSettings__Topics__KafkaUpdates=kafka-updates-topic
       - KafkaSettings__Consumer__MaxRetries=5
       - KafkaSettings__Consumer__InitialRetryDelayMs=2000
       - KafkaSettings__Consumer__AutoCreateTopics=true

@@ -25,5 +25,7 @@ public interface IDataSyncRepository
 
     bool InsertDataSyncServiceErpToken(DataSyncErpAuth TokenInfo);
 
+    Task<User> GetUser(int userId, string userHash, User systemOperator, CancellationToken cancellationToken = default);
+    Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo, CancellationToken cancel = default);
 
 }

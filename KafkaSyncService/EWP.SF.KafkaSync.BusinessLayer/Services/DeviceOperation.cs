@@ -11,7 +11,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 
 public class DeviceOperation : IDeviceOperation
 {
-    private readonly IDeviceRepo _deviceRepo;
+    
     private readonly IOEERepo _oeeRepo;
     private readonly ISkillRepo _skillRepo;
     private readonly IProcessTypeRepo _processTypeRepo;
@@ -24,13 +24,13 @@ public class DeviceOperation : IDeviceOperation
 
 
 
-    public DeviceOperation(IDeviceRepo deviceRepo, IAttachmentOperation attachmentOperation,
+    public DeviceOperation( IAttachmentOperation attachmentOperation,
      IActivityOperation activityOperation, ISchedulingCalendarShiftsOperation schedulingCalendarShiftsOperation
      , IProcessTypeOperation processTypeOperation
      , IOEERepo oeeRepo, ISkillRepo skillRepo, IProcessTypeRepo processTypeRepo, IMachineRepo machineRepo,
      IProductionLinesOperation productionLinesOperation)
     {
-        _deviceRepo = deviceRepo;
+      
         _attachmentOperation = attachmentOperation;
         _activityOperation = activityOperation;
         _schedulingCalendarShiftsOperation = schedulingCalendarShiftsOperation;

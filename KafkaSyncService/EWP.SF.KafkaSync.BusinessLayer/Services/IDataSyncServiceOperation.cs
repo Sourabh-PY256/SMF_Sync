@@ -19,4 +19,5 @@ public interface IDataSyncServiceOperation
     string GetDatasyncDynamicBody(string entityCode);
 
     List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);
+    Task<User> GetUserWithoutValidations(User user);
 }
