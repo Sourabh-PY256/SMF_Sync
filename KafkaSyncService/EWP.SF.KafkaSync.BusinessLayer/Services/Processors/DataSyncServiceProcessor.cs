@@ -1525,7 +1525,7 @@ public class DataSyncServiceProcessor
 						var warehouseOperation = GetOperation<IWarehouseOperation>();
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWarehouses);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						 _ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						// _ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listWarehouses.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];

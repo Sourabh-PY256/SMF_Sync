@@ -190,10 +190,11 @@ public class DemandOperation : IDemandOperation
 		}
 		if (!Validate)
 		{
+			// TODO: uncomment this after migrated main project as discuused mario
 			// if (!NotifyOnce)
 			// {
 			// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Item, Action = ActionDB.IntegrateAll.ToStr() });
-			// }
+			// } 
 			returnValue = Level switch
 			{
 				LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
