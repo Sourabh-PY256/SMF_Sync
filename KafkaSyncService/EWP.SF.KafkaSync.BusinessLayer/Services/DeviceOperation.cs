@@ -558,9 +558,10 @@ public class DeviceOperation : IDeviceOperation
     {
         Sensor sensorTemp = null;
         Machine returnValue = _machineRepo.ListMachines(machineId)?.FirstOrDefault();
-        returnValue.Name = returnValue.Description;
+        // returnValue.Name = returnValue.Description;
         if (returnValue is not null && returnValue.Status != Status.Deleted)
         {
+            returnValue.Name = returnValue.Description;
             returnValue.Environment = new MachineEnvironment();
             returnValue.ProcessType = _processTypeRepo.GetProcessType(returnValue.TypeId).FirstOrDefault();
             returnValue.OEEConfiguration = _oeeRepo.GetMachineOeeConfiguration(returnValue.Id);

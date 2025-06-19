@@ -64,16 +64,6 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 		return returnValue;
 	}
 
-    public Task<List<DataSyncServiceInstanceVisibility>> GetSyncServiceInstanceVisibility(User systemOperator, string services, TriggerType trigger)
-    {
-        throw new NotImplementedException();
-    }
-
-    public DataSyncErpMapping MergeDataSyncServiceInstanceMapping(User systemOperator, DataSyncErpMapping instanceMapping)
-    {
-        throw new NotImplementedException();
-    }
-
     public Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false)
     {
         return _dataSyncRepository.GetTimezones(currentValues);
@@ -86,7 +76,7 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 	public List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes) => _dataSyncRepository.ListDataSyncERP(id, getInstances);
 
 
-/// <summary>
+    /// <summary>
 	///
 	/// </summary>
 	public Task<User> GetUserWithoutValidations(User user) => _dataSyncRepository.GetUser(user.Id, null, new User(0));

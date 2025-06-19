@@ -1,7 +1,6 @@
 using System.Data;
 using System.Globalization;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.EntityLogger;
 using EWP.SF.Helper;
 using MySqlConnector;
 using EWP.SF.KafkaSync.BusinessEntities;

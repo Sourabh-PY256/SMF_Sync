@@ -9,11 +9,14 @@ using System.Text;
 using Newtonsoft.Json;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
+using NLog;
 
 namespace EWP.SF.KafkaSync.DataAccess;
 
 public class ProcessTypeRepo : IProcessTypeRepo
 {
+    private static Logger logger = LogManager.GetCurrentClassLogger();
+
 	private readonly string ConnectionString;
 	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
 	private readonly string ConnectionStringReports;
@@ -197,7 +200,7 @@ public class ProcessTypeRepo : IProcessTypeRepo
 			}
 			catch (Exception ex)
 			{
-				//logger.Error(ex);
+				logger.Error(ex);
 				throw;
 			}
 			finally

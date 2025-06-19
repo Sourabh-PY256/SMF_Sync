@@ -67,23 +67,24 @@ public class APIWebClient : HttpClient
 	{
 		DataSyncResponse response = new();
 		
-		// Parse the original URI
-		Uri originalUri = new Uri(uri);
+		// // Parse the original URI
+		// Uri originalUri = new Uri(uri);
 		
-		// Construct new URI with host.docker.internal
-		UriBuilder uriBuilder = new UriBuilder
-		{
-			Scheme = "http",
-			Host = "host.docker.internal",
-			Port = 8030,
-			Path = originalUri.AbsolutePath,
-			Query = originalUri.Query
-		};
+		// // Construct new URI with host.docker.internal
+		// UriBuilder uriBuilder = new UriBuilder
+		// {
+		// 	Scheme = "http",
+		// 	Host = "host.docker.internal",
+		// 	Port = 8030,
+		// 	Path = originalUri.AbsolutePath,
+		// 	Query = originalUri.Query
+		// };
 		
 		using HttpRequestMessage requestGet = new()
 		{
 			Method = HttpMethod.Get,
-			RequestUri = uriBuilder.Uri,
+			//RequestUri = uriBuilder.Uri,
+			RequestUri = new Uri(uri),
 			Content = new StringContent(body, Encoding.UTF8, MediaTypeNames.Application.Json),
 		};
 		using (HttpResponseMessage httpResponse = await SendAsync(requestGet).ConfigureAwait(false))

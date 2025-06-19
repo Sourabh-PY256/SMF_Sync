@@ -6,13 +6,14 @@ using System.Text;
 using System.Text.Json;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
+using NLog;
 
 namespace EWP.SF.KafkaSync.DataAccess;
 
 public class AttachmentRepo : IAttachmentRepo
 {
     private readonly string ConnectionString;
-    private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+   
     private readonly string ConnectionStringReports;
     private readonly string ConnectionStringLogs;
 

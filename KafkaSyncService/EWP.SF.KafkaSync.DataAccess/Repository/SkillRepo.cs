@@ -1,17 +1,12 @@
 ﻿using System.Data;
 using System.Globalization;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.EntityLogger;
 using EWP.SF.Helper;
 using MySqlConnector;
-using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.ConnectionModule;
 using System.Text;
 
-using Newtonsoft.Json;
 using EWP.SF.Common.Models;
-using EWP.SF.Common.ResponseModels;
-using EWP.SF.Common.Models.IntegrationStaging;
 
 namespace EWP.SF.KafkaSync.DataAccess;
 public class SkillRepo : ISkillRepo

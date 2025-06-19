@@ -71,7 +71,6 @@ builder.Services.AddScoped<IInventoryStatusRepo, InventoryStatusRepo>();
 builder.Services.AddScoped<ILotSerialStatusRepo, LotSerialStatusRepo>();
 builder.Services.AddScoped<ISupplyRepo, SupplyRepo>();
 builder.Services.AddScoped<IToolRepo, ToolRepo>();
-builder.Services.AddScoped<IDeviceRepo, DeviceRepo>();
 builder.Services.AddScoped<IProductionLinesRepo, ProductionLinesRepo>();
 builder.Services.AddScoped<IMeasureUnitRepo, MeasureUnitRepo>();
 builder.Services.AddScoped<IMachineRepo, MachineRepo>();

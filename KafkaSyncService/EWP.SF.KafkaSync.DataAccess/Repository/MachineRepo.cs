@@ -10,11 +10,14 @@ using Newtonsoft.Json;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Common.Models.Sensors;
+using NLog;
 
 namespace EWP.SF.KafkaSync.DataAccess;
 
 public class MachineRepo : IMachineRepo
 {
+    private static Logger logger = LogManager.GetCurrentClassLogger();
+	
 	private readonly string ConnectionString;
 	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
 	private readonly string ConnectionStringReports;
@@ -101,7 +104,7 @@ public class MachineRepo : IMachineRepo
 			}
 			catch (Exception ex)
 			{
-				//logger.Error(ex);
+				logger.Error(ex);
 			}
 			finally
 			{
@@ -368,7 +371,7 @@ public class MachineRepo : IMachineRepo
 			}
 			catch (Exception ex)
 			{
-				//logger.Error(ex);
+				logger.Error(ex);
 				throw;
 			}
 			finally
@@ -471,7 +474,7 @@ public class MachineRepo : IMachineRepo
 			}
 			catch (Exception ex)
 			{
-				//logger.Error(ex);
+				logger.Error(ex);
 				throw new Exception("Error Detected SensorId = " + SensorErrorId);
 			}
 			finally
@@ -551,7 +554,7 @@ public class MachineRepo : IMachineRepo
 			}
 			catch (Exception ex)
 			{
-				//logger.Error(ex);
+				logger.Error(ex);
 				throw;
 			}
 			finally

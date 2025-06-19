@@ -10,11 +10,13 @@ using Newtonsoft.Json;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Common.Models.Catalogs;
+using NLog;
 
 namespace EWP.SF.KafkaSync.DataAccess;
 
 public class DemandRepo : IDemandRepo
 {
+	private static Logger logger = LogManager.GetCurrentClassLogger();
     private readonly string ConnectionString;
     private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
     private readonly string ConnectionStringReports;
@@ -155,7 +157,7 @@ public class DemandRepo : IDemandRepo
 				catch (Exception ex)
 				{
 					// Log the exception if a logger is available
-					//logger.Error(ex);
+					logger.Error(ex);
 					throw;
 				}
 

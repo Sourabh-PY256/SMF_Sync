@@ -25,7 +25,7 @@ COPY ["Lib/Windows/EWP.SF.ConnectionModule.dll", "/src/Lib/Windows/"]
 
 # Copy Settings directory
 RUN mkdir -p /src/Settings
-COPY ["KafkaSyncService/Settings/", "/src/Settings/"]
+COPY ["Settings/", "/src/Settings/"]
 
 # Replace Program.cs with Docker-specific version
 WORKDIR "/src/KafkaSyncService/EWP.SF.KafkaSync.API"

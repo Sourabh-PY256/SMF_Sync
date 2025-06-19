@@ -14,7 +14,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="Confluent.Kafka" Version="2.3.0" />
   </ItemGroup>
-
+<ItemGroup>
+  <Compile Remove="Program.Docker.cs" />
+</ItemGroup>
   <ItemGroup>
 
     <ProjectReference Include="..\EWP.SF.KafkaSync.DataAccess\EWP.SF.KafkaSync.DataAccess.csproj" />
