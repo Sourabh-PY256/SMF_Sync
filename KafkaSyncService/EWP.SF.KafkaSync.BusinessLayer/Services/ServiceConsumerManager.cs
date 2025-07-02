@@ -31,65 +31,63 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         public void StartConsumer()
         {
             _logger.LogInformation("Starting ServiceConsumerManager");
-            
+
             // Start Kafka consumers for all sync entities
             foreach (var entityType in GetSyncEntityTypes())
             {
                 string topic = $"producer-sync-{entityType.ToLower()}";
                 _logger.LogInformation("Starting consumer for topic: {Topic}", topic);
-                
+
                 // No need to specify retries and delay - will use values from configuration
-                _kafkaService.StartConsumer(topic, async (key, value) => 
-                {
-                    _logger.LogInformation("Received Kafka message: {Key}", key);
-                    
-                    // Parse the message
-                    var message = JsonSerializer.Deserialize<SyncMessage>(value);
-                    if (message == null)
-                    {
-                        _logger.LogWarning("Failed to deserialize Kafka message");
-                        return;
-                    }
-                    
-                    // Create a scope to resolve scoped services
-                    using (var scope = _serviceScopeFactory.CreateScope())
-                    {
-                        // Get the operations service from the scope
-                        var operations = scope.ServiceProvider.GetRequiredService<IDataSyncServiceOperation>();
-                        
-                        // Get the service data
-                        var serviceData = await operations.GetBackgroundService(message.Service).ConfigureAwait(false);
-                        if (serviceData == null)
-                        {
-                            _logger.LogWarning("Service not found: {Service}", message.Service);
-                            return;
-                        }
-                        
-                        // Parse trigger type
-                        if (!Enum.TryParse<TriggerType>(message.Trigger, out var triggerType))
-                        {
-                            triggerType = TriggerType.SmartFactory;
-                        }
-                        
-                        // Parse execution origin
-                        var execOrigin = message.ExecutionType == 1 ? 
-                            ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton;
-                        
-                        // Execute the service
-                        _logger.LogInformation("Executing service {Service} from Kafka message", message.Service);
-                        var response = await SyncERPData(
-                            serviceData, 
-                            triggerType, 
-                            execOrigin, 
-                            message.User, 
-                            message.EntityCode ?? string.Empty, 
-                            message.BodyData ?? string.Empty
-                        ).ConfigureAwait(false);
-                        
-                        // Publish execution result to Kafka if needed
-                        // ...
-                    }
-                });
+                _kafkaService.StartConsumer(topic, async (key, value) =>
+{
+    _logger.LogInformation("Received Kafka message: {Key}", key);
+
+    var message = JsonSerializer.Deserialize<SyncMessage>(value);
+    if (message == null)
+    {
+        _logger.LogWarning("Failed to deserialize Kafka message");
+        return;
+    }
+
+    using (var scope = _serviceScopeFactory.CreateScope())
+    {
+        var serviceManager = scope.ServiceProvider.GetRequiredService<DataSyncServiceManager>();
+
+        // Use the centralized validation
+        TriggerType triggerType;
+        if (!Enum.TryParse<TriggerType>(message.Trigger, out triggerType))
+        {
+            triggerType = TriggerType.SmartFactory;
+        }
+
+        var validation = await serviceManager.ValidateAndGetService(
+            message.Service,
+            triggerType,
+            message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton
+        );
+
+        if (validation.Status == 1)
+        {
+            var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+            var response = await processor.SyncExecution(
+                validation.ServiceData,
+                message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
+                Enum.TryParse<TriggerType>(message.Trigger, out  triggerType) ? triggerType : TriggerType.SmartFactory,
+                message.User,
+                message.EntityCode ?? string.Empty,
+                message.BodyData ?? string.Empty
+            ).ConfigureAwait(false);
+
+            // Optionally publish execution result to Kafka if needed
+        }
+        else
+        {
+            _logger.LogWarning("Service {Service} not executed: {Reason}", message.Service, validation.Message);
+            // Optionally publish a failure result or just return
+        }
+    }
+});
             }
         }
 
@@ -97,11 +95,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         /// Executes a service manually
         /// </summary>
         public async Task<DataSyncHttpResponse> SyncERPData(
-            DataSyncService Data, 
-            TriggerType Trigger, 
-            ServiceExecOrigin ExecOrigin, 
-            User SystemOperator, 
-            string EntityCode, 
+            DataSyncService Data,
+            TriggerType Trigger,
+            ServiceExecOrigin ExecOrigin,
+            User SystemOperator,
+            string EntityCode,
             string BodyData)
         {
             DataSyncHttpResponse response = new();
@@ -189,13 +187,13 @@ namespace EWP.SF.KafkaSync.BusinessLayer
     {
         void StartConsumer();
         Task<DataSyncHttpResponse> SyncERPData(
-            DataSyncService Data, 
-            TriggerType Trigger, 
-            ServiceExecOrigin ExecOrigin, 
-            User SystemOperator, 
-            string EntityCode, 
+            DataSyncService Data,
+            TriggerType Trigger,
+            ServiceExecOrigin ExecOrigin,
+            User SystemOperator,
+            string EntityCode,
             string BodyData);
-        
+
     }
 }
 

@@ -37,37 +37,54 @@ public class DataSyncServiceManager
 		}).ConfigureAwait(false);
 	}
 
-	public  async Task<int> ValidateExecuteService(string ServiceType, TriggerType Trigger, ServiceExecOrigin ExecOrigin, string HttpMethod = "GET")
-	{
-		int returnValue = 0;
-		DataSyncService _dataService = await _operations.GetBackgroundService(ServiceType, HttpMethod.ToUpperInvariant()).ConfigureAwait(false);
-		if (_dataService is null)
-		{
-			return -1;
-		}
-		EnableType Enable = EnableType.No;
-		if (Trigger == TriggerType.Erp)
-		{
-			Enable = _dataService.ErpTriggerEnable;
-		}
-		else if (Trigger == TriggerType.SmartFactory)
-		{
-			if (ExecOrigin == ServiceExecOrigin.Event)
-			{
-				Enable = _dataService.SfTriggerEnable;
-			}
-			else
-			{
-				Enable = _dataService.ManualSyncEnable;
-			}
-		}
-		if (Enable == EnableType.Yes && _dataService.Status == ServiceStatus.Active)
-		{
-			returnValue = 1;
-		}
-		
-		return returnValue;
-	}
+	public class ServiceValidationResult
+{
+    public int Status { get; set; } // 1 = OK, 0 = Disabled, 2 = Running, -1 = Not found, etc.
+    public string Message { get; set; }
+    public DataSyncService ServiceData { get; set; }
+}
+
+public async Task<ServiceValidationResult> ValidateAndGetService(
+    string serviceType, 
+    TriggerType trigger, 
+    ServiceExecOrigin execOrigin, 
+    string httpMethod = "GET")
+{
+    var result = new ServiceValidationResult();
+    var dataService = await _operations.GetBackgroundService(serviceType, httpMethod.ToUpperInvariant()).ConfigureAwait(false);
+
+    if (dataService == null)
+    {
+        result.Status = -1;
+        result.Message = "Service does not exist!";
+        return result;
+    }
+
+    // EnableType enable = EnableType.No;
+    // if (trigger == TriggerType.Erp)
+    //     enable = dataService.ErpTriggerEnable;
+    // else if (trigger == TriggerType.SmartFactory)
+    //     enable = execOrigin == ServiceExecOrigin.Event ? dataService.SfTriggerEnable : dataService.ManualSyncEnable;
+
+    // if (enable != EnableType.Yes)
+    // {
+    //     result.Status = 0;
+    //     result.Message = "Service is disabled";
+    //     return result;
+    // }
+
+    if (dataService.Status != ServiceStatus.Active)
+    {
+        result.Status = 0;
+        result.Message = "Service is not active";
+        return result;
+    }
+
+    result.Status = 1;
+    result.Message = "Service execution request accepted";
+    result.ServiceData = dataService;
+    return result;
+}
 
 	
 	// }

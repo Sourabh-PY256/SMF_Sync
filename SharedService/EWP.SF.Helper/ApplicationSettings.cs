@@ -70,13 +70,20 @@ public class ApplicationSettings : IApplicationSettings
 	/// </summary>
 	public ApplicationSettings()
 	{
+		// _configuration = new ConfigurationBuilder()
+		// 	.SetBasePath(Directory.GetCurrentDirectory())
+		// 	.AddJsonFile(Path.GetFullPath(Path.Combine("../..", "Settings", "appsettings.json")), optional: false, reloadOnChange: false)
+		// 	.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+		// 	.AddJsonFile(Path.GetFullPath(Path.Combine("../..", "Settings", "appsettings.ConnectionStrings.json")), optional: false, reloadOnChange: false)
+		// 	.AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false)
+		// 	.Build();
 		_configuration = new ConfigurationBuilder()
-			.SetBasePath(Directory.GetCurrentDirectory())
-			.AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.json")), optional: false, reloadOnChange: false)
-			.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-			.AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.ConnectionStrings.json")), optional: false, reloadOnChange: false)
-			.AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false)
-			.Build();
+	.SetBasePath(Directory.GetCurrentDirectory())
+	.AddJsonFile("Settings/appsettings.json", optional: false, reloadOnChange: false)
+	.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+	.AddJsonFile("Settings/appsettings.ConnectionStrings.json", optional: false, reloadOnChange: false)
+	.AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false)
+	.Build();
 
 		// Cache values during object construction
 		appName = Common.GetProjectName();
