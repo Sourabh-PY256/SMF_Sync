@@ -4,6 +4,7 @@ using EWP.SF.KafkaSync.BusinessLayer;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
 using EWP.SF.KafkaSync.API.Extensions;
+using EWP.SF.KafkaSync.BusinessEntities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -145,6 +146,28 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 //app.UseHttpsRedirection();
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<KafkaTopicValidator>>();
+
+    var entityList = typeof(SyncERPEntity)
+        .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+        .Where(fi => fi.IsLiteral && !fi.IsInitOnly)
+        .Select(fi => fi.GetRawConstantValue()?.ToString())
+        .Where(value => !string.IsNullOrEmpty(value))
+        .ToList();
+
+    var topicNames = entityList
+        .Select(e => $"producer-sync-{e.ToLower()}")
+        .ToList();
+
+    var kafkaBootstrapServers = configuration["KafkaSettings:BootstrapServers"];
+
+    var topicValidator = new KafkaTopicValidator(logger, kafkaBootstrapServers);
+    await topicValidator.EnsureTopicsExistAsync(topicNames);
+
+    logger.LogInformation("All required Kafka topics validated and created successfully.");
+}
 
 // Start the service consumer
 app.UseServiceConsumer();
