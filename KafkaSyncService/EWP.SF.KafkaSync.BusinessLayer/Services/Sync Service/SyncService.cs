@@ -209,12 +209,12 @@
 // 				resolver.onMachineProduced += Resolver_onMachineProduced;
 // 				updatedMachine.Tag = resolver;
 // 				Machines.Add(updatedMachine);
-// 				if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
-// 				{
-// 					string json = JsonSerializer.Serialize(Machines);
-// 					string base64 = Convert.ToBase64String(json.ToBytes());
-// 					GarnetConnectionClient.SetValue("CurrentMachines", base64);
-// 				}
+// 				// if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
+// 				// {
+// 				// 	string json = JsonSerializer.Serialize(Machines);
+// 				// 	string base64 = Convert.ToBase64String(json.ToBytes());
+// 				// 	GarnetConnectionClient.SetValue("CurrentMachines", base64);
+// 				// }
 // 			}
 // 			else
 // 			{
@@ -246,12 +246,12 @@
 // 					_ = Machines.Remove(currentMachine);
 // 					currentMachine = null;
 // 					Machines.Add(updatedMachine);
-// 					if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
-// 					{
-// 						string json = JsonSerializer.Serialize(Machines);
-// 						string base64 = Convert.ToBase64String(json.ToBytes());
-// 						GarnetConnectionClient.SetValue("CurrentMachines", base64);
-// 					}
+// 					// if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
+// 					// {
+// 					// 	string json = JsonSerializer.Serialize(Machines);
+// 					// 	string base64 = Convert.ToBase64String(json.ToBytes());
+// 					// 	GarnetConnectionClient.SetValue("CurrentMachines", base64);
+// 					// }
 // 				}
 // 			}
 // 			if (!MachineValues[updatedMachine.Id].ContainsKey("@ConfigError"))
@@ -383,148 +383,148 @@
 // 			MachineValues[MachineId]["IO"] = tempValues["IO"];
 // 		}
 
-// 		if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("write", StringComparison.OrdinalIgnoreCase))
-// 		{
-// 			string json = JsonSerializer.Serialize(MachineValues);
-// 			string base64 = Convert.ToBase64String(json.ToBytes());
-// 			GarnetConnectionClient.SetValue("MachineData", base64);
-// 		}
+// 		// if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("write", StringComparison.OrdinalIgnoreCase))
+// 		// {
+// 		// 	string json = JsonSerializer.Serialize(MachineValues);
+// 		// 	string base64 = Convert.ToBase64String(json.ToBytes());
+// 		// 	GarnetConnectionClient.SetValue("MachineData", base64);
+// 		// }
 // 		return tempValues;
 // 	}
 
 // 	/// <summary>
 // 	/// Merge the machines from memory.
 // 	/// </summary>
-// 	public static async Task MergeMachinesFromMemory(string[] machineList)
-// 	{
-// 		if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("write", StringComparison.OrdinalIgnoreCase))
-// 		{
-// 			try
-// 			{
-// 				string base64 = GarnetConnectionClient.GetValue("CurrentMachines");
-// 				byte[] data = base64 is not null ? Convert.FromBase64String(base64) : null;
-// 				string dataDecoded = Encoding.UTF8.GetString(data);
+// 	// public static async Task MergeMachinesFromMemory(string[] machineList)
+// 	// {
+// 	// 	if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("write", StringComparison.OrdinalIgnoreCase))
+// 	// 	{
+// 	// 		try
+// 	// 		{
+// 	// 			string base64 = GarnetConnectionClient.GetValue("CurrentMachines");
+// 	// 			byte[] data = base64 is not null ? Convert.FromBase64String(base64) : null;
+// 	// 			string dataDecoded = Encoding.UTF8.GetString(data);
 
-// 				List<Machine> tempValue = JsonSerializer.Deserialize<List<Machine>>(dataDecoded);
+// 	// 			List<Machine> tempValue = JsonSerializer.Deserialize<List<Machine>>(dataDecoded);
 
-// 				if (tempValue?.Count > 0)
-// 				{
-// 					await Parallel.ForEachAsync(machineList, async (machineCode, _) =>
-// 					{
-// 						Machine localDevice = Machines.Find(x => x.Id == machineCode);
-// 						Machine sharedDevice = tempValue.Find(x => x.Id == machineCode);
+// 	// 			if (tempValue?.Count > 0)
+// 	// 			{
+// 	// 				await Parallel.ForEachAsync(machineList, async (machineCode, _) =>
+// 	// 				{
+// 	// 					Machine localDevice = Machines.Find(x => x.Id == machineCode);
+// 	// 					Machine sharedDevice = tempValue.Find(x => x.Id == machineCode);
 
-// 						if (sharedDevice is not null)
-// 						{
-// 							if (localDevice is null)
-// 							{
-// 								await UpdateMachine(machineCode).ConfigureAwait(false);
-// 							}
-// 							else
-// 							{
-// 								localDevice.Status = sharedDevice.Status;
-// 								localDevice.BinLocations = sharedDevice.BinLocations;
-// 								localDevice.LotCalculation = sharedDevice.LotCalculation;
-// 								localDevice.Location = sharedDevice.Location;
-// 								localDevice.CtrlModel = sharedDevice.CtrlModel;
-// 								localDevice.Description = sharedDevice.Description;
-// 								localDevice.FacilityCode = sharedDevice.FacilityCode;
-// 								localDevice.FacilityId = sharedDevice.FacilityId;
-// 								localDevice.FloorId = sharedDevice.FloorId;
-// 								localDevice.LiveIconId = sharedDevice.LiveIconId;
-// 								localDevice.Location = sharedDevice.Location;
-// 								localDevice.LotCalculation = sharedDevice.LotCalculation;
-// 								localDevice.LotCapacity = sharedDevice.LotCapacity;
-// 								localDevice.HasTool = sharedDevice.HasTool;
-// 								localDevice.IsAuxiliar = sharedDevice.IsAuxiliar;
-// 								localDevice.OEEConfiguration = sharedDevice.OEEConfiguration;
-// 								localDevice.Skills = sharedDevice.Skills;
-// 								localDevice.OperationTypeCode = sharedDevice.OperationTypeCode;
-// 								localDevice.Programming = sharedDevice.Programming;
+// 	// 					if (sharedDevice is not null)
+// 	// 					{
+// 	// 						if (localDevice is null)
+// 	// 						{
+// 	// 							await UpdateMachine(machineCode).ConfigureAwait(false);
+// 	// 						}
+// 	// 						else
+// 	// 						{
+// 	// 							localDevice.Status = sharedDevice.Status;
+// 	// 							localDevice.BinLocations = sharedDevice.BinLocations;
+// 	// 							localDevice.LotCalculation = sharedDevice.LotCalculation;
+// 	// 							localDevice.Location = sharedDevice.Location;
+// 	// 							localDevice.CtrlModel = sharedDevice.CtrlModel;
+// 	// 							localDevice.Description = sharedDevice.Description;
+// 	// 							localDevice.FacilityCode = sharedDevice.FacilityCode;
+// 	// 							localDevice.FacilityId = sharedDevice.FacilityId;
+// 	// 							localDevice.FloorId = sharedDevice.FloorId;
+// 	// 							localDevice.LiveIconId = sharedDevice.LiveIconId;
+// 	// 							localDevice.Location = sharedDevice.Location;
+// 	// 							localDevice.LotCalculation = sharedDevice.LotCalculation;
+// 	// 							localDevice.LotCapacity = sharedDevice.LotCapacity;
+// 	// 							localDevice.HasTool = sharedDevice.HasTool;
+// 	// 							localDevice.IsAuxiliar = sharedDevice.IsAuxiliar;
+// 	// 							localDevice.OEEConfiguration = sharedDevice.OEEConfiguration;
+// 	// 							localDevice.Skills = sharedDevice.Skills;
+// 	// 							localDevice.OperationTypeCode = sharedDevice.OperationTypeCode;
+// 	// 							localDevice.Programming = sharedDevice.Programming;
 
-// 								foreach (Sensor os in sharedDevice.Sensors)
-// 								{
-// 									Sensor localSensor = localDevice.Sensors.Find(x => x.Id == os.Id);
-// 									if (localSensor is null)
-// 									{
-// 										localDevice.Sensors.Add(os);
-// 									}
-// 									else
-// 									{
-// 										int index = localDevice.Sensors.IndexOf(localSensor);
-// 										if (index >= 0)
-// 										{
-// 											os.Value = localSensor.Value;
-// 											os.AvgValue = localSensor.AvgValue;
-// 											os.Data = localSensor.Data;
-// 											os.LastRead = localSensor.LastRead;
-// 											os.LastValue = localSensor.LastValue;
-// 											localDevice.Sensors[index] = os;
-// 										}
-// 									}
-// 								}
+// 	// 							foreach (Sensor os in sharedDevice.Sensors)
+// 	// 							{
+// 	// 								Sensor localSensor = localDevice.Sensors.Find(x => x.Id == os.Id);
+// 	// 								if (localSensor is null)
+// 	// 								{
+// 	// 									localDevice.Sensors.Add(os);
+// 	// 								}
+// 	// 								else
+// 	// 								{
+// 	// 									int index = localDevice.Sensors.IndexOf(localSensor);
+// 	// 									if (index >= 0)
+// 	// 									{
+// 	// 										os.Value = localSensor.Value;
+// 	// 										os.AvgValue = localSensor.AvgValue;
+// 	// 										os.Data = localSensor.Data;
+// 	// 										os.LastRead = localSensor.LastRead;
+// 	// 										os.LastValue = localSensor.LastValue;
+// 	// 										localDevice.Sensors[index] = os;
+// 	// 									}
+// 	// 								}
+// 	// 							}
 
-// 								foreach (MachineParam op in sharedDevice.Parameters)
-// 								{
-// 									MachineParam localParam = localDevice.Parameters.Find(x => x.Id == op.Id);
-// 									if (localParam is null)
-// 									{
-// 										localDevice.Parameters.Add(localParam);
-// 									}
-// 									else
-// 									{
-// 										int index = localDevice.Parameters.IndexOf(localParam);
-// 										if (index >= 0)
-// 										{
-// 											op.Value = localParam.Value;
-// 											localDevice.Parameters[index] = op;
-// 										}
-// 									}
-// 								}
-// 							}
-// 						}
-// 					}).ConfigureAwait(false);
-// 				}
-// 			}
-// 			catch { }
-// 		}
-// 	}
+// 	// 							foreach (MachineParam op in sharedDevice.Parameters)
+// 	// 							{
+// 	// 								MachineParam localParam = localDevice.Parameters.Find(x => x.Id == op.Id);
+// 	// 								if (localParam is null)
+// 	// 								{
+// 	// 									localDevice.Parameters.Add(localParam);
+// 	// 								}
+// 	// 								else
+// 	// 								{
+// 	// 									int index = localDevice.Parameters.IndexOf(localParam);
+// 	// 									if (index >= 0)
+// 	// 									{
+// 	// 										op.Value = localParam.Value;
+// 	// 										localDevice.Parameters[index] = op;
+// 	// 									}
+// 	// 								}
+// 	// 							}
+// 	// 						}
+// 	// 					}
+// 	// 				}).ConfigureAwait(false);
+// 	// 			}
+// 	// 		}
+// 	// 		catch { }
+// 	// 	}
+// 	// }
 
 // 	/// <summary>
 // 	/// Get all values from the memory or the current machines.
 // 	/// </summary>
-// 	public static async Task<ConcurrentDictionary<string, ConcurrentDictionary<string, object>>> GetAllValues()
-// 	{
-// 		if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
-// 		{
-// 			try
-// 			{
-// 				string base64 = GarnetConnectionClient.GetValue("MachineData");
-// 				byte[] data = base64 is not null ? Convert.FromBase64String(base64) : null;
-// 				string dataDecoded = Encoding.UTF8.GetString(data);
-// 				ConcurrentDictionary<string, ConcurrentDictionary<string, object>> tempValue = JsonSerializer.Deserialize<ConcurrentDictionary<string, ConcurrentDictionary<string, object>>>(dataDecoded);
+// 	// public static async Task<ConcurrentDictionary<string, ConcurrentDictionary<string, object>>> GetAllValues()
+// 	// {
+// 	// 	if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
+// 	// 	{
+// 	// 		try
+// 	// 		{
+// 	// 			string base64 = GarnetConnectionClient.GetValue("MachineData");
+// 	// 			byte[] data = base64 is not null ? Convert.FromBase64String(base64) : null;
+// 	// 			string dataDecoded = Encoding.UTF8.GetString(data);
+// 	// 			ConcurrentDictionary<string, ConcurrentDictionary<string, object>> tempValue = JsonSerializer.Deserialize<ConcurrentDictionary<string, ConcurrentDictionary<string, object>>>(dataDecoded);
 
-// 				if (tempValue?.IsEmpty == false)
-// 				{
-// 					MachineValues = tempValue;
-// 				}
-// 			}
-// 			catch { }
-// 		}
-// 		else
-// 		{
-// 			foreach (string m in MachineValues.Keys.ToArray())
-// 			{
-// 				Machine machine = Machines?.Find(x => x.Id == m);
-// 				if (machine is not null)
-// 				{
-// 					await LoadMachineContext(machine).ConfigureAwait(false);
-// 					await GetMachineValues(machine.Id, true).ConfigureAwait(false);
-// 				}
-// 			}
-// 		}
-// 		return MachineValues;
-// 	}
+// 	// 			if (tempValue?.IsEmpty == false)
+// 	// 			{
+// 	// 				MachineValues = tempValue;
+// 	// 			}
+// 	// 		}
+// 	// 		catch { }
+// 	// 	}
+// 	// 	else
+// 	// 	{
+// 	// 		foreach (string m in MachineValues.Keys.ToArray())
+// 	// 		{
+// 	// 			Machine machine = Machines?.Find(x => x.Id == m);
+// 	// 			if (machine is not null)
+// 	// 			{
+// 	// 				await LoadMachineContext(machine).ConfigureAwait(false);
+// 	// 				await GetMachineValues(machine.Id, true).ConfigureAwait(false);
+// 	// 			}
+// 	// 		}
+// 	// 	}
+// 	// 	return MachineValues;
+// 	// }
 
 // 	#endregion Public Methods
 
@@ -582,12 +582,12 @@
 // 			MachineValues = new ConcurrentDictionary<string, ConcurrentDictionary<string, object>>();
 // 			MachineTimestamps = new ConcurrentDictionary<string, ConcurrentDictionary<string, DateTime>>();
 // 			Machines = [.. BusinessProcess.ListDevices(false, false, false, null, false).Where(x => x.Status == Status.Active)];
-// 			if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
-// 			{
-// 				string json = JsonSerializer.Serialize(Machines);
-// 				string base64 = Convert.ToBase64String(json.ToBytes());
-// 				GarnetConnectionClient.SetValue("CurrentMachines", base64);
-// 			}
+// 			// if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
+// 			// {
+// 			// 	string json = JsonSerializer.Serialize(Machines);
+// 			// 	string base64 = Convert.ToBase64String(json.ToBytes());
+// 			// 	GarnetConnectionClient.SetValue("CurrentMachines", base64);
+// 			// }
 // 			for (int i = 0; i < Machines.Count; i++)
 // 			{
 // 				Machine m = Machines[i];
@@ -624,12 +624,12 @@
 // 						MachineValues[m.Id]["@ConfigError"] = m.ConfigError;
 // 					}
 // 				}
-// 				if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
-// 				{
-// 					string json = JsonSerializer.Serialize(Machines);
-// 					string base64 = Convert.ToBase64String(json.ToBytes());
-// 					GarnetConnectionClient.SetValue("CurrentMachines", base64);
-// 				}
+// 				// if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
+// 				// {
+// 				// 	string json = JsonSerializer.Serialize(Machines);
+// 				// 	string base64 = Convert.ToBase64String(json.ToBytes());
+// 				// 	GarnetConnectionClient.SetValue("CurrentMachines", base64);
+// 				// }
 // 				try
 // 				{
 // 					await ProcessMachine(m.Id, null, null, true).ConfigureAwait(false);
@@ -656,14 +656,14 @@
 // 	/// <summary>
 // 	/// Process messages from the queue.
 // 	/// </summary>
-// 	public static async Task ProcessMessages()
-// 	{
-// 		foreach (MsTeamsNotification message in messageQueue.GetConsumingEnumerable())
-// 		{
-// 			await Operations.SendMessageMSteamsAsync(message).ConfigureAwait(false);
-// 			await Task.Delay(delayBetweenMessages).ConfigureAwait(false); // Control the rate of sending
-// 		}
-// 	}
+// 	// public static async Task ProcessMessages()
+// 	// {
+// 	// 	foreach (MsTeamsNotification message in messageQueue.GetConsumingEnumerable())
+// 	// 	{
+// 	// 		await Operations.SendMessageMSteamsAsync(message).ConfigureAwait(false);
+// 	// 		await Task.Delay(delayBetweenMessages).ConfigureAwait(false); // Control the rate of sending
+// 	// 	}
+// 	// }
 
 // 	private static void Resolver_OnLog(object sender, CustomActionEventArgs<string, bool> e)
 // 	{
@@ -720,78 +720,78 @@
 // 					logger.Error($"There are no users configured to send the sensor notification. Machine: {machine.Code} Sensor: {lectorSensor.Code}-{lectorSensor.Description} ");
 // 				}
 
-// 				foreach (RecipientNotification recipient in Recipients)
-// 				{
-// 					//Se genera el registro con el proceso que detona la notificación y que será leida posteriormente para crear el mensaje
-// 					//sustituyendo los valores por los campos dinámicamente
-// 					NotificationsTemplates template = await BusinessProcess.GetTemplate(sensorWhen.SensorsThen[index].TemplateId).ConfigureAwait(false);
-// 					if (template is not null)
-// 					{
-// 						messageRequest = new MessageNotificationRequest
-// 						{
-// 							Placeholders = [
-// 							   new() { Code = "sensor_name", Value = $"{lectorSensor.Code}-{lectorSensor.Description}" },
-// 								   new() { Code = "machine_name", Value = $"{machine.Code}-{machine.Description}" },
-// 								   new() { Code = "sensor_reading", Value = SensorRead.Value },
-// 								   new() { Code = "user_name", Value = string.IsNullOrEmpty(recipient.displayName) ? "User" : recipient.displayName },
-// 								   new() { Code = "event_date", Value = DateTime.UtcNow.ToString() },
-// 								   new() { Code = "event_hour", Value = DateTime.UtcNow.Hour.ToString() },
-// 								   new() { Code = "event_type", Value = "Unknown" },
-// 								   new() { Code = "name_explode", Value = index > 0 ? sensorWhen.SensorsThen[index - 1].SensorsRecipients[0].Value : "System Automatic" }
-// 							],
-// 							ToEmp = [recipient.employeeId],
-// 							TemplateCode = template.Code,
-// 							TargetType = sensorWhen.SensorsThen[index].Action,
-// 							Subject = template.Subject,
-// 							KeyConfirm = guid,
-// 							RequiresConfirm = sensorWhen.SensorsThen[index].RequiresConfirm.ToBool(),
-// 							Priority = template.Priority,
-// 						};
-// 						if (messageRequest.TargetType == "MsTeams")
-// 						{
-// 							foreach (MessageNotification notify in await BusinessProcess.CreateMessageNotification(messageRequest).ConfigureAwait(false))
-// 							{
-// 								messageQueue.Add(new MsTeamsNotification
-// 								{
-// 									Message = notify.Message,
-// 									RequiresConfirm = notify.RequiresConfirm,
-// 									Subject = notify.Subject,
-// 									Disabled = false,
-// 									ProcessId = notify.keyConfirm,
-// 									To = notify.To
-// 								});
-// 							}
-// 						}
-// 						else
-// 						{
-// 							_ = Task.Run(async () =>
-// 							{
-// 								ResponseModel response = await BusinessProcess.SendMessageNotification(messageRequest, recipient, null, "System Automatic").ConfigureAwait(false);
-// 								if (!response.IsSuccess)
-// 								{
-// 									logger.Error(response.Message);
-// 								}
-// 							});
-// 						}
-// 					}
-// 					else
-// 					{
-// 						logger.Error("Template " + sensorWhen.SensorsThen[index].TemplateId + " doesn't exist");
-// 					}
-// 				}
+// 				// foreach (RecipientNotification recipient in Recipients)
+// 				// {
+// 				// 	//Se genera el registro con el proceso que detona la notificación y que será leida posteriormente para crear el mensaje
+// 				// 	//sustituyendo los valores por los campos dinámicamente
+// 				// 	NotificationsTemplates template = await BusinessProcess.GetTemplate(sensorWhen.SensorsThen[index].TemplateId).ConfigureAwait(false);
+// 				// 	if (template is not null)
+// 				// 	{
+// 				// 		messageRequest = new MessageNotificationRequest
+// 				// 		{
+// 				// 			Placeholders = [
+// 				// 			   new() { Code = "sensor_name", Value = $"{lectorSensor.Code}-{lectorSensor.Description}" },
+// 				// 				   new() { Code = "machine_name", Value = $"{machine.Code}-{machine.Description}" },
+// 				// 				   new() { Code = "sensor_reading", Value = SensorRead.Value },
+// 				// 				   new() { Code = "user_name", Value = string.IsNullOrEmpty(recipient.displayName) ? "User" : recipient.displayName },
+// 				// 				   new() { Code = "event_date", Value = DateTime.UtcNow.ToString() },
+// 				// 				   new() { Code = "event_hour", Value = DateTime.UtcNow.Hour.ToString() },
+// 				// 				   new() { Code = "event_type", Value = "Unknown" },
+// 				// 				   new() { Code = "name_explode", Value = index > 0 ? sensorWhen.SensorsThen[index - 1].SensorsRecipients[0].Value : "System Automatic" }
+// 				// 			],
+// 				// 			ToEmp = [recipient.employeeId],
+// 				// 			TemplateCode = template.Code,
+// 				// 			TargetType = sensorWhen.SensorsThen[index].Action,
+// 				// 			Subject = template.Subject,
+// 				// 			KeyConfirm = guid,
+// 				// 			RequiresConfirm = sensorWhen.SensorsThen[index].RequiresConfirm.ToBool(),
+// 				// 			Priority = template.Priority,
+// 				// 		};
+// 				// 		if (messageRequest.TargetType == "MsTeams")
+// 				// 		{
+// 				// 			foreach (MessageNotification notify in await BusinessProcess.CreateMessageNotification(messageRequest).ConfigureAwait(false))
+// 				// 			{
+// 				// 				messageQueue.Add(new MsTeamsNotification
+// 				// 				{
+// 				// 					Message = notify.Message,
+// 				// 					RequiresConfirm = notify.RequiresConfirm,
+// 				// 					Subject = notify.Subject,
+// 				// 					Disabled = false,
+// 				// 					ProcessId = notify.keyConfirm,
+// 				// 					To = notify.To
+// 				// 				});
+// 				// 			}
+// 				// 		}
+// 				// 		else
+// 				// 		{
+// 				// 			_ = Task.Run(async () =>
+// 				// 			{
+// 				// 				ResponseModel response = await BusinessProcess.SendMessageNotification(messageRequest, recipient, null, "System Automatic").ConfigureAwait(false);
+// 				// 				if (!response.IsSuccess)
+// 				// 				{
+// 				// 					logger.Error(response.Message);
+// 				// 				}
+// 				// 			});
+// 				// 		}
+// 				// 	}
+// 				// 	else
+// 				// 	{
+// 				// 		logger.Error("Template " + sensorWhen.SensorsThen[index].TemplateId + " doesn't exist");
+// 				// 	}
+// 				// }
 // 			}
-// 			if (sensorWhen.SensorsThen[index].RequiresConfirm == 1 && sensorWhen.SensorsThen.Count > index + 1)
-// 			{
-// 				SensorMonitoringService.SetSensorThen(
-// 					code,
-// 					machineId,
-// 					lectorSensor,
-// 					SensorRead,
-// 					sensorWhen,
-// 					sensorWhen.SensorsThen[index + 1],
-// 					sensorWhen.SensorsThen[index + 1].IdleTimeout.ToInt32()
-// 				);
-// 			}
+// 			// if (sensorWhen.SensorsThen[index].RequiresConfirm == 1 && sensorWhen.SensorsThen.Count > index + 1)
+// 			// {
+// 			// 	SensorMonitoringService.SetSensorThen(
+// 			// 		code,
+// 			// 		machineId,
+// 			// 		lectorSensor,
+// 			// 		SensorRead,
+// 			// 		sensorWhen,
+// 			// 		sensorWhen.SensorsThen[index + 1],
+// 			// 		sensorWhen.SensorsThen[index + 1].IdleTimeout.ToInt32()
+// 			// 	);
+// 			// }
 // 		}
 // 		catch (Exception ex)
 // 		{
@@ -831,7 +831,7 @@
 
 // 	internal static string SetPrintQueue(string machineId, string processId, string workOrderId, string LogDate) => BusinessProcess.SetPrintQueue(machineId, processId, workOrderId, LogDate);
 
-// 	internal static string SetManualPrintQueue(PrintRequest request, int IdUser) => BusinessProcess.SetManualPrintQueue(request, IdUser);
+// 	//internal static string SetManualPrintQueue(PrintRequest request, int IdUser) => BusinessProcess.SetManualPrintQueue(request, IdUser);
 
 // 	private static void Resolver_OnResolve_Handler(object sender, CustomActionEventArgs<ResolvedMachine, bool> e)
 // 	{
@@ -939,12 +939,12 @@
 // 				Machines.Remove(current);
 // 				Machines.Add(value);
 // 				UpdatedMachines.Remove(machineId);
-// 				if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
-// 				{
-// 					string json = JsonSerializer.Serialize(Machines);
-// 					string base64 = Convert.ToBase64String(json.ToBytes());
-// 					GarnetConnectionClient.SetValue("CurrentMachines", base64);
-// 				}
+// 				// if (ServiceManager.appSettings.GetAppSetting("MemoryMode").Contains("read", StringComparison.OrdinalIgnoreCase))
+// 				// {
+// 				// 	string json = JsonSerializer.Serialize(Machines);
+// 				// 	string base64 = Convert.ToBase64String(json.ToBytes());
+// 				// 	GarnetConnectionClient.SetValue("CurrentMachines", base64);
+// 				// }
 // 			}
 // 		}
 // 		OnMachineProcessed?.Invoke(e.Request.IgnoreInsert, machineId);

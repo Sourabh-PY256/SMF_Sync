@@ -13,10 +13,12 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 public class WarehouseOperation : IWarehouseOperation
 {
     private readonly IWarehouseRepo _warehouseRepo;
+    //private readonly IBinLocationOperation _binLocationOperation;
 
     public WarehouseOperation(IWarehouseRepo warehouseRepo)
     {
         _warehouseRepo = warehouseRepo;
+        //_binLocationOperation = binLocationOperation;
     }
     #region Warehouse
 
@@ -141,7 +143,7 @@ public class WarehouseOperation : IWarehouseOperation
 
                     if (!editMode || (warehouse.Locations?.Count > 0))
                     {
-                        //List<ResponseData> binLocationsResponse = await ListUpdateBinLocation(warehouse.Locations, null, systemOperator, Validate, Level).ConfigureAwait(false);discuss mario
+                        //List<ResponseData> binLocationsResponse = await _binLocationOperation.ListUpdateBinLocation(warehouse.Locations, null, systemOperator, Validate, Level).ConfigureAwait(false);//discuss mario
                         warehouseInfo.Details = null;
                     }
                     if (editMode && string.IsNullOrEmpty(warehouse.FacilityCode))

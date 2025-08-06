@@ -195,12 +195,12 @@ public class DemandOperation : IDemandOperation
 			// {
 			// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Item, Action = ActionDB.IntegrateAll.ToStr() });
 			// } 
-			returnValue = Level switch
-			{
-				LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
-				LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
-				_ => returnValue
-			};
+			// returnValue = Level switch
+			// {
+			// 	LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
+			// 	LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
+			// 	_ => returnValue
+			// };
 		}
 
 		return returnValue;

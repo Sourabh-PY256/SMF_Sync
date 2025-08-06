@@ -13,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using System.Net;
 using EWP.SF.Common.Constants;
 using EWP.SF.KafkaSync.BusinessEntities;
+using Confluent.Kafka;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 
@@ -589,6 +590,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 		return _orderTransactionProductRepo.MergeOrderTransactionProductStatus(orderTransactionInfo, systemOperator, Validate);
 	}
+	/// <summary>
+	///
+	/// </summary>
 	public async Task<List<WorkOrderResponse>> ListUpdateWorkOrder(List<WorkOrderExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, bool isDataSynced = false)
 	{
 		List<WorkOrderResponse> returnValue = [];
@@ -659,30 +663,17 @@ public class WorkOrderOperation : IWorkOrderOperation
 					Status orderStatus = Status.Disabled;
 					if (!string.IsNullOrEmpty(workOrder.Status))
 					{
-						switch (workOrder.Status.ToUpperInvariant())
+						orderStatus = workOrder.Status.ToUpperInvariant() switch
 						{
-							case "NEW":
-								orderStatus = Status.Disabled;
-								break;
-							case "IN PROGRESS":
-								orderStatus = Status.Active;
-								break;
-							case "RELEASED":
-								orderStatus = Status.Pending;
-								break;
-							case "QUEUED":
-								orderStatus = Status.Queued;
-								break;
-							case "CANCELLED":
-								orderStatus = Status.Cancelled;
-								break;
-							case "ON HOLD":
-								orderStatus = Status.Hold;
-								break;
-							case "FINISHED":
-								orderStatus = Status.Finished;
-								break;
-						}
+							"NEW" => Status.Disabled,
+							"IN PROGRESS" => Status.Active,
+							"RELEASED" => Status.Pending,
+							"QUEUED" => Status.Queued,
+							"CANCELLED" => Status.Cancelled,
+							"ON HOLD" => Status.Hold,
+							"FINISHED" => Status.Finished,
+							_ => throw new InvalidOperationException($"Unknown work order status: {workOrder.Status}")
+						};
 					}
 					string salesOrder = null;
 					if (!string.IsNullOrEmpty(workOrder.SalesOrder))
@@ -904,7 +895,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									if (processType is not null)
 									{
 										curProcess.ProcessTypeId = actualProcess.ProcessTypeId;
-										processType = processTypesList.Where(pt => pt.Id == op.OperationType)?.FirstOrDefault();
+										_ = processTypesList.Where(pt => pt.Id == op.OperationType)?.FirstOrDefault();
 									}
 									else
 									{
@@ -933,8 +924,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 											throw new Exception(string.Format("Byproduct {1} in Operation No. {0} Warehouse code is required", op.Step, bp.ItemCode));
 										}
 										Component opComp = (await _componentOperation.GetComponents(bp.ItemCode, true).ConfigureAwait(false)).Where(c => c.Status != Status.Failed)?.FirstOrDefault();
-										Warehouse bpwh = _warehouseOperation.GetWarehouse(bp.WarehouseCode);
-										if (bpwh is null)
+										Warehouse whs = _warehouseOperation.GetWarehouse(bp.WarehouseCode);
+										if (whs is null)
 										{
 											throw new Exception(string.Format("Byproduct in Operation No. {0} Warehouse code {1} is invalid", op.Step, bp.WarehouseCode));
 										}
@@ -967,7 +958,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 													}
 												}
 											}
-											if (!workOrderInfo.Subproducts.Any(c => c.ComponentId == newComp.ComponentId && c.ProcessId == newComp.ProcessId && c.LineId == newComp.LineId))
+											if (!workOrderInfo.Subproducts.Any(x => x.ComponentId == newComp.ComponentId && x.ProcessId == newComp.ProcessId && x.LineId == newComp.LineId))
 											{
 												workOrderInfo.Subproducts.Add(newComp);
 											}
@@ -984,11 +975,11 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 									foreach (WorkOrderItem itm in op.Items)
 									{
-										ProcessEntryComponent productItem = currentProduct.Components.FirstOrDefault(com =>
-											com.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
-											com.ComponentId == itm.ItemCode
-										);
-										Component opComp = (await _componentOperation.GetComponents(itm.ItemCode, true).ConfigureAwait(false)).Where(c => c.Status != Status.Failed)?.FirstOrDefault();
+										// ProcessEntryComponent productItem = currentProduct.Components.FirstOrDefault(x =>
+										// 	x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+										// 	x.ComponentId == itm.ItemCode
+										// );
+										Component opComp = (await _componentOperation.GetComponents(itm.ItemCode, true).ConfigureAwait(false)).Where(x => x.Status != Status.Failed)?.FirstOrDefault();
 										if (opComp is not null)
 										{
 											string UnitCode = currentProduct.UnitId;
@@ -1019,17 +1010,17 @@ public class WorkOrderOperation : IWorkOrderOperation
 												Comments = itm.Comments
 											};
 
-											if (!editMode && productItem is not null && string.IsNullOrEmpty(itm.Source))
-											{
-												newComp.Source = productItem.Source;
-											}
+											// if (!editMode && productItem is not null && string.IsNullOrEmpty(itm.Source))
+											// {
+											// 	newComp.Source = productItem.Source;
+											// }
 
 											if (editMode)
 											{
-												OrderComponent foundComponent = workOrderInfo.Components.Find(p =>
-													p.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
-													p.SourceId == newComp.SourceId &&
-													p.LineId == newComp.LineId
+												OrderComponent foundComponent = workOrderInfo.Components.Find(x =>
+													x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+													x.SourceId == newComp.SourceId &&
+													x.LineId == newComp.LineId
 												);
 												if (foundComponent is not null)
 												{
@@ -1047,7 +1038,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 													}
 												}
 											}
-											if (!workOrderInfo.Components.Any(c => c.SourceId == newComp.SourceId && c.ProcessId == newComp.ProcessId && c.LineId == newComp.LineId))
+											if (!workOrderInfo.Components.Any(x => x.SourceId == newComp.SourceId && x.ProcessId == newComp.ProcessId && x.LineId == newComp.LineId))
 											{
 												workOrderInfo.Components.Add(newComp);
 											}
@@ -1061,15 +1052,15 @@ public class WorkOrderOperation : IWorkOrderOperation
 								if (op.Tooling is not null)
 								{
 									workOrderInfo.Tools ??= [];
-									op.Tooling.ForEach(tool =>
+									foreach (WorkOrderOperationTool tool in op.Tooling)
 									{
 										WorkOrderTool newTool = new();
-										ToolType currentTooltype = _toolOperation.ListToolTypes(tool.ToolingCode)?.Find(x => x.Status != Status.Failed);
-										ProcessEntryTool productTool = currentProduct.Tools.FirstOrDefault(com =>
-											com.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
-											com.ToolId == tool.ToolingCode
+										ToolType currentToolType = _toolOperation.ListToolTypes(tool.ToolingCode)?.Find(x => x.Status != Status.Failed);
+										ProcessEntryTool productTool = currentProduct.Tools.FirstOrDefault(x =>
+											x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+											x.ToolId == tool.ToolingCode
 										);
-										if (currentTooltype is not null)
+										if (currentToolType is not null)
 										{
 											newTool.ToolId = tool.ToolingCode;
 											newTool.ProcessId = curProcess.ProcessId;
@@ -1093,7 +1084,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 												}
 											}
 
-											WorkOrderTool existingTool = workOrderInfo.Tools.Find(c => c.ProcessId.ToDouble() == newTool.ProcessId.ToDouble() && c.LineId == newTool.LineId);
+											WorkOrderTool existingTool = workOrderInfo.Tools.Find(x => x.ProcessId.ToDouble() == newTool.ProcessId.ToDouble() && x.LineId == newTool.LineId);
 											if (existingTool is null)
 											{
 												workOrderInfo.Tools.Add(newTool);
@@ -1123,21 +1114,20 @@ public class WorkOrderOperation : IWorkOrderOperation
 										{
 											throw new Exception(string.Format("Tooling Type: {0} not found", tool.ToolingCode));
 										}
-									});
+									}
 								}
 
 								if (op.Labor is not null)
 								{
 									workOrderInfo.Labor ??= [];
-									op.Labor.ForEach(labor =>
+									foreach (WorkOrderOperationLabor labor in op.Labor)
 									{
 										WorkOrderLabor newLabor = new();
-										ProcessEntryLabor productLabor = currentProduct.Labor.FirstOrDefault(com =>
-											com.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
-											com.LaborId == labor.ProfileCode
+										ProcessEntryLabor productLabor = currentProduct.Labor.FirstOrDefault(x =>
+											x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+											x.LaborId == labor.ProfileCode
 										);
-										//Remove Parameter Synstem Operator
-										Labor currentLabor = _laborRepo.ListLabors()?.Find(lb => string.Equals(lb.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
+										Labor currentLabor = _laborRepo.ListLabors()?.Find(x => string.Equals(x.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
 										if (currentLabor is not null)
 										{
 											newLabor.LaborId = labor.ProfileCode;
@@ -1162,7 +1152,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 												}
 											}
 
-											WorkOrderLabor existingLabor = workOrderInfo.Labor.Find(c => c.ProcessId.ToDouble() == newLabor.ProcessId.ToDouble() && c.LineId == newLabor.LineId);
+											WorkOrderLabor existingLabor = workOrderInfo.Labor.Find(x =>
+												x.ProcessId.ToDouble() == newLabor.ProcessId.ToDouble() &&
+												x.LineId == newLabor.LineId);
 											if (existingLabor is null)
 											{
 												workOrderInfo.Labor.Add(newLabor);
@@ -1177,7 +1169,6 @@ public class WorkOrderOperation : IWorkOrderOperation
 												{
 													existingLabor.IsBackflush = labor.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase);
 												}
-
 												if (!string.IsNullOrEmpty(labor.Usage) && labor.Usage != "0")
 												{
 													existingLabor.Usage = labor.Usage;
@@ -1192,26 +1183,28 @@ public class WorkOrderOperation : IWorkOrderOperation
 										{
 											throw new Exception(string.Format("Labor profile code: {0} not found", labor.ProfileCode));
 										}
-									});
+									}
 								}
 								if (op.Tasks is not null)
 								{
-									List<Activity> tasks = _dataImportOperation.GetDataImportOerderTasks(op, curProcess);
+									List<Activity> tasks = _dataImportOperation.GetDataImportOrderTasks(op, curProcess);
 									if (!editMode)
 									{
 										workOrderInfo.Tasks = tasks;
 									}
 									else
 									{
-										tasks.ForEach(tsk =>
+										foreach (Activity tsk in tasks)
 										{
 											if (workOrderInfo.Tasks?.Count > 0)
 											{
-												workOrderInfo.Tasks.Where(x => x.SortId == tsk.SortId && x.TriggerId == tsk.TriggerId)?.ToList()?.ForEach(x =>
-																								{
-																									x.ManualDelete = true;
-																									tsk.ManualDelete = true;
-																								});
+												workOrderInfo.Tasks.Where(x =>
+													x.SortId == tsk.SortId &&
+													x.TriggerId == tsk.TriggerId)?.ToList()?.ForEach(x =>
+														{
+															x.ManualDelete = true;
+															tsk.ManualDelete = true;
+														});
 											}
 											tsk.ProcessId = curProcess.ProcessId;
 											if (!tsk.ManualDelete)
@@ -1219,7 +1212,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 												workOrderInfo.Tasks ??= [];
 												workOrderInfo.Tasks.Add(tsk);
 											}
-										});
+										}
 									}
 								}
 
@@ -1245,13 +1238,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 						else
 						{
 							OrderProcess firstProcess = workOrderInfo.Processes.OrderBy(x => x.PlannedStart).FirstOrDefault();
-							if (firstProcess is not null)
+							if (firstProcess is null)
 							{
-								workOrderInfo.PlannedStart = firstProcess.PlannedStart;
+								workOrderInfo.PlannedStart = workOrder.PlannedStartDate;
 							}
 							else
 							{
-								workOrderInfo.PlannedStart = workOrder.PlannedStartDate;
+								workOrderInfo.PlannedStart = firstProcess.PlannedStart;
 							}
 						}
 						if (workOrder.PlannedEndDate.Year > 1900)
@@ -1261,13 +1254,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 						else
 						{
 							OrderProcess lastProcess = workOrderInfo.Processes.OrderByDescending(x => x.PlannedEnd).FirstOrDefault();
-							if (lastProcess is not null)
+							if (lastProcess is null)
 							{
-								workOrderInfo.PlannedEnd = lastProcess.PlannedEnd;
+								workOrderInfo.PlannedEnd = workOrder.PlannedEndDate;
 							}
 							else
 							{
-								workOrderInfo.PlannedEnd = workOrder.PlannedEndDate;
+								workOrderInfo.PlannedEnd = lastProcess.PlannedEnd;
 							}
 						}
 
@@ -1298,14 +1291,14 @@ public class WorkOrderOperation : IWorkOrderOperation
 					if (currentProduct?.Tasks is not null && !editMode)
 					{
 						workOrderInfo.Tasks ??= [];
-						currentProduct.Tasks.ForEach(t =>
+						foreach (Activity t in currentProduct.Tasks)
 						{
 							OrderProcess existingProcess = workOrderInfo.Processes.Find(x => x.ProcessId.ToDouble() == t.ProcessId.ToDouble());
 							if (existingProcess is not null)
 							{
 								workOrderInfo.Tasks.Add(t);
 							}
-						});
+						}
 					}
 
 					returnValue.Add(await MergeWorkOrder(editMode ? ActionDB.Update : ActionDB.Create, workOrderInfo, systemOperator, Validate, Level.ToStr(), true, isDataSynced, IntegrationSource.ERP).ConfigureAwait(false));
@@ -1322,20 +1315,24 @@ public class WorkOrderOperation : IWorkOrderOperation
 				}
 			}
 		}
-		if (!Validate)
-		{
-			//ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.WorkOrder, Action = ActionDB.IntegrateAll.ToStr() });
-			returnValue = Level switch
-			{
-				LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
-				LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
-				_ => returnValue
-			};
-		}
+		// if (!Validate)
+		// {
+		// 	ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.WorkOrder, Action = ActionDB.IntegrateAll.ToStr() });
+		// 	returnValue = Level switch
+		// 	{
+		// 		LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
+		// 		LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
+		// 		_ => returnValue
+		// 	};
+		// }
 		return returnValue;
 	}
+
 	/// <summary>
 	///
+	/// </summary>
+	/// <summary>
+	/// Merges the specified work order with the current work order.
 	/// </summary>
 	public async Task<WorkOrderResponse> MergeWorkOrder(
 		ActionDB mode,
@@ -1381,13 +1378,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 					if (!string.IsNullOrEmpty(returnValue.WorkOrder.Id) && workOrderInfo.Processes?.Count > 0)
 					{
 						MemoryStream ms;
-						returnValue.WorkOrder.Processes.ForEach(static nlmt => { if (string.IsNullOrEmpty(nlmt.LineUID)) { nlmt.LineUID = Guid.NewGuid().ToString(); } });
+						returnValue.WorkOrder.Processes.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
 						string processDetailJSON = JsonConvert.SerializeObject(returnValue.WorkOrder.Processes);
 						_workOrderRepo.MergeWorkOrderProcesses(returnValue.WorkOrder, processDetailJSON, systemOperator);
 
 						if (workOrderInfo.Components?.Count > 0)
 						{
-							returnValue.WorkOrder.Components.ForEach(static nlmt => { if (string.IsNullOrEmpty(nlmt.LineUID)) { nlmt.LineUID = Guid.NewGuid().ToString(); } });
+							returnValue.WorkOrder.Components.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
 							string componentDetailsJSON = JsonConvert.SerializeObject(workOrderInfo.Components);
 							_workOrderRepo.MergeWorkOrderComponents(returnValue.WorkOrder, componentDetailsJSON, systemOperator);
 
@@ -1403,27 +1400,27 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 						if (workOrderInfo.Subproducts?.Count > 0 && !string.IsNullOrEmpty(returnValue.WorkOrder.Id))
 						{
-							returnValue.WorkOrder.Subproducts.ForEach(static nlmt =>
+							returnValue.WorkOrder.Subproducts.ForEach(static x =>
 							{
-								if (string.IsNullOrEmpty(nlmt.LineUID))
+								if (string.IsNullOrEmpty(x.LineUID))
 								{
-									nlmt.LineUID = Guid.NewGuid().ToString();
+									x.LineUID = Guid.NewGuid().ToString();
 								}
 							});
-							string subproductJson = JsonConvert.SerializeObject(workOrderInfo.Subproducts);
-							_workOrderRepo.MergeWorkOrderSubproducts(returnValue.WorkOrder, subproductJson, systemOperator);
+							string byProductJson = JsonConvert.SerializeObject(workOrderInfo.Subproducts);
+							_workOrderRepo.MergeWorkOrderByProducts(returnValue.WorkOrder, byProductJson, systemOperator);
 						}
 						string ToolingJson = string.Empty;
 						if (workOrderInfo.Tools?.Count > 0 && !string.IsNullOrEmpty(returnValue.WorkOrder.Id))
 						{
-							returnValue.WorkOrder.Tools.ForEach(static nlmt => { if (string.IsNullOrEmpty(nlmt.LineUID)) { nlmt.LineUID = Guid.NewGuid().ToString(); } });
+							returnValue.WorkOrder.Tools.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
 							ToolingJson = JsonConvert.SerializeObject(workOrderInfo.Tools);
 						}
 						_workOrderRepo.MergeWorkOrderTooling(returnValue.WorkOrder, ToolingJson, systemOperator);
 						string LaborJson = string.Empty;
 						if (workOrderInfo.Labor?.Count > 0 && !string.IsNullOrEmpty(returnValue.WorkOrder.Id))
 						{
-							returnValue.WorkOrder.Labor.ForEach(static nlmt => { if (string.IsNullOrEmpty(nlmt.LineUID)) { nlmt.LineUID = Guid.NewGuid().ToString(); } });
+							returnValue.WorkOrder.Labor.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
 							LaborJson = JsonConvert.SerializeObject(workOrderInfo.Labor);
 						}
 						_workOrderRepo.MergeWorkOrderLabor(returnValue.WorkOrder, LaborJson, systemOperator);
@@ -1500,7 +1497,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 				}
 				else
 				{
-					List<Activity> rv = [];
+					List<Activity> rv;
 					LevelMessage objLevel = Enum.Parse<LevelMessage>(Level);
 					returnValue = _workOrderRepo.MergeWorkOrder(workOrderInfo, systemOperator, Validate, objLevel, mode);
 					const bool result = true;
@@ -1515,12 +1512,12 @@ public class WorkOrderOperation : IWorkOrderOperation
 							_workOrderRepo.MergeWorkOrderComponents(workOrderInfo, componentDetailsJSON, systemOperator);
 						}
 
-						string subproductJson = string.Empty;
+						string byProductJson = string.Empty;
 						if (workOrderInfo.Subproducts?.Count > 0 && !string.IsNullOrEmpty(workOrderInfo.Id))
 						{
-							subproductJson = JsonConvert.SerializeObject(workOrderInfo.Subproducts);
+							byProductJson = JsonConvert.SerializeObject(workOrderInfo.Subproducts);
 						}
-						_workOrderRepo.MergeWorkOrderSubproducts(workOrderInfo, subproductJson, systemOperator);
+						_workOrderRepo.MergeWorkOrderByProducts(workOrderInfo, byProductJson, systemOperator);
 
 						string ToolingJson = string.Empty;
 						if (workOrderInfo.Tools?.Count > 0 && !string.IsNullOrEmpty(workOrderInfo.Id))
@@ -1600,13 +1597,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 			}
 			scope.Complete();
 		}
-		SyncInitializer.ForcePush(new MessageBroker
-		{
-			Type = MessageBrokerType.WorkOrder,
-			Aux = mode == ActionDB.Create ? "N" : "U",
-			ElementValue = returnValue.WorkOrder.Id,
-		});
-		//ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.WorkOrder, Action = ActionDB.IntegrateAll.ToStr() });
+		// SyncInitializer.ForcePush(new MessageBroker
+		// {
+		// 	Type = MessageBrokerType.WorkOrder,
+		// 	Aux = mode == ActionDB.Create ? "N" : "U",
+		// 	ElementValue = returnValue.WorkOrder.Id,
+		// });
+		// ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.WorkOrder, Action = ActionDB.IntegrateAll.ToStr() });
 		return returnValue;
 	}
 /// <summary>

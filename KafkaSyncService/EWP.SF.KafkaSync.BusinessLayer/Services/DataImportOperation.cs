@@ -700,7 +700,7 @@ public  class DataImportOperation : IDataImportOperation
 	/// <summary>
 	///
 	/// </summary>
-	public List<Activity> GetDataImportOerderTasks(Common.Models.WorkOrderOperation operationType, OrderProcess currentProcess)
+	public List<Activity> GetDataImportOrderTasks(Common.Models.WorkOrderOperation operationType, OrderProcess currentProcess)
 	{
 		List<Activity> tasks = [];
 		if (operationType.Tasks?.Count > 0)

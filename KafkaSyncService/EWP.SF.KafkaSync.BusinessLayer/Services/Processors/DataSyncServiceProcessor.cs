@@ -1112,6 +1112,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1162,6 +1164,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1219,6 +1223,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1269,6 +1275,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1278,7 +1286,7 @@ public class DataSyncServiceProcessor
 								}
 							}
 							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
-							string orderId = string.Join(",", listProductReceipts.Select(x => x.OrderCode).Distinct().ToArray());
+							//string orderId = string.Join(",", listProductReceipts.Select(x => x.OrderCode).Distinct().ToArray());
 							//ServiceManager.SendMessage(MessageBrokerType.WorkOrder, new { Type = "U", Id = orderId });
 						}
 						break;
@@ -1321,6 +1329,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1330,7 +1340,7 @@ public class DataSyncServiceProcessor
 								}
 							}
 							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
-							string orderId = string.Join(",", listProductReturns.Select(x => x.OrderCode).Distinct().ToArray());
+							//string orderId = string.Join(",", listProductReturns.Select(x => x.OrderCode).Distinct().ToArray());
 							//ServiceManager.SendMessage(MessageBrokerType.WorkOrder, new { Type = "U", Id = orderId });
 						}
 						break;
@@ -1375,6 +1385,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1426,6 +1438,8 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{
@@ -1493,17 +1507,43 @@ public class DataSyncServiceProcessor
 
 					case SyncERPEntity.STOCK_SERVICE:
 					case SyncERPEntity.FULL_STOCK_SERVICE:
-						StockExternal stock = JsonConvert.DeserializeObject<StockExternal>(dataJson);
-						var stockOperation = GetOperation<IStockOperation>();
-						if (stock is not null)
+					List<StockExternal> stocks = JsonConvert.DeserializeObject<List<StockExternal>>(dataJson);
+					var stockOperation = GetOperation<IStockOperation>();
+						if (stocks != null && stocks.Any())
+						//StockExternal stock = JsonConvert.DeserializeObject<StockExternal>(dataJson);
 						{
-							List<StockExternal> listElem = [stock];
-							ResponseData sfResponse = stockOperation.ListUpdateStockBulk(
+							List<StockExternal> listElem = stocks;
+							ResponseData sfResponse = null;
+							// ResponseData sfResponse = stockOperation.ListUpdateStockBulk(
+							// 	listElem,
+							// 	SystemOperator,
+							// 	false,
+							// 	LevelMessage.Success
+							// );
+							try
+							{
+								sfResponse = (await stockOperation.ListUpdateStockBulk(
 								listElem,
 								SystemOperator,
 								false,
 								LevelMessage.Success
-							);
+							).ConfigureAwait(false));
+
+								// LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
+							}
+							catch (Exception ex)
+							{
+								sfResponse = new ResponseData
+								{
+									IsSuccess = false,
+									Message = ex.Message
+								};
+							}
+							finally
+							{
+								// (successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+							}
+						}
 
 							// DataSyncServiceLogDetail LogSingleInfo = new()
 							// {
@@ -1513,7 +1553,7 @@ public class DataSyncServiceProcessor
 							// 	LastAttemptDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone)
 							// };
 							//(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
-						}
+						//}
 						break;
 
 					case SyncERPEntity.SUPPLY_SERVICE:
@@ -1657,6 +1697,9 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
+									
+									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
+									throw;
 								}
 								finally
 								{

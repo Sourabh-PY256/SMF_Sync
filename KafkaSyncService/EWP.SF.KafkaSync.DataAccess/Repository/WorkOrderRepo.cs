@@ -1000,7 +1000,7 @@ public class WorkOrderRepo : IWorkOrderRepo
     /// <summary>
     ///
     /// </summary>
-    public bool MergeWorkOrderSubproducts(WorkOrder workorderInfo, string subproductXML, User systemOperator)
+    public bool MergeWorkOrderByProducts(WorkOrder workorderInfo, string subproductXML, User systemOperator)
     {
         bool returnValue = false;
         using (EWP_Connection connection = new(ConnectionString))

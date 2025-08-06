@@ -57,9 +57,13 @@ COPY --from=build /src/Settings/ /app/Settings/
 COPY --from=build /src/KafkaSyncService/EWP.SF.KafkaSync.API/appsettings.json /app/appsettings.json
 
 # Install the VS remote debugger
+# RUN apt-get update \
+#     && apt-get install -y --no-install-recommends unzip procps curl \
+#     && rm -rf /var/lib/apt/lists/* \
+#     && curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /vsdbg
+    # Install the debugger (vsdbg)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends unzip procps curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /vsdbg
+&& apt-get install -y curl bash unzip \
+&& curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /vsdbg
 
 ENTRYPOINT ["dotnet", "EWP.SF.KafkaSync.API.dll"]

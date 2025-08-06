@@ -15,6 +15,6 @@ public interface IDataImportOperation
 
     List<ProcessEntryLabor> GetDataImportLabor(ProductExternal item, ProcessEntry pe, User systemOperator);
 
-    List<Activity> GetDataImportOerderTasks(Common.Models.WorkOrderOperation operationType, OrderProcess currentProcess);
+    List<Activity> GetDataImportOrderTasks(Common.Models.WorkOrderOperation operationType, OrderProcess currentProcess);
 
 }

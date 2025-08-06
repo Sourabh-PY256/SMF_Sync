@@ -19,7 +19,7 @@ public class StockOperation : IStockOperation
     /// <summary>
     ///
     /// </summary>
-    public ResponseData ListUpdateStockBulk(List<StockExternal> stockList, User systemOperator, bool Validate, LevelMessage Level)
+    public async Task<ResponseData> ListUpdateStockBulk(List<StockExternal> stockList, User systemOperator, bool Validate, LevelMessage Level)
     {
         ResponseData returnValue = new();
 

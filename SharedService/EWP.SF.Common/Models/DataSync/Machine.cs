@@ -740,7 +740,7 @@ public class MachineParam : IBehaviorMatch, ICloneable
 	///
 	/// </summary>
 	public string CustomBehaviorId { get; set; }
-    private CustomBehavior customBehavior;
+    public  CustomBehavior customBehavior;
 
     /// <summary>
     ///
@@ -1149,7 +1149,7 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	public int MinimumCapacity { get; set; }
+	public double MinimumCapacity { get; set; }
 
 	/// <summary>
 	///

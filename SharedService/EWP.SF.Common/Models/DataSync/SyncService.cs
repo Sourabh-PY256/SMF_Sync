@@ -77,12 +77,12 @@ public static class SyncService
 
 	/// <summary>
 	///
-	/// </summary>
+	/// </summary
 	public static List<Machine> CurrentMachines
 	{
 		get
 		{
-			return [.. Machines];
+		  return Machines is not null ? [.. Machines] : [];
 		}
 	}
 

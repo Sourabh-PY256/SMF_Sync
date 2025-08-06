@@ -6,7 +6,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 
 public interface IStockOperation
 {
-    ResponseData ListUpdateStockBulk(List<StockExternal> stockList, User systemOperator, bool Validate, LevelMessage Level);
+    Task<ResponseData> ListUpdateStockBulk(List<StockExternal> stockList, User systemOperator, bool Validate, LevelMessage Level);
     
 
 }

@@ -75,6 +75,7 @@ builder.Services.AddScoped<IToolRepo, ToolRepo>();
 builder.Services.AddScoped<IProductionLinesRepo, ProductionLinesRepo>();
 builder.Services.AddScoped<IMeasureUnitRepo, MeasureUnitRepo>();
 builder.Services.AddScoped<IMachineRepo, MachineRepo>();
+builder.Services.AddScoped<IStockRepo, StockRepo>();
 
 // Register services
 builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
@@ -106,6 +107,8 @@ builder.Services.AddScoped<IToolOperation, ToolOperation>();
 builder.Services.AddScoped<IDeviceOperation, DeviceOperation>();
 builder.Services.AddScoped<IProductionLinesOperation, ProductionLinesOperation>();
 builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitOperation>();
+builder.Services.AddScoped<IProfileOperation, ProfileOperation>();
+builder.Services.AddScoped<IStockOperation, StockOperation>();
 
 // Register Kafka services
 builder.Services.AddSingleton<IKafkaService, KafkaService>();
