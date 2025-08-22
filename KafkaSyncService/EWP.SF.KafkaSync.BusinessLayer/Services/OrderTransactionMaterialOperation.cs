@@ -121,10 +121,10 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 								{
 									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
 								}
-								if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
-								{
-									throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
-								}
+								// if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
+								// {
+								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
+								// }
 
 								if (otItem.Lots.Count > 0)
 								{
@@ -307,10 +307,10 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 								{
 									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
 								}
-								if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
-								{
-									throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
-								}
+								// if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
+								// {
+								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
+								// }
 								if (otItem.Lots.Count > 0)
 								{
 									decimal lotQty = otItem.Lots.Sum(s => s.Quantity);
@@ -491,10 +491,10 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 								{
 									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
 								}
-								if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
-								{
-									throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
-								}
+								// if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
+								// {
+								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
+								// }
 								if (otItem.Lots.Count > 0)
 								{
 									decimal lotQty = otItem.Lots.Sum(s => s.Quantity);

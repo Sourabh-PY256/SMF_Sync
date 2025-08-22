@@ -52,7 +52,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
     using (var scope = _serviceScopeFactory.CreateScope())
     {
-        var serviceManager = scope.ServiceProvider.GetRequiredService<DataSyncServiceManager>();
+        
+        
 
         // Use the centralized validation
         TriggerType triggerType;
@@ -61,17 +62,15 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             triggerType = TriggerType.SmartFactory;
         }
 
-        var validation = await serviceManager.ValidateAndGetService(
-            message.Service,
-            triggerType,
-            message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton
-        );
+        // var validation = await serviceManager.ValidateAndGetService(
+        //     message.Service,
+        //     triggerType,
+        //     message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton
+        // );
 
-        if (validation.Status == 1)
-        {
             var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
             var response = await processor.SyncExecution(
-                validation.ServiceData,
+                message.ServiceData,
                 message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
                 Enum.TryParse<TriggerType>(message.Trigger, out  triggerType) ? triggerType : TriggerType.SmartFactory,
                 message.User,
@@ -80,12 +79,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             ).ConfigureAwait(false);
 
             // Optionally publish execution result to Kafka if needed
-        }
-        else
-        {
-            _logger.LogWarning("Service {Service} not executed: {Reason}", message.Service, validation.Message);
-            // Optionally publish a failure result or just return
-        }
+        
     }
 });
             }
@@ -94,80 +88,80 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         /// <summary>
         /// Executes a service manually
         /// </summary>
-        public async Task<DataSyncHttpResponse> SyncERPData(
-            DataSyncService Data,
-            TriggerType Trigger,
-            ServiceExecOrigin ExecOrigin,
-            User SystemOperator,
-            string EntityCode,
-            string BodyData)
-        {
-            DataSyncHttpResponse response = new();
-            string serviceType = string.Empty;
-            try
-            {
-                EnableType Enable = EnableType.No;
-                if (Trigger == TriggerType.Erp)
-                {
-                    serviceType = "ERP";
-                    Enable = Data.ErpTriggerEnable;
-                }
-                else if (Trigger == TriggerType.SmartFactory || Trigger == TriggerType.DataSyncSettings)
-                {
-                    serviceType = "Smart Factory";
-                    if (ExecOrigin == ServiceExecOrigin.Event)
-                    {
-                        Enable = Data.SfTriggerEnable;
-                    }
-                    else
-                    {
-                        Enable = Data.ManualSyncEnable;
-                        serviceType += " Manual";
-                    }
-                }
+        // public async Task<DataSyncHttpResponse> SyncERPData(
+        //     DataSyncService Data,
+        //     TriggerType Trigger,
+        //     ServiceExecOrigin ExecOrigin,
+        //     User SystemOperator,
+        //     string EntityCode,
+        //     string BodyData)
+        // {
+        //     DataSyncHttpResponse response = new();
+        //     string serviceType = string.Empty;
+        //     try
+        //     {
+        //         EnableType Enable = EnableType.No;
+        //         if (Trigger == TriggerType.Erp)
+        //         {
+        //             serviceType = "ERP";
+        //             Enable = Data.ErpTriggerEnable;
+        //         }
+        //         else if (Trigger == TriggerType.SmartFactory || Trigger == TriggerType.DataSyncSettings)
+        //         {
+        //             serviceType = "Smart Factory";
+        //             if (ExecOrigin == ServiceExecOrigin.Event)
+        //             {
+        //                 Enable = Data.SfTriggerEnable;
+        //             }
+        //             else
+        //             {
+        //                 Enable = Data.ManualSyncEnable;
+        //                 serviceType += " Manual";
+        //             }
+        //         }
 
-                if (Enable == EnableType.Yes)
-                {
-                    if (Data.Status == ServiceStatus.Active)
-                    {
-                        // Create a scope for this request
-                        using (var scope = _serviceScopeFactory.CreateScope())
-                        {
-                            // Get the processor service
-                            var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
-                            //ContextCache.SetRunningService(Data.Id, true);
-                            // Execute the service
-                            response = await processor.SyncExecution(
-                                Data,
-                                ExecOrigin,
-                                Trigger,
-                                SystemOperator,
-                                EntityCode,
-                                BodyData
-                            ).ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        response.StatusCode = System.Net.HttpStatusCode.Conflict;
-                        response.Message = $"{serviceType} {(ContextCache.IsServiceRunning(Data.Id) ? "is being executing" : "status is disabled")}";
-                    }
-                }
-                else
-                {
-                    response.StatusCode = System.Net.HttpStatusCode.Conflict;
-                    response.Message = $"{serviceType} trigger is not enabled";
-                }
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = System.Net.HttpStatusCode.InternalServerError;
-                response.Message = $"Service Error: {ex.Message}.";
-                _logger.LogError(ex, "Service Error: {Message}", ex.Message);
-                throw;
-            }
-            return response;
-        }
+        //         if (Enable == EnableType.Yes)
+        //         {
+        //             if (Data.Status == ServiceStatus.Active)
+        //             {
+        //                 // Create a scope for this request
+        //                 using (var scope = _serviceScopeFactory.CreateScope())
+        //                 {
+        //                     // Get the processor service
+        //                     var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+        //                     //ContextCache.SetRunningService(Data.Id, true);
+        //                     // Execute the service
+        //                     response = await processor.SyncExecution(
+        //                         Data,
+        //                         ExecOrigin,
+        //                         Trigger,
+        //                         SystemOperator,
+        //                         EntityCode,
+        //                         BodyData
+        //                     ).ConfigureAwait(false);
+        //                 }
+        //             }
+        //             else
+        //             {
+        //                 response.StatusCode = System.Net.HttpStatusCode.Conflict;
+        //                 response.Message = $"{serviceType} {(ContextCache.IsServiceRunning(Data.Id) ? "is being executing" : "status is disabled")}";
+        //             }
+        //         }
+        //         else
+        //         {
+        //             response.StatusCode = System.Net.HttpStatusCode.Conflict;
+        //             response.Message = $"{serviceType} trigger is not enabled";
+        //         }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         response.StatusCode = System.Net.HttpStatusCode.InternalServerError;
+        //         response.Message = $"Service Error: {ex.Message}.";
+        //         _logger.LogError(ex, "Service Error: {Message}", ex.Message);
+        //         throw;
+        //     }
+        //     return response;
+        // }
 
         /// <summary>
         /// Gets all sync entity types from SyncERPEntity constants
@@ -186,13 +180,13 @@ namespace EWP.SF.KafkaSync.BusinessLayer
     public interface IServiceConsumerManager
     {
         void StartConsumer();
-        Task<DataSyncHttpResponse> SyncERPData(
-            DataSyncService Data,
-            TriggerType Trigger,
-            ServiceExecOrigin ExecOrigin,
-            User SystemOperator,
-            string EntityCode,
-            string BodyData);
+        // Task<DataSyncHttpResponse> SyncERPData(
+        //     DataSyncService Data,
+        //     TriggerType Trigger,
+        //     ServiceExecOrigin ExecOrigin,
+        //     User SystemOperator,
+        //     string EntityCode,
+        //     string BodyData);
 
     }
 }

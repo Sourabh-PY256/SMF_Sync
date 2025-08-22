@@ -300,7 +300,7 @@ public class ComponentOperation : IComponentOperation
 									//}
 								}
 
-								if (machine.MachineLabor is not null)
+								if (machine.MachineTools is not null)
 								{
 									int countItems = 0;
 									machine.MachineTools.ForEach(itm =>
@@ -309,7 +309,7 @@ public class ComponentOperation : IComponentOperation
 										Tool itemComp = _toolOperation.ListTools(itm.ToolingCode).FirstOrDefault() ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ToolintType {2} : Tooling Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ToolingCode));
 									});
 								}
-								if (machine.MachineTools is not null)
+								if (machine.MachineLabor is not null)
 								{
 									int countItems = 0;
 									machine.MachineLabor.ForEach(itm =>

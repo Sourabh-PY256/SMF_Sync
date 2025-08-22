@@ -7,4 +7,6 @@ public class DataSyncExecuteRequest
 	public string EntityCode { get; set; }
 
 	public string BodyData { get; set; }
+
+	public string MethodType { get; set; }
 }

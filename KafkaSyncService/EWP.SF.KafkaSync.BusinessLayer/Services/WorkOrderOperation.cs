@@ -36,7 +36,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 	private readonly ILaborRepo _laborRepo;
 
 
-	public WorkOrderOperation(IWorkOrderRepo workOrderRepo, ICatalogRepo catalogRepo, IApplicationSettings applicationSettings
+	public WorkOrderOperation(IWorkOrderRepo workOrderRepo
 	, IMeasureUnitOperation measureUnitOperation, IEmployeeOperation employeeOperation
 	, IWarehouseOperation warehouseOperation, IDataSyncServiceOperation dataSyncServiceOperation
 	, IOrderTransactionProductRepo orderTransactionProductRepo, IProcessTypeOperation processTypeOperation

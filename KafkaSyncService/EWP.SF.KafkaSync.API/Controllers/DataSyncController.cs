@@ -38,7 +38,7 @@ public async Task<ResponseModel> SyncProducer(
     foreach (string service in ServiceRequest.Services)
     {
         var validation = await ServiceManager.ValidateAndGetService(
-            service, TriggerType.Erp, ServiceExecOrigin.KafkaProducer, "GET");
+            service, TriggerType.Erp, ServiceExecOrigin.KafkaProducer, ServiceRequest.MethodType);
 
         DataSyncExecuteResponse ServiceResponse = new()
         {
@@ -53,12 +53,14 @@ public async Task<ResponseModel> SyncProducer(
             await kafkaService.ProduceMessageAsync(
                 topic, 
                 $"producer-{service}-{Guid.NewGuid()}", 
-                new SyncMessage { 
-                    Service = service, 
+                new SyncMessage
+                {
+                    Service = service,
                     Trigger = TriggerType.Erp.ToString(),
                     ExecutionType = (int)ServiceExecOrigin.KafkaProducer,
                     EntityCode = ServiceRequest.EntityCode,
-                    BodyData = ServiceRequest.BodyData
+                    BodyData = ServiceRequest.BodyData,
+                    ServiceData = validation.ServiceData
                 }
             ).ConfigureAwait(false);
 

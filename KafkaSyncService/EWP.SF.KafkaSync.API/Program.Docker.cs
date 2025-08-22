@@ -76,6 +76,7 @@ builder.Services.AddScoped<IProductionLinesRepo, ProductionLinesRepo>();
 builder.Services.AddScoped<IMeasureUnitRepo, MeasureUnitRepo>();
 builder.Services.AddScoped<IMachineRepo, MachineRepo>();
 builder.Services.AddScoped<IStockRepo, StockRepo>();
+builder.Services.AddScoped<IStockAllocationRepo, StockAllocationRepo>();
 
 // Register services
 builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
@@ -109,6 +110,7 @@ builder.Services.AddScoped<IProductionLinesOperation, ProductionLinesOperation>(
 builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitOperation>();
 builder.Services.AddScoped<IProfileOperation, ProfileOperation>();
 builder.Services.AddScoped<IStockOperation, StockOperation>();
+builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>();
 
 // Register Kafka services
 builder.Services.AddSingleton<IKafkaService, KafkaService>();

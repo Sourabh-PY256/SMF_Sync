@@ -631,7 +631,7 @@ public class ComponentRepo : IComponentRepo
                         // Process additional result sets, similar to your original method
                         if (!string.IsNullOrEmpty(id) || (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(warehouse) && sequence > 0))
                         {
-                            await ProcessAdditionalResultsAsync(rdr, returnValue, cancel).ConfigureAwait(false);
+                            //await ProcessAdditionalResultsAsync(rdr, returnValue, cancel).ConfigureAwait(false);
                         }
                     }
                 }
