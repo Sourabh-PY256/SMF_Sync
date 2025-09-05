@@ -1,7 +1,7 @@
 ﻿namespace EWP.SF.Common.Models.IntegrationStaging;
 
 /// <summary>
-///
+/// 
 /// </summary>
 public class ResponseSchedule
 {

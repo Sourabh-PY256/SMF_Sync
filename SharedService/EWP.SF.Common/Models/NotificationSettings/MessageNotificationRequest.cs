@@ -2,6 +2,9 @@
 
 namespace EWP.SF.Common.Models.NotificationSettings;
 
+/// <summary>
+///
+/// </summary>
 public class MessageNotificationRequest
 {
 	/// <summary>
@@ -72,8 +75,20 @@ public class MessageNotificationRequest
 	/// </summary>
 	[StringLength(150)]
 	public string TemplateCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	public string EntityCode { get; set; }
 
+	/// <summary>
+	///
+	/// </summary>
+	public string Type { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	public MessageNotificationRequest()
 	{
 		ToEmp = [];
@@ -81,8 +96,18 @@ public class MessageNotificationRequest
 	}
 }
 
+/// <summary>
+///
+/// </summary>
 public class DataValue
 {
+	/// <summary>
+	///
+	/// </summary>
 	public string Code { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	public string Value { get; set; }
 }

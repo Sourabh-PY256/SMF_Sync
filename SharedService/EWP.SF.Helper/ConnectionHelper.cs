@@ -2,29 +2,37 @@
 
 namespace EWP.SF.Helper;
 
+/// <summary>
+///
+/// </summary>
 public static class ConnectionHelper
 {
+	/// <summary>
+	///
+	/// </summary>
+	/// <exception cref="ArgumentException"></exception>
 	public static void AddCondition(this MySqlParameterCollection myParam, string param, object value, bool condition, string throwEx = null)
 	{
 		ArgumentNullException.ThrowIfNull(myParam);
 
 		if (condition)
 		{
-			_ = myParam.AddWithValue(param, value);
+			myParam.AddWithValue(param, value);
+		}
+		else if (string.IsNullOrEmpty(throwEx))
+		{
+			myParam.AddWithValue(param, null);
 		}
 		else
 		{
-			if (string.IsNullOrEmpty(throwEx))
-			{
-				_ = myParam.AddWithValue(param, null);
-			}
-			else
-			{
-				throw new ArgumentException(throwEx);
-			}
+			throw new ArgumentException(throwEx);
 		}
 	}
 
+	/// <summary>
+	///
+	/// </summary>
+	/// <exception cref="ArgumentException"></exception>
 	public static void AddCondition(this MySqlParameterCollection myParam, string param, Func<object> value, bool condition, string throwEx = null)
 	{
 		ArgumentNullException.ThrowIfNull(myParam);
@@ -32,39 +40,39 @@ public static class ConnectionHelper
 
 		if (condition)
 		{
-			_ = myParam.AddWithValue(param, value());
+			myParam.AddWithValue(param, value());
+		}
+		else if (string.IsNullOrEmpty(throwEx))
+		{
+			myParam.AddWithValue(param, null);
 		}
 		else
 		{
-			if (string.IsNullOrEmpty(throwEx))
-			{
-				_ = myParam.AddWithValue(param, null);
-			}
-			else
-			{
-				throw new ArgumentException(throwEx);
-			}
+			throw new ArgumentException(throwEx);
 		}
 	}
 
+	/// <summary>
+	///
+	/// </summary>
 	public static void AddNull(this MySqlParameterCollection myParam, string param)
 	{
 		ArgumentNullException.ThrowIfNull(myParam);
-		_ = myParam.AddWithValue(param, null);
+		myParam.AddWithValue(param, null);
 	}
 
-	public static object Val(this DateTime? obj)
-	{
-		return obj ?? (object)null;
-	}
+	/// <summary>
+	///
+	/// </summary>
+	public static object Val(this DateTime? obj) => obj ?? (object)null;
 
-	public static object Val(this int? obj)
-	{
-		return obj ?? (object)null;
-	}
+	/// <summary>
+	///
+	/// </summary>
+	public static object Val(this int? obj) => obj ?? (object)null;
 
-	public static object Val(this bool? obj)
-	{
-		return obj ?? (object)null;
-	}
+	/// <summary>
+	///
+	/// </summary>
+	public static object Val(this bool? obj) => obj ?? (object)null;
 }

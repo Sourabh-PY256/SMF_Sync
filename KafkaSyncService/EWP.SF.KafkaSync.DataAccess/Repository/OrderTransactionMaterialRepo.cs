@@ -14,22 +14,22 @@ namespace EWP.SF.KafkaSync.DataAccess;
 
 public class OrderTransactionMaterialRepo : IOrderTransactionMaterialRepo
 {
-    private readonly string ConnectionString;
-    private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
-    private readonly string ConnectionStringReports;
-    private readonly string ConnectionStringLogs;
+	private readonly string ConnectionString;
+	private static readonly CompositeFormat MISSING_PARAM = CompositeFormat.Parse("Parameter \"{0}\" is required and was not provided.");
+	private readonly string ConnectionStringReports;
+	private readonly string ConnectionStringLogs;
 
-    private readonly string Database;
+	private readonly string Database;
 
-    public OrderTransactionMaterialRepo(IApplicationSettings applicationSettings)
-    {
-        ConnectionString = applicationSettings.GetConnectionString();
-        ConnectionStringReports = applicationSettings.GetReportsConnectionString();
-        ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
-        Database = applicationSettings.GetDatabaseFromConnectionString();
-    }
-    #region OrderTransactionMaterial
-    public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation, IntegrationSource intSrc = IntegrationSource.ERP)
+	public OrderTransactionMaterialRepo(IApplicationSettings applicationSettings)
+	{
+		ConnectionString = applicationSettings.GetConnectionString();
+		ConnectionStringReports = applicationSettings.GetReportsConnectionString();
+		ConnectionStringLogs = applicationSettings.GetConnectionString("Logs");
+		Database = applicationSettings.GetDatabaseFromConnectionString();
+	}
+	#region OrderTransactionMaterial
+	public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation, IntegrationSource intSrc = IntegrationSource.ERP)
 	{
 		ResponseData returnValue = null;
 		using (EWP_Connection connection = new(ConnectionString))
@@ -82,5 +82,101 @@ public class OrderTransactionMaterialRepo : IOrderTransactionMaterialRepo
 		}
 		return returnValue;
 	}
+// 	public async Task<List<OrderTransactionMaterial>> ListOrderTransactions(CancellationToken cancel = default)
+// {
+//     List<OrderTransactionMaterial> returnValue = null;
+
+//     await using EWP_Connection connection = new(ConnectionString);
+//     await using (connection.ConfigureAwait(false))
+//     {
+//         await connection.OpenAsync(cancel).ConfigureAwait(false);
+
+//         await using EWP_Command command = new("SP_sf_order_transactions_SEL", connection)
+//         {
+//             CommandType = CommandType.StoredProcedure
+//         };
+
+//         await using (command.ConfigureAwait(false))
+//         {
+//             command.Parameters.Clear();
+//             command.Parameters.AddWithValue("_ExternalId", string.Empty); // filter for empty externalId
+
+//             try
+//             {
+//                 MySqlDataReader rdr = await command.ExecuteReaderAsync(cancel).ConfigureAwait(false);
+//                 await using (rdr.ConfigureAwait(false))
+//                 {
+//                     // --- First result set: Materials ---
+//                     var materials = new Dictionary<string, OrderTransactionMaterial>();
+
+//                     while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+//                     {
+//                         var material = new OrderTransactionMaterial
+//                         {
+//                             Id = rdr["Id"].ToStr(),
+//                             OrderCode = rdr["OrderCode"].ToStr(),
+//                             OperationNo = rdr["OperationNo"].ToStr(),
+//                             Direction = rdr["Direction"].ToInt32(),
+//                             ExternalId = rdr["ExternalId"].ToStr(),
+//                             ExternalDate = rdr["ExternalDate"].ToDateNullable(),
+//                             Comments = rdr["Comments"].ToStr(),
+//                             CreateDate = rdr["CreateDate"].ToDate(),
+//                             CreateUser = rdr["CreateUser"].ToStr(),
+//                             CreateEmployee = rdr["CreateEmployee"].ToStr(),
+//                             Origin = rdr["Origin"].ToStr(),
+//                             Details = new()
+//                         };
+
+//                         materials[material.Id] = material;
+//                     }
+
+//                     // --- Move to second result set: Details ---
+//                     if (await rdr.NextResultAsync(cancel).ConfigureAwait(false))
+//                     {
+//                         while (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+//                         {
+//                             var detail = new OrderTransactionMaterialDetail
+//                             {
+//                                 TransactionId = rdr["TransactionId"].ToStr(),
+//                                 MachineCode = rdr["MachineCode"].ToStr(),
+//                                 OriginalItemCode = rdr["OriginalItemCode"].ToStr(),
+//                                 ItemCode = rdr["ItemCode"].ToStr(),
+//                                 LineNo = rdr["LineNo"].ToStr(),
+//                                 Quantity = rdr["Quantity"].ToDouble(),
+//                                 LotNumber = rdr["LotNumber"].ToStr(),
+//                                 Pallet = rdr["Pallet"].ToStr(),
+//                                 BinLocationCode = rdr["BinLocationCode"].ToStr(),
+//                                 InventoryStatusCode = rdr["InventoryStatusCode"].ToStr(),
+//                                 ExpDate = rdr["ExpDate"].ToDateNullable(),
+//                                 AllocationOrderCode = rdr["AllocationOrderCode"].ToStr(),
+//                                 WarehouseCode = rdr["WarehouseCode"].ToStr(),
+//                                 ScrapTypeCode = rdr["ScrapTypeCode"].ToStr(),
+//                                 Comments = rdr["Comments"].ToStr()
+//                             };
+
+//                             if (materials.TryGetValue(detail.TransactionId, out var parent))
+//                             {
+//                                 parent.Details.Add(detail);
+//                             }
+//                         }
+//                     }
+
+//                     returnValue = materials.Values.ToList();
+//                 }
+//             }
+//             catch (Exception ex)
+//             {
+//                 //logger?.Error(ex);
+//                 throw;
+//             }
+//             finally
+//             {
+//                 await connection.CloseAsync().ConfigureAwait(false);
+//             }
+
+//             return returnValue;
+//         }
+//     }
+// }
     #endregion OrderTransactionMaterialRepo
 }

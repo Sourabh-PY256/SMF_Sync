@@ -14,6 +14,7 @@ using System.Net;
 using EWP.SF.Common.Constants;
 using EWP.SF.KafkaSync.BusinessEntities;
 using Confluent.Kafka;
+using EWP.SF.KafkaSync.DataAccess;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 
@@ -23,7 +24,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 	private readonly IMeasureUnitOperation _measureUnitOperation;
 	private readonly IWarehouseOperation _warehouseOperation;
 	private readonly IEmployeeOperation _employeeOperation;
-	private readonly  IOrderTransactionProductRepo _orderTransactionProductRepo;
+	private readonly IOrderTransactionProductRepo _orderTransactionProductRepo;
 	private readonly IDataSyncServiceOperation _dataSyncServiceOperation;
 	private readonly IProcessTypeOperation _processTypeOperation;
 	private readonly IComponentOperation _componentOperation;
@@ -35,6 +36,10 @@ public class WorkOrderOperation : IWorkOrderOperation
 	private readonly IDeviceOperation _deviceOperation;
 	private readonly ILaborRepo _laborRepo;
 
+	private readonly IBinLocationRepo _binLocationRepo;
+	private readonly DataSyncServiceManager _dataSyncServiceManager;
+
+
 
 	public WorkOrderOperation(IWorkOrderRepo workOrderRepo
 	, IMeasureUnitOperation measureUnitOperation, IEmployeeOperation employeeOperation
@@ -42,7 +47,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 	, IOrderTransactionProductRepo orderTransactionProductRepo, IProcessTypeOperation processTypeOperation
 	, IComponentOperation componentOperation, IActivityOperation activityOperation
 	, IDataImportOperation dataImportOperation, IInventoryOperation inventoryOperation
-	, IMachineRepo machineRepo, IToolOperation toolOperation, IDeviceOperation deviceOperation, ILaborRepo laborRepo)
+	, IMachineRepo machineRepo, IToolOperation toolOperation, IDeviceOperation deviceOperation,
+	 IBinLocationRepo binLocationRepo, ILaborRepo laborRepo, DataSyncServiceManager dataSyncServiceManager)
 	{
 		_workOrderRepo = workOrderRepo;
 		_measureUnitOperation = measureUnitOperation;
@@ -59,6 +65,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 		_toolOperation = toolOperation;
 		_deviceOperation = deviceOperation;
 		_laborRepo = laborRepo;
+		_binLocationRepo = binLocationRepo;
+		_dataSyncServiceManager = dataSyncServiceManager;
 	}
 	private static string RemoveXMLHeader(string xml) => xml.Replace("'", "´").Replace("<?xml version=\"1.0\"?>", "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>");
 	/// <summary>
@@ -113,6 +121,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 						"Cancelled" => BMMOrderStatus.Cancelled,
 						"On Hold" => BMMOrderStatus.Hold,
 						"Finished" => BMMOrderStatus.Finished,
+						"Completed" => BMMOrderStatus.Finished,
+						"Planned" => BMMOrderStatus.Running,
 						_ => BMMOrderStatus.Error,
 					};
 					if (status == BMMOrderStatus.Error)
@@ -672,6 +682,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 							"CANCELLED" => Status.Cancelled,
 							"ON HOLD" => Status.Hold,
 							"FINISHED" => Status.Finished,
+							"COMPLETED" => Status.Finished,
+							"PLANNED" => Status.Active,
 							_ => throw new InvalidOperationException($"Unknown work order status: {workOrder.Status}")
 						};
 					}
@@ -780,11 +792,16 @@ public class WorkOrderOperation : IWorkOrderOperation
 								}
 
 								OrderProcess curProcess = new()
-								{
-									Step = op.Step.ToInt32(),
-									ProcessId = op.Step.ToStr(),
+								{//Pass Group of parrel operation 
+									Step = 0,
+									//need to add
+									//SortId = 0,
+									//need discuss
+									ProcessId = op.Step.ToStr(),//need to map oeration numer 
 									ProcessTypeId = CurrentOperationSubType.ProcessTypeId,
-									OperationName = CurrentOperationSubType.Name,
+									//need discuss
+									//OperationName = CurrentOperationSubType.Name,
+									OperationName = op.OperationName ?? CurrentOperationSubType.Name,
 									ProcessSubTypeId = op.OperationSubtype,
 									Total = op.Quantity,
 									MachineId = machine.MachineCode,
@@ -1356,7 +1373,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 		#endregion Permission validation
 
-		await ValidateRules(workOrderInfo, systemOperator).ConfigureAwait(false);
+		//await ValidateRules(workOrderInfo, systemOperator).ConfigureAwait(false);
 
 		using (TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled))
 		{
@@ -1606,7 +1623,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		// ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.WorkOrder, Action = ActionDB.IntegrateAll.ToStr() });
 		return returnValue;
 	}
-/// <summary>
+	/// <summary>
 	///
 	/// </summary>
 	public async Task ValidateRules(WorkOrder orderInfo, User SystemOperator)
@@ -1890,7 +1907,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 			if (!returnValue)
 			{
 				//throw new Exception("ERP|" + resp.Message);need to discuss
-				throw new Exception("ERP|" );
+				throw new Exception("ERP|");
 			}
 			else
 			{
@@ -2008,7 +2025,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public 
+	public
 	 void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset)
 	{
 		if (order is not null)
@@ -2039,5 +2056,254 @@ public class WorkOrderOperation : IWorkOrderOperation
 				});
 		}
 	}
+	/// <summary>
+	/// Transfers products from one work order to another.
+	/// </summary>
+	public async Task<string> UpdateWorkOrderComponent(string workOrderId, List<OrderComponent> componentValues, string employeeId, User systemOperator)
+	{
+		string returnValue = string.Empty;
+		string objectToInsert = "";
+		WorkOrder tempOrder = (await GetWorkOrder(workOrderId).ConfigureAwait(false)).FirstOrDefault();
+		List<OrderComponent> valuesToInsert = [];
+		bool CanProceed = true;
+		bool isReturn = false;
+		string movType = "Issue";
+		string movEvent = SyncERPEntity.MATERIAL_ISSUE_SERVICE;
 
+		if (tempOrder?.Components is not null)
+		{
+			foreach (OrderComponent order in tempOrder.Components)
+			{
+				OrderComponent[] tempValue = [.. componentValues.Where(x => x.ProcessId.ToDouble() == order.ProcessId.ToDouble() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
+				if (tempValue.Length > 0)
+				{
+					try
+					{
+						double oldValue = order.InputQty;
+						double QtyChanged = tempValue
+							.Where(x => x.Batches is not null)
+							.SelectMany(x => x.Batches)
+							.Sum(x => x.Quantity);
+						order.InputQty = oldValue + QtyChanged;
+
+						if (QtyChanged != 0)
+						{
+							foreach (OrderComponent y in tempValue)
+							{
+								y.InputQty = y.Batches.Sum(x => x.Quantity);
+								if (string.IsNullOrEmpty(y.LineId))
+								{
+									y.LineId = "0";
+								}
+							}
+
+							valuesToInsert.AddRange(tempValue);
+						}
+						if (QtyChanged < 0)
+						{
+							isReturn = true;
+						}
+					}
+					catch { }
+				}
+			}
+
+			string transactionId = Guid.CreateVersion7().ToStr();
+			List<KeyValuePair<string, string>> ErrorList = [];
+
+			#region object 2 ins
+
+			object ob2Ins = new
+			{
+				sf_order_transactions_material = valuesToInsert.Select(x =>
+					new
+					{
+						OperationNo = x.ProcessId,
+						OrderCode = workOrderId,
+						LineNo = x.LineId,
+						Quantity = x.InputQty,
+						EmployeeId = employeeId,
+						UserId = systemOperator.Id,
+						TransactionId = transactionId,
+						Comments = string.Empty,
+						ExternalId = string.Empty,
+						ExternalDate = string.Empty
+					}
+				).ToArray(),
+				sf_order_transactions_material_detail = valuesToInsert.SelectMany(x => x.Batches, (parent, detail) =>
+				new
+				{
+					TransactionId = transactionId,
+					ItemCode = detail.ComponentId,
+					detail.Quantity,
+					LotNumber = detail.Batch,
+					detail.Pallet,
+					BinLocationCode = detail.Location,
+					InventoryStatusCode = detail.InventoryStatus,
+					ExpDate = detail.BatchDate,
+					detail.WarehouseCode,
+					detail.Type,
+					MachineCode = parent.MachineId,
+					OriginalItem = parent.OriginalSourceId,
+					LineNo = string.IsNullOrEmpty(detail.LineId) ? parent.LineId : detail.LineId,
+					OrderLot = detail.OrderId
+				}).ToArray()
+			};
+
+			#endregion object 2 ins
+
+			objectToInsert = JsonConvert.SerializeObject(ob2Ins);
+			string externalId = string.Empty;
+
+			//Validar evento onIssueMaterial
+			if (!string.IsNullOrEmpty(tempOrder.ExternalId))
+			{
+				if (isReturn)
+				{
+					movType = "Return";
+					movEvent = SyncERPEntity.MATERIAL_RETURN_SERVICE;
+				}
+
+				foreach (OrderComponent order in valuesToInsert)
+				{
+					order.Batches.RemoveAll(x => x.Quantity == 0);
+					order.ExternalId = order.SourceId;
+				}
+				List<OrderComponent> comps = [.. valuesToInsert.Where(x => !string.IsNullOrEmpty(x.ExternalId))];
+				comps = JsonConvert.DeserializeObject<List<OrderComponent>>(JsonConvert.SerializeObject(comps));
+				comps.ForEach(c => c.Batches.ForEach(b => b.Quantity = Math.Abs(b.Quantity)));
+				comps.RemoveAll(x => x.Batches.Count == 0);
+
+				if (comps.Count > 0)
+				{
+					foreach (OrderComponent cp in comps)
+					{
+						cp.InputQty = Math.Abs(cp.InputQty);
+						Component item = (await _componentOperation.GetComponents(cp.SourceId).ConfigureAwait(false)).Where(x => x.Status != Status.Failed)?.FirstOrDefault();
+					}
+					if (!string.IsNullOrEmpty(employeeId))
+					{
+						systemOperator.EmployeeId = employeeId;
+					}
+					object requestParams = new
+					{
+						TransactionId = transactionId,
+						tempOrder.ExternalId,
+						Date = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+						Type = movType,
+						OrderBatch = tempOrder.LotNo,
+						Components = comps,
+						Comments = "",
+						Employee = systemOperator.EmployeeId
+					};
+					//Not saved in Temp table 
+					//BrokerDAL.TrySaveTempWorkOrderTransaction(movEvent, objectToInsert);
+					// This logic replace with kafka
+					// DataSyncHttpResponse resp = await ServiceManager.ExecuteService(
+					// 	movEvent,
+					// 	TriggerType.SmartFactory,
+					// 	ServiceExecOrigin.Event,
+					// 	systemOperator,
+					// 	"POST",
+					// 	string.Empty,
+					// 	JsonConvert.SerializeObject(requestParams)
+					// ).ConfigureAwait(false);
+					// 		CanProceed = resp.StatusCode == HttpStatusCode.OK;
+					// 		if (CanProceed)
+					// 		{
+					// 			try
+					// 			{
+					// 				if (!string.IsNullOrEmpty(resp.Message))
+					// 				{
+					// 					JObject o = JObject.Parse(resp.Message);
+					// 					JObject m = JObject.Parse(o["Message"].ToString());
+					// 					JObject d = JObject.Parse(m["data"].ToString());
+					// 					externalId = d["docNum"].ToString();
+					// 				}
+					// 			}
+					// 			catch
+					// 			{
+					// 			}
+					// 		}
+					// 		else
+					// 		{
+					// 			ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + resp.Message));
+					// 		}
+				}
+			}
+
+			if (CanProceed)
+			{
+				try
+				{
+					List<MessageBroker> messagesToPush = [];
+					using TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled);
+					valuesToInsert.ForEach(tempValue =>
+					{
+						string result = _workOrderRepo.UpdateMaterialManual(transactionId, tempValue, employeeId, workOrderId, externalId, systemOperator);
+						if (!string.IsNullOrEmpty(result))
+						{
+							messagesToPush.Add(new MessageBroker
+							{
+								Type = MessageBrokerType.ManualMaterialIssue,
+								ElementId = workOrderId,
+								ElementValue = tempValue.ProcessId,
+								MachineId = tempValue.MachineId,
+								Aux = string.Format("{0}|{1}", tempValue.SourceId, tempValue.InputQty.ToStr())
+							});
+
+							messagesToPush.Add(new MessageBroker
+							{
+								Type = MessageBrokerType.ExternalMaterialIssue,
+								ElementId = result
+							});
+						}
+					});
+
+					tempOrder.Components = [.. tempOrder.Components.Where(x => x.SourceId == x.OriginalSourceId)];
+					if (tempOrder.Components?.Count > 0)
+					{
+						string componentDetailsJSON = JsonConvert.SerializeObject(tempOrder.Components);
+						bool success = _workOrderRepo.MergeWorkOrderComponents(tempOrder, componentDetailsJSON, systemOperator);
+					}
+
+					scope.Complete();
+					returnValue = transactionId;
+
+					//messagesToPush.ForEach(SyncInitializer.ForcePush);
+				}
+				catch (Exception ex)
+				{
+					//await BrokerDAL.SaveTransactionErrorLog(transactionId, movEvent, ex.Message + "|" + ex.StackTrace, objectToInsert).ConfigureAwait(false);
+					throw;
+				}
+			}
+
+			if (!CanProceed && ErrorList.Count > 0)
+			{
+				throw new Exception(ErrorList.FirstOrDefault().Value);
+			}
+		}
+	
+   // Replace with DataSyncServiceManager ExecuteServiceEndpoint
+var endpointResponse = await _dataSyncServiceManager.ExecuteServiceEndpoint(
+    movEvent,
+    string.Empty,
+    "",
+    "POST",
+    systemOperator
+).ConfigureAwait(false);
+
+CanProceed = endpointResponse.StatusCode == HttpStatusCode.OK;
+if (CanProceed)
+{
+   
 }
+else
+{
+   // ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + endpointResponse.Message));
+}
+		return returnValue;
+	}
+			
+		}

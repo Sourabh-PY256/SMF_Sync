@@ -106,7 +106,10 @@ public class OrderTransactionProduct
 	///
 	/// </summary>
 	public List<OrderTransactionProductDetail> Details { get; set; }
-
+	/// <summary>
+	///
+	/// </summary>
+	public Double Quantity { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -731,6 +734,11 @@ public class OrderTransactionProductStatus
 	///
 	/// </summary>
 	public string NewWarehouseCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string ItemType { get; set; }
 }
 
 /// <summary>
@@ -778,7 +786,10 @@ public class ProductTransferExternalItem
 	///
 	/// </summary>
 	public string ItemCode { get; set; }
-
+	/// <summary>
+	///
+	/// </summary>
+	public string ItemType { get; set; }
 	/// <summary>
 	///
 	/// </summary>

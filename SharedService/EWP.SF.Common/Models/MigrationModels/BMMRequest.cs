@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace EWP.SF.Common.Models.MigrationModels;
 
 
-/// <summary>
+/// <sum/// <summary>
 ///
 /// </summary>
 public enum BMMComponentype

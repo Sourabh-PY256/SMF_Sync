@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 namespace EWP.SF.Common.Models;
+
+
 /// <summary>
 ///
 /// </summary>
@@ -648,6 +650,11 @@ public class WorkOrder : ILoggableEntity
 	/// </summary>
 	[GridIgnoreProperty]
 	public string LogDetailId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public double LotSize { get; set; }
 }
 
 /// <summary>
@@ -1712,6 +1719,8 @@ public class WorkOrderResponse
 	[JsonIgnoreTransport]
 	public WorkOrder WorkOrder { get; set; }
 
+	[JsonIgnoreTransport]
+	public ProductionOrder ProductionOrder { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -2787,17 +2796,17 @@ public class OperatorsOrder
 	/// <summary>
 	///
 	/// </summary>
-	public string WorkcenterCode { get; set; }
+	public string WorkCenterCode { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public string WorkcenterName { get; set; }
+	public string WorkCenterName { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public string WorkcenterImage { get; set; }
+	public string WorkCenterImage { get; set; }
 
 	/// <summary>
 	///
@@ -3118,8 +3127,11 @@ public class OrderOperationSchedule
 /// <summary>
 ///
 /// </summary>
-public class ProductionOrder
+public class ProductionOrder : ILoggableEntity
+
 {
+	public EntityLoggerConfig EntityLogConfiguration => new("SF_Order_Log");
+
 	/// <summary>
 	///
 	/// </summary>
@@ -3130,6 +3142,7 @@ public class ProductionOrder
 	/// <summary>
 	///
 	/// </summary>
+	[EntityColumn("OrderCode")]
 	public string Code { get; set; }
 
 	/// <summary>
@@ -3169,12 +3182,13 @@ public class ProductionOrder
 		OrderSource = oldOrder.OrderSource;
 		APS = oldOrder.APS;
 		LogDetailId = oldOrder.LogDetailId;
+		LotSize = oldOrder.LotSize;
 		Operations = [];
 		foreach (OrderProcess oldOp in oldOrder.Processes)
 		{
 			ProductionOrderOperation elemOperation = Operations.FirstOrDefault(x => x.OperationNo == oldOp.ProcessId.ToDouble());
 			bool isNewOperation = elemOperation is null;
-			elemOperation = elemOperation ?? new ProductionOrderOperation
+			elemOperation ??= new ProductionOrderOperation
 			{
 				OperationTypeCode = oldOp.ProcessTypeId,
 				OperationSubTypeCode = oldOp.ProcessSubTypeId,
@@ -3189,6 +3203,16 @@ public class ProductionOrder
 				Status = oldOp.Status,
 				Machines = [],
 				Class = oldOp.Class,
+				Byproducts = oldOrder.Subproducts?.Where(x => x.ProcessId == oldOp.ProcessId).Select(x => new ProductionOrderByProduct
+				{
+					ItemCode = x.ComponentId,
+					Quantity = x.Factor,
+					LineId = x.LineId,
+					LineUID = x.LineUID,
+					WarehouseCode = x.WarehouseCode,
+					ReceivedQty = x.Quantity,
+					Comments = x.Comments
+				}).ToList() ?? [],
 				Items = oldOrder.Components?.Where(x => x.ProcessId == oldOp.ProcessId).Select(x => new ProductionOrderItem
 				{
 					ItemCode = x.SourceId,
@@ -3203,26 +3227,27 @@ public class ProductionOrder
 					Consumption = x.IsBackflush ? 1 : 0,
 					Status = x.Status,
 					WarehouseCode = x.WarehouseCode,
-					MaterialType = x.MaterialType
+					Class = x.MaterialType,
+					ManagedBy = x.ManagedBy,
 				}).ToList() ?? [],
-				Labor = oldOrder.Labor?.Where(x => x.ProcessId == oldOp.ProcessId && String.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
+				Labor = oldOrder.Labor?.Where(x => x.ProcessId == oldOp.ProcessId && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
 				{
 					Code = x.LaborId,
 					LineId = x.LineId,
 					LineUID = x.LineUID,
-					Quantity = x.Quantity,
+					PlannedQty = x.PlannedQty,
 					Usage = x.Usage,
 					Source = x.Source,
 					Comments = x.Comments,
 					IssuedTime = x.IssuedTime,
 					Consumption = x.IsBackflush ? 1 : 0
 				}).ToList() ?? [],
-				ToolingType = oldOrder.Tools?.Where(x => x.ProcessId == oldOp.ProcessId && String.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
+				ToolingType = oldOrder.Tools?.Where(x => x.ProcessId == oldOp.ProcessId && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
 				{
 					Code = x.ToolId,
 					LineId = x.LineId,
 					LineUID = x.LineUID,
-					Quantity = x.Quantity,
+					PlannedQty = x.PlannedQty,
 					Usage = x.Usage,
 					Source = x.Source,
 					Comments = x.Comments,
@@ -3248,8 +3273,10 @@ public class ProductionOrder
 				Received = oldOp.MachineReceived,
 				Rejected = oldOp.MachineRejected,
 				Status = oldOp.MachineStatus,
-				SetupTime = oldOp.SetupTime,
-				ExecTime = oldOp.IssuedTime,
+				PlannedSetupTime = oldOp.SetupTime,
+				PlannedExecTime = oldOp.ExecTime,
+				ActualExecTime = oldOp.IssuedTime,
+				ActualSetupTime = 0,
 				WaitTime = oldOp.WaitTime,
 				Consumption = oldOp.IsBackflush ? 1 : 0,
 				Labor = [],
@@ -3296,6 +3323,11 @@ public class ProductionOrder
 	[GridCustomPropertyName("Lot")]
 	public string LotNo { get; set; }
 
+	/// <summary>
+	///
+	/// </summary>
+	[GridCustomPropertyName("Lot")]
+	public double LotSize { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -3622,7 +3654,7 @@ public class ProductionOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductionOrderItem> Byproducts { get; set; }
+	public List<ProductionOrderByProduct> Byproducts { get; set; }
 
 	/// <summary>
 	///
@@ -3688,13 +3720,13 @@ public class ProductionOrderMachine
 	/// <summary>
 	///
 	/// </summary>
-	public double SetupTime { get; set; }
-
+	public double PlannedSetupTime { get; set; }
+	public double ActualSetupTime { get; set; }
 	/// <summary>
 	///
 	/// </summary>
-	public double ExecTime { get; set; }
-
+	public double PlannedExecTime { get; set; }
+	public double ActualExecTime { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -3779,7 +3811,11 @@ public class ProductionOrderItem
 	/// <summary>
 	///
 	/// </summary>
-	public int MaterialType { get; set; }
+	public int Class { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string ManagedBy { get; set; }
 
 	/// <summary>
 	///
@@ -3821,7 +3857,10 @@ public class ProductionOrderResource
 	///
 	/// </summary>
 	public double Quantity { get; set; }
-
+	/// <summary>
+	///
+	/// </summary>
+	public double PlannedQty { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -3846,4 +3885,50 @@ public class ProductionOrderResource
 	///
 	/// </summary>
 	public double IssuedTime { get; set; }
+}
+
+/// <summary>
+///
+/// </summary>
+public class ProductionOrderByProduct
+{
+	/// <summary>
+	///
+	/// </summary>
+	public string ItemCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public double Quantity { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string UnitCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public double ReceivedQty { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Comments { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string WarehouseCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string LineId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string LineUID { get; set; }
 }

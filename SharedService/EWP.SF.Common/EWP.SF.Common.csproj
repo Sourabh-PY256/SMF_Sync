@@ -5,6 +5,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
+	<!-- Includes the ConnectionModule DLL after the PostBuildEvent. -->
+	<ItemGroup>
+		<Reference Include="EWP.SF.ConnectionModule">
+			<HintPath>..\..\Lib\Windows\EWP.SF.ConnectionModule.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

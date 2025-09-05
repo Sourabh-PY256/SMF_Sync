@@ -1,4 +1,5 @@
 ﻿namespace EWP.SF.Common.Models;
+
 /// <summary>
 ///
 /// </summary>

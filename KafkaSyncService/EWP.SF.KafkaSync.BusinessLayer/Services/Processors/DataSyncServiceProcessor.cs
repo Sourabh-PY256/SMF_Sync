@@ -2054,8 +2054,17 @@ public class DataSyncServiceProcessor
 	{
 		if (string.IsNullOrEmpty(RequestBody))
 		{
-			throw new Exception("No request body found");
+					
+		switch (ServiceData.Entity.Name)
+		{
+			// Not Applicable for any ERP
+			case SyncERPEntity.ORDER_TRANSACTION_SERVICE:
+			
+				break;	
+		default:
+		throw new Exception("No request body found");
 		}
+				}
 		dynamic requestErpMapped = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.RequestMapSchema, RequestBody) ?? throw new Exception("No data to process");
 		string requestErpJson = JsonConvert.SerializeObject(requestErpMapped);
 		LogInfo.SfMappedJson = requestErpJson;

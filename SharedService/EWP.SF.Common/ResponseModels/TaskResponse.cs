@@ -5,10 +5,79 @@ using EWP.SF.Common.Models;
 namespace EWP.SF.Common.ResponseModels;
 
 /// <summary>
-///
+/// Represents the basic header of a task in the system.
 /// </summary>
 [GridBDEntityName("Task")]
-public class TaskResponse
+public class TaskResponseHeader
+{
+	/// <summary>
+	/// Class or category of the task.
+	/// </summary>
+	public string Class { get; set; }
+
+	/// <summary>
+	/// Status of the task, requires translation.
+	/// </summary>
+	[GridRequireTranslate]
+	public string Status { get; set; }
+
+	/// <summary>
+	/// Unique identifier of the task, requires decode and drill-down functionality.
+	/// </summary>
+	[GridRequireDecode]
+	[GridDrillDown]
+	[GridDisabledHiding]
+	public string TaskId { get; set; }
+
+	/// <summary>
+	/// Production order code, with drill-down to ProductionOrder.
+	/// </summary>
+	[GridDrillDown("ProductionOrder", "Code")]
+	public string OrderCode { get; set; }
+
+	/// <summary>
+	/// Operation number related to the task.
+	/// </summary>
+	public string OperationNo { get; set; }
+
+	/// <summary>
+	/// User who started the task, with drill-down to User.
+	/// </summary>
+	[GridDrillDown("User", "Code")]
+	public string StartedBy { get; set; }
+
+	/// <summary>
+	/// Currently active user, with drill-down to User.
+	/// </summary>
+	[GridDrillDown("User", "Code")]
+	public string ActiveUser { get; set; }
+
+	/// <summary>
+	/// User who locked the task.
+	/// </summary>
+	public string LockedUser { get; set; }
+
+	/// <summary>
+	/// User who finished the task, with drill-down to User.
+	/// </summary>
+	[GridDrillDown("User", "Code")]
+	public string FinishUser { get; set; }
+
+	/// <summary>
+	/// Description of the task.
+	/// </summary>
+	public string Description { get; set; }
+
+	/// <summary>
+	/// Origin of the task.
+	/// </summary>
+	public string Origin { get; set; }
+}
+
+/// <summary>
+/// Represents a detailed task with sections and additional metadata.
+/// </summary>
+public class TaskResponse : TaskResponseHeader
 {
 	/// <summary>
 	///
@@ -24,6 +93,7 @@ public class TaskResponse
 	/// <summary>
 	///
 	/// </summary>
+	[GridRequireTranslate]
 	public string Status { get; set; }
 
 	/// <summary>
@@ -71,16 +141,19 @@ public class TaskResponse
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public DateTime PlannedStartDate { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public DateTime PlannedEndDate { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public decimal PlannedDuration { get; set; }
 
 	/// <summary>
@@ -91,36 +164,43 @@ public class TaskResponse
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public DateTime? ActualStart { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public DateTime? ActualEnd { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public decimal ActualDuration { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public decimal FreqValue { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public decimal RepeatEvery { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public decimal EndValue { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
 	public string FrequencyModeBy { get; set; }
 
 	/// <summary>
@@ -186,6 +266,18 @@ public class TaskResponse
 	///
 	/// </summary>
 	[GridIgnoreProperty]
+	public bool CanReloadItems { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[GridIgnoreProperty]
+	public string FreqUnit { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[GridIgnoreProperty]
 	public string SectionResponseArray { get; set; }
 
 	/// <summary>
@@ -213,6 +305,12 @@ public class TaskResponse
 	public List<TaskAttachment> Attachments { get; set; }
 
 	/// <summary>
+	/// List of items related to the task .
+	/// </summary>
+	[GridIgnoreProperty]
+	public List<ItemActivity> Items { get; set; }
+
+	/// <summary>
 	///
 	/// </summary>
 	public TaskResponse()
@@ -230,6 +328,14 @@ public class Section
 	///
 	/// </summary>
 	public int SortId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public int OriginalSortId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public int SortIdItem { get; set; }
 
 	/// <summary>
 	///
@@ -506,6 +612,8 @@ public class MultipleCondition
 	///
 	/// </summary>
 	public string ChoiceDescriptions { get; set; }
+
+	public bool Selected { get; set; }
 }
 
 /// <summary>
@@ -552,4 +660,107 @@ public class TaskAttachment
 	///
 	/// </summary>
 	public string PathVisualHelp { get; set; }
+}
+public class ItemActivity
+{
+	/// <summary>
+	///
+	/// </summary>
+	public int SortSection { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string ItemCode { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string Name { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public int SortId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public bool IsByProduct { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public decimal Quantity { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public decimal AvailableQuantity { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public decimal IssueQuantity { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public decimal Tolerance { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public decimal MinQtyAllowed { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public decimal MaxQtyAllowed { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Method { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string CodeSignal { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public bool Mandatory { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public bool IsRemainingTotal { get; set; }
+
+	/// <summary>
+	/// ///
+	/// </summary>
+	public string TransactionId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Status { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string PathVisualHelp { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public decimal QuantityStage { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public decimal TargetQty { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public bool Passed { get; set; }
 }

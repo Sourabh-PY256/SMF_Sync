@@ -221,7 +221,7 @@ public class MachineProgramming
 	/// <summary>
 	///
 	/// </summary>
-	public string InfinityModeBehaviur { get; set; }
+	public string InfinityModeBehavior { get; set; }
 
 	/// <summary>
 	///

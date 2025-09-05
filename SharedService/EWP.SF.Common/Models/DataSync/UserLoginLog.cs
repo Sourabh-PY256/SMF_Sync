@@ -3,6 +3,9 @@
 /// <summary>
 ///
 /// </summary>
+/// <summary>
+///
+/// </summary>
 public class UserLoginLog
 {
 	/// <summary>

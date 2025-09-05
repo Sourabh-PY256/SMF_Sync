@@ -16,9 +16,6 @@ using EWP.SF.Helper;
 
 namespace EWP.SF.Common.Models;
 
-/// <summary>
-/// Provides helper methods for custom behavior.
-/// </summary>
 public static class CustomBehaviorHelper
 {
 	/// <summary>
@@ -30,26 +27,14 @@ public static class CustomBehaviorHelper
 		if (machine is not null && parameter.CustomBehaviorMatch.TryGetValue(code, out BehaviorMatch value))
 		{
 			BehaviorMatch match = value;
-			switch (match.SourceType)
+			returnValue = match.SourceType switch
 			{
-				case 1:
-					//Sensor
-					returnValue = machine.Sensors.Find(x => x.Status == Enumerators.Status.Active && x.Code.Equals(match.Code, StringComparison.Ordinal));
-					break;
-				case 2:
-					//Parameter
-					returnValue = machine.Parameters.Find(x => x.Status == Enumerators.Status.Active && x.Code.Equals(match.Code, StringComparison.Ordinal));
-					break;
-				case 3:
-					//Scalar
-					returnValue = new MachineParam { Formula = match.SourceValue, Value = match.SourceValue };
-					break;
-
-				case 4:
-					//Environment
-					returnValue = new MachineParam { Formula = machine.Environment.Values[match.SourceValue], Value = machine.Environment.Values[match.SourceValue] };
-					break;
-			}
+				1 => machine.Sensors.Find(x => x.Status == Enumerators.Status.Active && x.Code.Equals(match.Code, StringComparison.Ordinal)),
+				2 => machine.Parameters.Find(x => x.Status == Enumerators.Status.Active && x.Code.Equals(match.Code, StringComparison.Ordinal)),
+				3 => new MachineParam { Formula = match.SourceValue, Value = match.SourceValue },
+				4 => new MachineParam { Formula = machine.Environment.Values[match.SourceValue], Value = machine.Environment.Values[match.SourceValue] },
+				_ => null
+			};
 		}
 		return returnValue;
 	}
@@ -300,7 +285,7 @@ public class CustomBehavior
 	}
 
 	/// <summary>
-	///
+	/// Validates the codes for the specified machine and parameter.
 	/// </summary>
 	protected bool ValidateCodes(Machine machine, MachineParam current) => machine.ValidateCodes(current) && RequiredCodes.All(current.CustomBehaviorMatch.ContainsKey);
 }

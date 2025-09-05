@@ -39,7 +39,7 @@ public class InventoryOperation : IInventoryOperation
                 try
                 {
                     BaseId = inventoryGroup.ItemGroupCode;
-                    Inventory existingInventory = GetInventory(cycleInventoryGroup.ItemGroupCode);
+                    InventoryItemGroup existingInventory = GetInventory(cycleInventoryGroup.ItemGroupCode);
                     bool editMode = existingInventory is not null;
                     if (editMode && inventoryGroupListOriginal is not null)
                     {
@@ -68,7 +68,7 @@ public class InventoryOperation : IInventoryOperation
                     {
                         throw new Exception("Cannot import a disabled Inventory Group record");
                     }
-                    Inventory inventoryGroupInfo = new()
+                    InventoryItemGroup inventoryGroupInfo = new()
                     {
                         Code = inventoryGroup.ItemGroupCode,
                         Name = !string.IsNullOrEmpty(inventoryGroup.ItemGroupName) ? inventoryGroup.ItemGroupName : inventoryGroup.ItemGroupCode,
@@ -94,12 +94,12 @@ public class InventoryOperation : IInventoryOperation
         return returntValue;
     }
 
-    public Inventory GetInventory(string Code)
+    public InventoryItemGroup GetInventory(string Code)
     {
         return _inventoryRepo.GetInventory(Code);
     }
 
-    public async Task<ResponseData> MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+    public async Task<ResponseData> MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
     {
         ResponseData returnValue = new();
 
@@ -115,7 +115,7 @@ public class InventoryOperation : IInventoryOperation
         returnValue = _inventoryRepo.MergeInventory(InventoryInfo, systemOperator, Validate);
         if (!Validate && returnValue is not null)
         {
-            Inventory ObjInventory = ListInventory(systemOperator, returnValue.Code).Find(x => x.Status != Status.Failed);
+            InventoryItemGroup ObjInventory = ListInventory(systemOperator, returnValue.Code).Find(x => x.Status != Status.Failed);
             await ObjInventory.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             if (NotifyOnce)
             {
@@ -133,7 +133,7 @@ public class InventoryOperation : IInventoryOperation
         }
         return returnValue;
     }
-    public List<Inventory> ListInventory(User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null)
+    public List<InventoryItemGroup> ListInventory(User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null)
     {
         #region Permission validation
 

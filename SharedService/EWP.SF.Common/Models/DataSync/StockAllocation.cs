@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 
 namespace EWP.SF.Common.Models;
+
 /// <summary>
 ///
 /// </summary>

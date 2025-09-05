@@ -13,8 +13,8 @@ namespace EWP.SF.KafkaSync.DataAccess;
 /// </summary>
 public interface IInventoryRepo
 {
-    Inventory GetInventory(string Code);
-    List<Inventory> ListInventory(string Code = "", DateTime? DeltaDate = null);
-    ResponseData MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validation);
+    InventoryItemGroup GetInventory(string Code);
+    List<InventoryItemGroup> ListInventory(string Code = "", DateTime? DeltaDate = null);
+    ResponseData MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validation);
     List<SaleOrder> ListSalesOrder(string Id, string SalesOrder, string CustomerCode, DateTime? DeltaDate = null);
 }

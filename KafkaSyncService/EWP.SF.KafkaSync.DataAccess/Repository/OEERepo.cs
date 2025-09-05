@@ -302,7 +302,7 @@ public class OEERepo : IOEERepo
 				command.Parameters.AddWithValue("_CostPerHour", configuration.CostPerHour);
 				command.Parameters.AddWithValue("_Attribute2", configuration.Attribute2);
 				command.Parameters.AddWithValue("_Attribute3", configuration.Attribute3);
-				command.Parameters.AddCondition("_InfiniteModeBehavior", configuration.InfinityModeBehaviur, !string.IsNullOrEmpty(configuration.InfinityModeBehaviur));
+				command.Parameters.AddCondition("_InfiniteModeBehavior", configuration.InfinityModeBehavior, !string.IsNullOrEmpty(configuration.InfinityModeBehavior));
 				command.Parameters.AddWithValue("_ScheduleLevel", configuration.ScheduleLevel ?? (int?)null);
 				command.Parameters.AddWithValue("_ConcurrentSetupTime", configuration.ConcurrentSetupTime);
 				command.Parameters.AddWithValue("_Schedule", configuration.Schedule);
@@ -355,7 +355,7 @@ public class OEERepo : IOEERepo
 						CostPerHour = rdr["CostPerHour"].ToDouble(),
 						Attribute2 = !string.IsNullOrEmpty(rdr["Attribute2"].ToStr()) ? rdr["Attribute2"].ToInt32() : null,
 						Attribute3 = !string.IsNullOrEmpty(rdr["Attribute3"].ToStr()) ? rdr["Attribute3"].ToInt32() : null,
-						InfinityModeBehaviur = rdr["InfiniteModeBehavior"].ToStr(),
+						InfinityModeBehavior = rdr["InfiniteModeBehavior"].ToStr(),
 						ScheduleLevel = !string.IsNullOrEmpty(rdr["ScheduleLevel"].ToStr()) ? Convert.ToInt16(rdr["ScheduleLevel"]) : null,
 						ConcurrentSetupTime = rdr["ConcurrentSetupTime"].ToBool(),
 						Schedule = rdr["Schedule"].ToBool(),

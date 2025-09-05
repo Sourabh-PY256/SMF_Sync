@@ -19,7 +19,7 @@ public static class Security
 		}
 		return strBld.ToString();
 	}
-
+	
 	public static bool validateIdHash(int id, string hash, string salt = "|")
 	{
 		using MD5 md5Hash = MD5.Create();

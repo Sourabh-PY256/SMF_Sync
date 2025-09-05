@@ -1,24 +1,29 @@
 ﻿using EWP.SF.Common.Models;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
 using System.ComponentModel.DataAnnotations;
 using EWP.SF.Common.Constants;
+using System.Transactions;
+using EWP.SF.KafkaSync.BusinessEntities;
+using System.Net;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
+
 public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperation
 {
-    private readonly IOrderTransactionMaterialRepo _orderTransactionMaterialRepo;
-    private readonly IWorkOrderOperation _workOrderOperation;
+	private readonly IOrderTransactionMaterialRepo _orderTransactionMaterialRepo;
+	private readonly IWorkOrderOperation _workOrderOperation;
 
-    private readonly IComponentOperation _componentOperation;
+	private readonly IComponentOperation _componentOperation;
 
 	public OrderTransactionMaterialOperation(IOrderTransactionMaterialRepo orderTransactionMaterialRepo
 	, IWorkOrderOperation workOrderOperation, IComponentOperation componentOperation)
 	{
 		_orderTransactionMaterialRepo = orderTransactionMaterialRepo;
-	    _workOrderOperation = workOrderOperation;
+		_workOrderOperation = workOrderOperation;
 		_componentOperation = componentOperation;
 	}
 	/// <summary>

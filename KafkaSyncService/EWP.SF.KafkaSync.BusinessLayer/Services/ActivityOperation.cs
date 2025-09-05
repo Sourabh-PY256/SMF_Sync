@@ -164,8 +164,8 @@ public class ActivityOperation : IActivityOperation
                 List<ActivityInstanceCalculateResponse> tmpListInstance = _activityRepo.ActivityInstanceCalculate(activityInfoSchedule, systemOperator);
                 if (tmpListInstance is not null)
                 {
-                    returnValue.ListInstaceResponse = [];
-                    returnValue.ListInstaceResponse = tmpListInstance;
+                    returnValue.ListInstanceResponse = [];
+                    returnValue.ListInstanceResponse = tmpListInstance;
                 }
             }
             else
@@ -320,8 +320,8 @@ public class ActivityOperation : IActivityOperation
                 List<ActivityInstanceCalculateResponse> tmpListInstance = _activityRepo.ActivityInstanceCalculate(activityInfoSchedule, systemOperator);
                 if (tmpListInstance is not null)
                 {
-                    returnValue.ListInstaceResponse = [];
-                    returnValue.ListInstaceResponse = tmpListInstance;
+                    returnValue.ListInstanceResponse = [];
+                    returnValue.ListInstanceResponse = tmpListInstance;
                 }
             }
             else

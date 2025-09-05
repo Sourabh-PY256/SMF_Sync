@@ -106,11 +106,11 @@ public class ComponentOperation : IComponentOperation
 					}
 					ProcessEntry existingEntry = (await GetProcessEntry(item.ProductCode, warehouseId, item.Version, item.Sequence, systemOperator).ConfigureAwait(false))?.Find(x => x.Status != Status.Failed);
 					bool editMode = existingEntry is not null;
-					if (editMode && itemListOriginal is not null)
-					{
-						item = itemListOriginal.Find(x => x.ProductCode == cycleItem.ProductCode && x.WarehouseCode == cycleItem.WarehouseCode && x.Version == cycleItem.Version);
-						item ??= cycleItem;
-					}
+					// if (editMode && itemListOriginal is not null)
+					// {
+					// 	item = itemListOriginal.Find(x => x.ProductCode == cycleItem.ProductCode && x.WarehouseCode == cycleItem.WarehouseCode && x.Version == cycleItem.Version);
+					// 	item ??= cycleItem;
+					// }
 					if (!editMode && !string.Equals(item.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase))
 					{
 						throw new Exception("Cannot import a new disabled product");
@@ -1101,7 +1101,7 @@ public class ComponentOperation : IComponentOperation
 						}
 					}
 					//Validar duplicados Opcenter
-					ValidateOpcenterRules(entryInfo, systemOperator);
+					//ValidateOpcenterRules(entryInfo, systemOperator);
 
 					if (entryInfo.Version == 0)
 					{
@@ -1313,7 +1313,7 @@ public class ComponentOperation : IComponentOperation
 							// ACTUALIZAR VERSION ACTUAL
 							entryInfo = componentInfo.ProcessEntry;
 							//Validar duplicados Opcenter
-							ValidateOpcenterRules(entryInfo, systemOperator);
+							//ValidateOpcenterRules(entryInfo, systemOperator);
 
 							if (_componentRepo.UpdateProcessEntry(entryInfo, systemOperator))
 							{
@@ -1475,7 +1475,7 @@ public class ComponentOperation : IComponentOperation
 							// CREAR NUEVA VERSION
 							entryInfo = componentInfo.ProcessEntry;
 							//Validar duplicados Opcenter
-							ValidateOpcenterRules(entryInfo, systemOperator);
+							//ValidateOpcenterRules(entryInfo, systemOperator);
 
 							ProcessEntry entryResult = null;
 							if (string.IsNullOrEmpty(entryInfo.Id) || isNewVersion)
@@ -1829,7 +1829,7 @@ public class ComponentOperation : IComponentOperation
 					}
 					if (!string.IsNullOrEmpty(item.ItemGroupCode))
 					{
-						Inventory inventoryInfo = _inventoryOperation.GetInventory(item.ItemGroupCode);
+						InventoryItemGroup inventoryInfo = _inventoryOperation.GetInventory(item.ItemGroupCode);
 						if (inventoryInfo is not null && inventoryInfo.Code.Trim() == item.ItemGroupCode.Trim())
 						{
 							itemInfo.InventoryId = inventoryInfo.InventoryId;
@@ -1905,7 +1905,7 @@ public class ComponentOperation : IComponentOperation
 		{
 			ProcessEntry entryInfo = componentInfo.ProcessEntry;
 			//Validando Duplicados OPCenter
-			ValidateOpcenterRules(entryInfo, systemOperator);
+			//ValidateOpcenterRules(entryInfo, systemOperator);
 			ProcessEntry entryResult = _componentRepo.CreateProcessEntry(entryInfo, systemOperator);
 			if (!string.IsNullOrEmpty(entryResult.Id))
 			{

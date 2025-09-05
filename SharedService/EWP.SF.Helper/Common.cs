@@ -12,8 +12,6 @@ public static class Common
 	/// <summary>
 	/// Checks if a file is locked by attempting to open it with exclusive access.
 	/// </summary>
-	/// <param name="file"></param>
-	/// <returns></returns>
 	public static bool IsFileLocked(FileInfo file)
 	{
 		FileStream? stream = null;
@@ -42,9 +40,6 @@ public static class Common
 	/// <summary>
 	/// Converts seconds to a formatted time string.
 	/// </summary>
-	/// <param name="seconds"></param>
-	/// <param name="forceDays"></param>
-	/// <returns></returns>
 	public static string SecondsToTimeString(int seconds, bool forceDays)
 	{
 		int hours = 0;
@@ -77,9 +72,6 @@ public static class Common
 	/// <summary>
 	/// Converts a time string to seconds.
 	/// </summary>
-	/// <param name="time"></param>
-	/// <param name="def"></param>
-	/// <returns></returns>
 	public static int TimeStringToSeconds(string time, int def)
 	{
 		int returnValue = 0;
@@ -124,7 +116,6 @@ public static class Common
 	/// <summary>
 	/// Checks if the current user is an administrator.
 	/// </summary>
-	/// <returns></returns>
 	public static bool IsAdministrator()
 	{
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -142,10 +133,10 @@ public static class Common
 	/// <summary>
 	/// Gets the name of the current project by extracting it from the assembly name.
 	/// </summary>
-	/// <returns></returns>
 	public static string GetProjectName()
 	{
 		string? assemblyName = Assembly.GetEntryAssembly()?.GetName().Name;
-		return assemblyName?.Split('.').Last() ?? "Unknown";
+		string[]? parts = assemblyName?.Split('.');
+		return parts?.Length > 0 ? parts[^1] : "Unknown";
 	}
 }

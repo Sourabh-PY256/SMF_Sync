@@ -236,6 +236,10 @@ public class AttachmentLocal
 	///
 	/// </summary>
 	public string FileBase64 { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public byte[] FileBaseByte { get; set; }
 
 	/// <summary>
 	///
@@ -445,4 +449,21 @@ public class AttachmentExternalResponse
 	///
 	/// </summary>
 	public string AttachmentExtension { get; set; }
+}
+public class AttachmentDownloadResponse
+{
+	/// <summary>
+	///
+	/// </summary>
+	public string FileName { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string FilePath { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public FileStream FileStream { get; set; }
 }

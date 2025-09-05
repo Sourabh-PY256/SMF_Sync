@@ -28,7 +28,7 @@ public async Task<List<ResponseData>> ListUpdateComponentBulk(List<ComponentExte
         List<ResponseData> returnValue = [];
         ResponseData MessageError;
         List<MeasureUnit> unitsList = GetMeasureUnits();
-        List<Inventory> inventories = _inventoryOperation.ListInventory(systemOperator, null);
+        List<InventoryItemGroup> inventories = _inventoryOperation.ListInventory(systemOperator, null);
         List<Component> componentsToMerge = [];
         bool NotifyOnce = false;
         if (itemList?.Count > 0)
@@ -153,7 +153,7 @@ public async Task<List<ResponseData>> ListUpdateComponentBulk(List<ComponentExte
                     }
                     if (!editMode || !string.IsNullOrEmpty(item.ItemGroupCode))
                     {
-                        Inventory inventoryInfo = inventories.Find(x => x.Code == item.ItemGroupCode && x.Status != Status.Failed);
+                        InventoryItemGroup inventoryInfo = inventories.Find(x => x.Code == item.ItemGroupCode && x.Status != Status.Failed);
                         if (inventoryInfo is not null && inventoryInfo.Code.Trim() == item.ItemGroupCode.Trim())
                         {
                             itemInfo.InventoryId = inventoryInfo.InventoryId;

@@ -14,7 +14,14 @@ namespace EWP.SF.Common.Attributes;
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class GridBDEntityName(string name, string component = null) : Attribute
 {
+	/// <summary>
+	/// Name of the entity in the database.
+	/// </summary>
 	public string Name { get; internal set; } = name;
+
+	/// <summary>
+	/// Name of the component in the front-end.
+	/// </summary>
 	public string Component { get; internal set; } = component;
 }
 
@@ -30,6 +37,9 @@ public sealed class GridIgnoreProperty : Attribute;
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class GridCustomPropertyName(string name) : Attribute
 {
+	/// <summary>
+	/// Name of the property in the database.
+	/// </summary>
 	public string Name { get; internal set; } = name;
 }
 
@@ -39,21 +49,41 @@ public sealed class GridCustomPropertyName(string name) : Attribute
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class GridCustomType : Attribute
 {
+	/// <summary>
+	/// Gets or sets the type of the column.
+	/// </summary>
 	public GridColumnType Type { get; internal set; }
+
+	/// <summary>
+	/// Gets or sets the name of the custom type.
+	/// </summary>
 	public string CustomTypeName { get; internal set; }
+
+	/// <summary>
+	/// Gets or sets the custom format of the column.
+	/// </summary>
 	public GridColumnFormat CustomFormat { get; internal set; }
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="GridCustomType" /> class.
+	/// </summary>
 	public GridCustomType(GridColumnType type)
 	{
 		Type = type;
 	}
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="GridCustomType" /> class.
+	/// </summary>
 	public GridCustomType(GridColumnType type, string customTypeName)
 	{
 		Type = type;
 		CustomTypeName = customTypeName;
 	}
 
+	/// <summary>
+	/// Initializes a new instance of the <see cref="GridCustomType" /> class.
+	/// </summary>
 	public GridCustomType(GridColumnType type, string customTypeName, GridColumnFormat customFormat)
 	{
 		Type = type;
@@ -66,17 +96,13 @@ public sealed class GridCustomType : Attribute
 /// Se utiliza para indicar que requiere una traducción utilizando el nombre de columna real o uno custom
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public sealed class GridRequireTranslate : Attribute
-{
-}
+public sealed class GridRequireTranslate : Attribute;
 
 /// <summary>
 /// Se utiliza para indicar que requiere una traducción utilizando el nombre de columna real o uno custom
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public sealed class GridRequireDecode : Attribute
-{
-}
+public sealed class GridRequireDecode : Attribute;
 
 /// <summary>
 /// Permitirá relacionar información entre entidades
@@ -92,9 +118,24 @@ public sealed class GridRequireDecode : Attribute
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class GridLookUpEntity(string propertyToUse, string entityReference, string propertyReference, string propertyToShow) : Attribute
 {
+	/// <summary>
+	/// Gets or sets the property to use.
+	/// </summary>
 	public string PropertyToUse { get; internal set; } = propertyToUse;
+
+	/// <summary>
+	/// Gets or sets the entity reference.
+	/// </summary>
 	public string EntityReference { get; internal set; } = entityReference;
+
+	/// <summary>
+	/// Gets or sets the property to reference.
+	/// </summary>
 	public string PropertyToReference { get; set; } = propertyReference;
+
+	/// <summary>
+	/// Gets or sets the property to show.
+	/// </summary>
 	public string PropertyToShow { get; internal set; } = propertyToShow;
 }
 
@@ -102,17 +143,13 @@ public sealed class GridLookUpEntity(string propertyToUse, string entityReferenc
 /// Utilizado para que en el front no pueda utilizarse para ordenar datos
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public sealed class GridDisableSorting : Attribute
-{
-}
+public sealed class GridDisableSorting : Attribute;
 
 /// <summary>
 /// Utilizado para que en el front no pueda ocultarse
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
-public sealed class GridDisabledHiding : Attribute
-{
-}
+public sealed class GridDisabledHiding : Attribute;
 
 /// <summary>
 /// Utilizado para que en el front no pueda ocultarse
@@ -120,6 +157,9 @@ public sealed class GridDisabledHiding : Attribute
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class GridConcatProperty(string name) : Attribute
 {
+	/// <summary>
+	/// Gets or sets the name of the property.
+	/// </summary>
 	public string Name { get; internal set; } = name;
 }
 
@@ -136,8 +176,6 @@ public sealed class GridConcatProperty(string name) : Attribute
 /// en el que se declararon sobre la propiedad
 /// </para>
 /// </summary>
-/// <remarks>
-/// </remarks>
 /// <param name="entityName">Se refiere al módulo al que hará referencia en caso de aplicar</param>
 /// <param name="propertyToReference">Se refiere al nombre de la propiedad de la entidad referenciada con la que hará la comparación en caso de requerir uno especifico. </param>
 /// <param name="propertyToUse">Se refiere a la propiedad que utilizará como párametro de la misma clase. Si se deja vácio significa que utilizará el valor de la propiedad donde se especificó el atributo de Drill Down ([GridDrillDown])</param>
@@ -146,9 +184,28 @@ public sealed class GridConcatProperty(string name) : Attribute
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
 public sealed class GridDrillDown(string entityName = null, string propertyToReference = null, string propertyToUse = null, bool useInSearch = true, bool useAsModalParameter = false) : Attribute
 {
+	/// <summary>
+	/// Gets or sets the entity name.
+	/// </summary>
 	public string EntityName { get; internal set; } = entityName;
+
+	/// <summary>
+	/// Gets or sets the property to reference.
+	/// </summary>
 	public string PropertyToReference { get; internal set; } = propertyToReference;
+
+	/// <summary>
+	/// Gets or sets the property to use.
+	/// </summary>
 	public string PropertyToUse { get; internal set; } = propertyToUse;
+
+	/// <summary>
+	/// Gets or sets a value indicating whether the property should be used in search.
+	/// </summary>
 	public bool UseInSearch { get; internal set; } = useInSearch;
+
+	/// <summary>
+	/// Gets or sets a value indicating whether the property should be used as a modal parameter.
+	/// </summary>
 	public bool UseAsModalParameter { get; internal set; } = useAsModalParameter;
 }

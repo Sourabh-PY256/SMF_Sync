@@ -6,13 +6,14 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Xml;
 using System.Xml.Serialization;
 
 namespace EWP.SF.Helper;
 
 /// <summary>
-///
+/// Extensions for various types.
 /// </summary>
 [SuppressMessage("Performance", "RAMU1:Sync method was used instead of async", Justification = "<Pending>")]
 public static class Extensions
@@ -20,18 +21,16 @@ public static class Extensions
 	static readonly JsonSerializerOptions options = new()
 	{
 		WriteIndented = true,  // Equivalent to Formatting.Indented
-		DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull  // Ignore null values
+		DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull  // Ignore null values
 	};
 
 	/// <summary>
 	/// Gets a list of all the values of an enum as a ReadOnlyCollection of KeyValuePair string, int.
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
 	public static ReadOnlyCollection<KeyValuePair<string, int>> GetEnumList<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] T>()
 	{
 		List<KeyValuePair<string, int>> list = [];
-		foreach (object e in Enum.GetValues(typeof(T)).Cast<object>().Where(x => x is not null))
+		foreach (object e in Enum.GetValues(typeof(T)).Cast<object>().Where(static x => x is not null))
 		{
 			list.Add(new KeyValuePair<string, int>(e.ToString()!, (int)e));
 		}
@@ -41,9 +40,6 @@ public static class Extensions
 	/// <summary>
 	/// Adds a property to an ExpandoObject. If the property already exists, it updates the value.
 	/// </summary>
-	/// <param name="expando"></param>
-	/// <param name="propertyName"></param>
-	/// <param name="propertyValue"></param>
 	public static void AddProperty(this ExpandoObject expando, string propertyName, object propertyValue)
 	{
 		//Take use of the IDictionary implementation
@@ -61,8 +57,6 @@ public static class Extensions
 	/// <summary>
 	/// Converts an object to XML string.
 	/// </summary>
-	/// <param name="value"></param>
-	/// <returns></returns>
 	public static string ToXML(this object value)
 	{
 		XmlSerializerNamespaces emptyNamespaces = new([XmlQualifiedName.Empty]);
@@ -82,8 +76,6 @@ public static class Extensions
 	/// <summary>
 	/// Converts an object to JSON string.
 	/// </summary>
-	/// <param name="value"></param>
-	/// <returns></returns>
 	public static string ToJSON(this object value)
 	{
 		string returnValue = string.Empty;
@@ -98,10 +90,6 @@ public static class Extensions
 	/// <summary>
 	/// Clones the properties of an object to a KeyValuePair.
 	/// </summary>
-	/// <param name="o"></param>
-	/// <param name="propertyName"></param>
-	/// <param name="owner"></param>
-	/// <returns></returns>
 	[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 	public static KeyValuePair<string, string> CloneProperties(this object o, string propertyName = "", string owner = "")
 	{
@@ -134,10 +122,6 @@ public static class Extensions
 	/// <summary>
 	/// Converts the properties of an object to an ExpandoObject.
 	/// </summary>
-	/// <param name="o"></param>
-	/// <param name="propertyName"></param>
-	/// <param name="owner"></param>
-	/// <returns></returns>
 	[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 	public static ExpandoObject ExpandProperties(this object o, string propertyName = "", string owner = "")
 	{
@@ -171,9 +155,6 @@ public static class Extensions
 	/// <summary>
 	/// Gets the value of a property from an anonymous object.
 	/// </summary>
-	/// <param name="o"></param>
-	/// <param name="value"></param>
-	/// <returns></returns>
 	public static object? GetAnonymousValue(this object o, string value)
 	{
 		try
@@ -191,7 +172,7 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns>Entero </returns>
+	/// <returns>string</returns>
 	public static string ToStr(this object o, string error = "")
 	{
 		try
@@ -209,7 +190,6 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns></returns>
 	public static string? ToStrNull(this object o, string error = "")
 	{
 		try
@@ -227,7 +207,7 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns>Entero </returns>
+	/// <returns>byte[]</returns>
 	public static byte[]? ToBytes(this object o, byte[]? error = null)
 	{
 		try
@@ -245,7 +225,6 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns></returns>
 	public static byte[]? ToBytesNull(this object o, byte[]? error = null)
 	{
 		try
@@ -264,7 +243,6 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns>Entero </returns>
 	public static bool ToBool(this object o, bool error = false)
 	{
 		try
@@ -299,7 +277,6 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns>Entero </returns>
 	public static int ToInt32(this object o, int error = 0)
 	{
 		try
@@ -330,7 +307,6 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">Object to convert</param>
 	/// <param name="error">Object to return if error</param>
-	/// <returns>Entero </returns>
 	public static long ToInt64(this object o, int error = 0)
 	{
 		try
@@ -357,8 +333,7 @@ public static class Extensions
 	{
 		try
 		{
-			decimal retVal;
-			if (!decimal.TryParse(o.ToStr(), out retVal))
+			if (!decimal.TryParse(o.ToStr(), out decimal retVal))
 			{
 				retVal = error;
 			}
@@ -380,8 +355,7 @@ public static class Extensions
 	{
 		try
 		{
-			double retVal;
-			if (!double.TryParse(o.ToStr(), out retVal))
+			if (!double.TryParse(o.ToStr(), out double retVal))
 			{
 				retVal = error;
 			}
@@ -420,27 +394,18 @@ public static class Extensions
 	/// </summary>
 	/// <param name="o">String to convert</param>
 	/// <returns>clear string</returns>
-	public static string FromBase64String(this string o)
-	{
-		return Encoding.UTF8.GetString(Convert.FromBase64String(o));
-	}
+	public static string FromBase64String(this string o) => Encoding.UTF8.GetString(Convert.FromBase64String(o));
 
 	/// <summary>
 	/// Converts a string to base64 string
 	/// </summary>
-	/// <param name="o">Cadena a convertir</param>
-	/// <returns>base64 string </returns>
-	public static string ToBase64String(this string o)
-	{
-		return Convert.ToBase64String(Encoding.UTF8.GetBytes(o));
-	}
+	/// <param name="o">string to convert</param>
+	/// <returns>base64 string</returns>
+	public static string ToBase64String(this string o) => Convert.ToBase64String(Encoding.UTF8.GetBytes(o));
 
 	/// <summary>
 	/// Gets the value from a request header
 	/// </summary>
-	/// <param name="request"></param>
-	/// <param name="key"></param>
-	/// <returns></returns>
 	public static string? GetHeader(this HttpRequestMessage request, string key)
 	{
 		return !request.Headers.TryGetValues(key, out IEnumerable<string>? keys) ? null : keys.First();
@@ -464,10 +429,6 @@ public static class Extensions
 	/// <summary>
 	/// Transforms parameters contained in a WebRequest into lineal parameters.
 	/// </summary>
-	/// <param name="input"></param>
-	/// <param name="start"></param>
-	/// <param name="length"></param>
-	/// <returns></returns>
 	public static string Substr(this string input, int start = 0, int length = 0)
 	{
 		string result = input;
@@ -512,8 +473,6 @@ public static class Extensions
 	/// <summary>
 	/// Converts a string to MD5 hash.
 	/// </summary>
-	/// <param name="input"></param>
-	/// <returns></returns>
 	public static string ComputeMD5(this string input)
 	{
 		// step 1, calculate MD5 hash from input
@@ -524,7 +483,7 @@ public static class Extensions
 		StringBuilder sb = new();
 		for (int i = 0; i < hash.Length; i++)
 		{
-			_ = sb.Append(hash[i].ToString("X2", CultureInfo.InvariantCulture));
+			sb.Append(hash[i].ToString("X2", CultureInfo.InvariantCulture));
 		}
 		return sb.ToString();
 	}
@@ -532,16 +491,13 @@ public static class Extensions
 	/// <summary>
 	/// Converts a byte array to hex string.
 	/// </summary>
-	/// <param name="bytes"></param>
-	/// <param name="upperCase"></param>
-	/// <returns></returns>
 	public static string ToHex(this byte[] bytes, bool upperCase)
 	{
 		StringBuilder result = new(bytes.Length * 2);
 
 		for (int i = 0; i < bytes.Length; i++)
 		{
-			_ = result.Append(bytes[i].ToString(upperCase ? "X2" : "x2", CultureInfo.InvariantCulture));
+			result.Append(bytes[i].ToString(upperCase ? "X2" : "x2", CultureInfo.InvariantCulture));
 		}
 
 		return result.ToString();
@@ -550,19 +506,6 @@ public static class Extensions
 	/// <summary>
 	/// Converts a string to MD5 hash.
 	/// </summary>
-	/// <param name="password"></param>
-	/// <returns></returns>
-	public static int PasswordStrength(this string password)
-	{
-		return PasswordHelper.GetPasswordStrength(password).ToInt32();
-	}
-
-	/// <summary>
-	/// Converts a string to MD5 hash.
-	/// </summary>
-	/// <param name="md5Hash"></param>
-	/// <param name="input"></param>
-	/// <returns></returns>
 	public static string FromString(this MD5 md5Hash, string input)
 	{
 		// Convert the input string to a byte array and compute the hash.
@@ -576,7 +519,7 @@ public static class Extensions
 		// and format each one as a hexadecimal string.
 		for (int i = 0; i < data.Length; i++)
 		{
-			_ = sBuilder.Append(data[i].ToString("x2", CultureInfo.InvariantCulture));
+			sBuilder.Append(data[i].ToString("x2", CultureInfo.InvariantCulture));
 		}
 
 		// Return the hexadecimal string.
@@ -586,18 +529,11 @@ public static class Extensions
 	/// <summary>
 	/// Returns true if the object is null.
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <returns></returns>
-	public static bool IsNull(this object? obj)
-	{
-		return obj is null;
-	}
+	public static bool IsNull(this object? obj) => obj is null;
 
 	/// <summary>
 	/// Converts a DateTime to a Unix epoch timestamp.
 	/// </summary>
-	/// <param name="value"></param>
-	/// <returns></returns>
 	public static double ToEpoch(this DateTime value)
 	{
 		//create TimeSpan by subtracting the value provided from
@@ -611,8 +547,6 @@ public static class Extensions
 	/// <summary>
 	/// Computes the MD5 hash of the input string.
 	/// </summary>
-	/// <param name="input"></param>
-	/// <returns></returns>
 	public static string Md5(this string input)
 	{
 		// Convert the input string to a byte array and compute the hash.
@@ -624,7 +558,7 @@ public static class Extensions
 		// Loop through each byte of the hashed data and format each one as a hexadecimal string.
 		for (int i = 0; i < data.Length; i++)
 		{
-			_ = sBuilder.Append(data[i].ToString("x2", CultureInfo.InvariantCulture));
+			sBuilder.Append(data[i].ToString("x2", CultureInfo.InvariantCulture));
 		}
 
 		// Return the hexadecimal string.
@@ -634,9 +568,6 @@ public static class Extensions
 	/// <summary>
 	/// Extension method to check if two strings are equal ignoring case.
 	/// </summary>
-	/// <param name="text"></param>
-	/// <param name="textToCompare"></param>
-	/// <returns></returns>
 	public static bool EqualsNoCase(this string text, string textToCompare)
 	{
 		return !string.IsNullOrEmpty(text)
@@ -647,9 +578,6 @@ public static class Extensions
 	/// <summary>
 	/// Extension method to check if a string contains another string ignoring case.
 	/// </summary>
-	/// <param name="text"></param>
-	/// <param name="textToCompare"></param>
-	/// <returns></returns>
 	public static bool ContainsNoCase(this string text, string textToCompare)
 	{
 		return !string.IsNullOrEmpty(text)

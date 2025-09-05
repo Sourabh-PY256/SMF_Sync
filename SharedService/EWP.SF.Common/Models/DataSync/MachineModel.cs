@@ -111,88 +111,71 @@ public class MachineModel
 	///
 	/// </summary>
 	public string RobotArmModel { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public bool Schedule { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public bool Planning { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public string CapacityMode { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public string GroupChange { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public double Capacity { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public string InfinityModeBehavior { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public double GanttPosition { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public double TheoricEfficiency { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public double CostPerHour { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public int ScheduleLevel { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public int Attribute2 { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public int Attribute3Time { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public bool ConcurrentSetupTime { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	////////////****
 	public int AvailabilityMode { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public string ProductionType { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public string PerformanceDefaultUnit { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
@@ -257,27 +240,42 @@ public class MachineModel
 	///
 	/// </summary>
 	public string QualitySourceId { get; set; }
-
+	/// <summary>
+	///
+	/// </summary>
+	public string FacilityCode { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double Availability { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double Performance { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double Quality { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double Efficiency { get; set; }
 	/// <summary>
 	///
 	/// </summary>
 	public List<MachineProgrammingDetail> ProgrammingDetails { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public List<string> Skill { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public List<Activity> Activities { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public List<string> AttachmentIds { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>

@@ -72,16 +72,16 @@ public static class PropertiesEntity
 	}
 
 	/// <summary>
-	///
+	/// Gets a list of properties for the specified entity.
 	/// </summary>
-	public static object GetProperties(string entity, string[] parent = null)
+	public static object GetProperties(string entity, string[] _ = null)
 	{
 		Type objType = GetEntityType(entity);
 		return GetListProperty(objType);
 	}
 
 	/// <summary>
-	///
+	/// Gets a list of properties for the specified type.
 	/// </summary>
 	[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 	public static List<PropertiesEntityModel> GetListProperty(Type objType)
@@ -89,12 +89,11 @@ public static class PropertiesEntity
 		// get all public static properties of MyClass type
 		PropertyInfo[] propertyInfos;
 		PropertiesEntityModel property;
-		List<PropertiesEntityModel> propiertieslst = [];
+		List<PropertiesEntityModel> propertiesList = [];
 		propertyInfos = objType.GetProperties(BindingFlags.Public | BindingFlags.Instance |
 		BindingFlags.Static);
 		// sort properties by name
-		Array.Sort(propertyInfos,
-				static (PropertyInfo propertyInfo1, PropertyInfo propertyInfo2) => propertyInfo1.Name.CompareTo(propertyInfo2.Name));
+		Array.Sort(propertyInfos, static (PropertyInfo propertyInfo1, PropertyInfo propertyInfo2) => propertyInfo1.Name.CompareTo(propertyInfo2.Name));
 
 		// write property names
 		foreach (PropertyInfo propertyInfo in propertyInfos)
@@ -115,28 +114,19 @@ public static class PropertiesEntity
 						property.IsRequired = true;
 						break;
 
-					case "MaxLengthAttribute":
-						try
+					case "MaxLengthAttribute" when attributeCustom.ConstructorArguments.Count > 0:
+						if (int.TryParse(attributeCustom.ConstructorArguments[0].Value?.ToString(), out int maxLength))
 						{
-							property.LongField = Convert.ToInt32(attributeCustom.ConstructorArguments[0].Value.ToString());
+							property.LongField = maxLength;
 						}
-						catch { }
 						break;
 
-					case "RegularExpressionAttribute":
-						try
-						{
-							property.Expression = attributeCustom.ConstructorArguments[0].Value.ToString();
-						}
-						catch { }
+					case "RegularExpressionAttribute" when attributeCustom.ConstructorArguments.Count > 0:
+						property.Expression = attributeCustom.ConstructorArguments[0].Value?.ToString();
 						break;
 
-					case "DefaultMappingEntity":
-						try
-						{
-							property.DefaultMappingEntity = attributeCustom.ConstructorArguments[0].Value.ToString();
-						}
-						catch { }
+					case "DefaultMappingEntity" when attributeCustom.ConstructorArguments.Count > 0:
+						property.DefaultMappingEntity = attributeCustom.ConstructorArguments[0].Value?.ToString();
 						break;
 				}
 			}
@@ -147,10 +137,10 @@ public static class PropertiesEntity
 				Type objTypeChild = Type.GetType(propertyInfo.PropertyType.GenericTypeArguments[0].ToString(), true);
 				property.Child = GetListProperty(objTypeChild);
 			}
-			propiertieslst.Add(property);
+			propertiesList.Add(property);
 		}
 
-		return propiertieslst;
+		return propertiesList;
 	}
 }
 

@@ -387,7 +387,7 @@ public class DeviceOperation : IDeviceOperation
                         ConcurrentSetupTime = machine.ConcurrentSetupTime?.ToUpperInvariant() == "YES",
                         Schedule = machine.Schedule?.ToUpperInvariant() == "YES",
                         GroupChange = machine.GroupChange,
-                        InfinityModeBehaviur = machine.InfiniteModeBehavior,
+                        InfinityModeBehavior = machine.InfiniteModeBehavior,
                         Planning = machine.Planning?.ToUpperInvariant() == "YES",
                         ScheduleLevel = string.IsNullOrEmpty(machine.ScheduleLevel) ? Convert.ToInt16(0) : Convert.ToInt16(machine.ScheduleLevel?.ToUpperInvariant() == "PRIMARY" ? 1 : 2),
                         CostPerHour = machine.CostPerHour,
@@ -455,7 +455,7 @@ public class DeviceOperation : IDeviceOperation
                     }
                     if (!string.IsNullOrEmpty(machine.InfiniteModeBehavior))
                     {
-                        machineInfo.Programming.InfinityModeBehaviur = machine.InfiniteModeBehavior;
+                        machineInfo.Programming.InfinityModeBehavior = machine.InfiniteModeBehavior;
                     }
                     if (!string.IsNullOrEmpty(machine.Planning))
                     {

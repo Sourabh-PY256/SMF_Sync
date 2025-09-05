@@ -33,9 +33,9 @@ public class InventoryRepo : IInventoryRepo
     }
 
     #region Inventory
-    public Inventory GetInventory(string Code)
+    public InventoryItemGroup GetInventory(string Code)
     {
-        Inventory returnValue = null;
+        InventoryItemGroup returnValue = null;
         using (EWP_Connection connection = new(ConnectionString))
         {
             try
@@ -55,7 +55,7 @@ public class InventoryRepo : IInventoryRepo
 
                 while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
                 {
-                    returnValue = new Inventory
+                    returnValue = new InventoryItemGroup
                     {
                         InventoryId = rdr["Code"].ToStr(),
                         Code = rdr["Code"].ToStr(),
@@ -85,9 +85,9 @@ public class InventoryRepo : IInventoryRepo
         }
         return returnValue;
     }
-    public List<Inventory> ListInventory(string Code = "", DateTime? DeltaDate = null)
+    public List<InventoryItemGroup> ListInventory(string Code = "", DateTime? DeltaDate = null)
     {
-        List<Inventory> returnValue = null;
+        List<InventoryItemGroup> returnValue = null;
         using (EWP_Connection connection = new(ConnectionString))
         {
             try
@@ -105,7 +105,7 @@ public class InventoryRepo : IInventoryRepo
 
                 while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
                 {
-                    Inventory element = new()
+                    InventoryItemGroup element = new()
                     {
                         InventoryId = rdr["Code"].ToStr(),
                         Code = rdr["Code"].ToStr(),
@@ -137,7 +137,7 @@ public class InventoryRepo : IInventoryRepo
         }
         return returnValue;
     }
-    public ResponseData MergeInventory(Inventory InventoryInfo, User systemOperator, bool Validation)
+    public ResponseData MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validation)
     {
         ResponseData returnValue = null;
         using (EWP_Connection connection = new(ConnectionString))

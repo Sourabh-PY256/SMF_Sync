@@ -41,7 +41,6 @@ public class MachineIcon
 	///
 	/// </summary>
 	public string MachinePath { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
@@ -147,6 +146,12 @@ public class Machine : ICloneable, ILoggableEntity
 	/// <summary>
 	///
 	/// </summary>
+	[GridCustomPropertyName("LocationName")]
+	public string BinLocationName { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	public string Location { get; set; }
 
 	/// <summary>
@@ -208,6 +213,14 @@ public class Machine : ICloneable, ILoggableEntity
 	[GridRequireDecode]
 	public string ParentCode { get; set; }
 
+	/// <summary>
+	///
+	/// </summary>
+	[GridCustomPropertyName("ProductionLineCode")]
+	[GridDrillDown("ProductionLine", "Code", "ParentCode")]
+	[GridRequireDecode]
+	public string ParentName { get; set; }
+
 	// Mismo dato que en TypeId
 
 	/// <summary>
@@ -248,6 +261,10 @@ public class Machine : ICloneable, ILoggableEntity
 	/// </summary>
 	public MachineProgramming Programming { get; set; }
 
+	/// <summary>
+	///
+	/// </summary>
+	public bool Planning { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -576,7 +593,11 @@ public class CapacityProduct
 	/// <summary>
 	///
 	/// </summary>
-	public int Status { get; set; }
+	//public string Status { get; set; }
+
+	// [GridLookUpEntity(null, "Status", "Id", "Name")]
+	[GridRequireTranslate]
+	public string Status { get; set; }
 
 	/// <summary>
 	///
@@ -740,24 +761,16 @@ public class MachineParam : IBehaviorMatch, ICloneable
 	///
 	/// </summary>
 	public string CustomBehaviorId { get; set; }
-    public  CustomBehavior customBehavior;
 
-    /// <summary>
-    ///
-    /// </summary>
-    public CustomBehavior GetCustomBehavior()
-    {
-        return customBehavior;
-    }
+	/// <summary>
+	///
+	/// </summary>
+	[JsonIgnore]
+	public CustomBehavior CustomBehavior { get; set; }
 
-    public void SetCustomBehavior(CustomBehavior value)
-    {
-        customBehavior = value;
-    }
-
-    /// <summary>Creates a new object that is a copy of the current instance.</summary>
-    /// <returns>A new object that is a copy of this instance.</returns>
-    public object Clone() => MemberwiseClone();
+	/// <summary>Creates a new object that is a copy of the current instance.</summary>
+	/// <returns>A new object that is a copy of this instance.</returns>
+	public object Clone() => MemberwiseClone();
 
 	/// <summary>Returns a string that represents the current object.</summary>
 	/// <returns>A string that represents the current object.</returns>
@@ -1149,7 +1162,7 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	public double MinimumCapacity { get; set; }
+	public int MinimumCapacity { get; set; }
 
 	/// <summary>
 	///

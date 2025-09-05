@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 namespace EWP.SF.Common.Models.Operations;
 
 
+
 /// <summary>
 ///
 /// </summary>
@@ -110,4 +111,25 @@ public class CustomDataRequest
 	///
 	/// </summary>
 	public string Program { get; set; }
+}
+
+public enum NotificationMessageType
+{
+	Message,
+	IntegrationMessage,
+	NotificationMessage
+}
+/// <summary>
+///
+/// </summary>
+public class CustomNotifyRequest
+{
+	/// <summary>
+	///
+	/// </summary>
+	public NotificationMessageType Type { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public object Message { get; set; }
 }

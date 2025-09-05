@@ -1,17 +1,57 @@
 
+/// <summary>
+///
+/// </summary>
 public class NotificationRequest
 {
-    public string UserId { get; set; }
-    public string Title { get; set; }
-    public string Message { get; set; }
-    public string Url { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string UserId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Title { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Message { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Url { get; set; }
 }
 
+/// <summary>
+///
+/// </summary>
 public class TokenPushNotification
 {
-    public string Token { get; set; }
-    public int UserId { get; set; }
-    public string Endpoint { get; set; }
-    public string Auth { get; set; }
-    public string PKey { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string Token { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public int UserId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Endpoint { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string Auth { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string PKey { get; set; }
 }

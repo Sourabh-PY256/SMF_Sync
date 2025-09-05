@@ -53,7 +53,7 @@ public static class SyncERPEntity
 
 	//public const string SCHEDULE_SERVICE = "ProductionOrderScheduling";
 
- 	public const string ALLOCATION_SERVICE = "StockAllocation";
+	public const string ALLOCATION_SERVICE = "StockAllocation";
 
 	public const string BIN_LOCATION_SERVICE = "BinLocation";
 
@@ -93,7 +93,7 @@ public static class SyncERPEntity
 
 	public const string FULL_STOCK_SERVICE = "FullStock";
 
-   public const string FULL_ALLOCATION_SERVICE = "FullStockAllocation";
+	public const string FULL_ALLOCATION_SERVICE = "FullStockAllocation";
 
 	public const string SUPPLY_SERVICE = "Supply";
 	public const string SUPPLY_MRP_SERVICE = "SupplyMRP";
@@ -103,6 +103,8 @@ public static class SyncERPEntity
 	public const string WAREHOUSE_SERVICE = "Warehouse";
 
 	public const string PROCESS_TYPE_SERVICE = "OperationSubtype";
+	
+	public const string ORDER_TRANSACTION_SERVICE = "OrderTransaction";
 	//public const string PROCEDURE_SERVICE = "Procedure";
 	// public const string IOT_DATA_SIMULATOR_SERVICE = "IoTDataSimulator";
 }

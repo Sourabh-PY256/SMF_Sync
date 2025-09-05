@@ -48,7 +48,7 @@ public class AssetOperation : IAssetOperation
                     }
                 case "WORKCENTER":
                     {
-                        x.AssetType = Entities.Workcenter.ToStr();
+                        x.AssetType = Entities.WorkCenter.ToStr();
                         break;
                     }
                 case "PRODUCTIONLINE":
@@ -122,7 +122,7 @@ public class AssetOperation : IAssetOperation
                         ResponseData resultWorkCenter = await CreateWorkCenter(currentAsset, user, Validate, Level, NotifyOnce).ConfigureAwait(false);
                         if (resultWorkCenter is not null)
                         {
-                            resultWorkCenter.Entity = Entities.Workcenter.ToStr();
+                            resultWorkCenter.Entity = Entities.WorkCenter.ToStr();
                             returntValue.Add(resultWorkCenter);
                         }
                         break;

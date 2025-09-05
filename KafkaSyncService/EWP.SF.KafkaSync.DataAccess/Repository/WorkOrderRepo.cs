@@ -1172,5 +1172,50 @@ public class WorkOrderRepo : IWorkOrderRepo
 		}
 		return returnValue;
 	}
+    /// <summary>
+	///
+	/// </summary>
+	public string UpdateMaterialManual(string transactionId, OrderComponent request, string employeeId, string workOrderId, string externalId, User systemOperator)
+	{
+		string returnValue = string.Empty;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Order_Trans_Material_INS", connection)
+				{
+					CommandType = CommandType.StoredProcedure,
+					CommandTimeout = 120000
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_TransactionId", transactionId, !string.IsNullOrEmpty(transactionId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Transaction"));
+				command.Parameters.AddCondition("_OrderCode", workOrderId, !string.IsNullOrEmpty(workOrderId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Work Order"));
+				//  command.Parameters.AddCondition("_MachineCode", request.MachineId, !string.IsNullOrEmpty(request.MachineId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Machine Id"));
+				command.Parameters.AddWithValue("_MachineCode", request.MachineId);
+				command.Parameters.AddCondition("_OperationNo", request.ProcessId, !string.IsNullOrEmpty(request.ProcessId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
+				command.Parameters.AddWithValue("_ItemCode", request.SourceId);
+				command.Parameters.AddWithValue("_LineId", request.LineId);
+				command.Parameters.AddWithValue("_Quantity", request.InputQty);
+				command.Parameters.AddWithValue("_EmployeeId", employeeId);
+				command.Parameters.AddCondition("_OriginalSourceId", request.OriginalSourceId, !string.IsNullOrEmpty(request.OriginalSourceId));
+				command.Parameters.AddCondition("_NewFactor", request.NewFactor, !string.IsNullOrEmpty(request.OriginalSourceId));
+				command.Parameters.AddCondition("_Operator", systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+				command.Parameters.AddCondition("_BatchesJSON", request.BatchesJson, !string.IsNullOrEmpty(request.BatchesJson));
+				command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+				command.Parameters.AddWithValue("_ExternalId", externalId);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				returnValue = command.ExecuteScalarAsync().ConfigureAwait(false).GetAwaiter().GetResult().ToStr();
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
 
 }

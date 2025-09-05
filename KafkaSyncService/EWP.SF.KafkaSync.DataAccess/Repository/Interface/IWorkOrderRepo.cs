@@ -19,6 +19,7 @@ public interface IWorkOrderRepo
     bool MergeWorkOrderByProducts(WorkOrder workorderInfo, string subproductXML, User systemOperator);
     bool MergeWorkOrderToolValues(WorkOrder workorderInfo, string toolValuesXML, User systemOperator);
     bool MergeWorkOrderLabor(WorkOrder workorderInfo, string JSONData, User systemOperator);
+    string UpdateMaterialManual(string transactionId, OrderComponent request, string employeeId, string workOrderId, string externalId, User systemOperator);
 
 
 

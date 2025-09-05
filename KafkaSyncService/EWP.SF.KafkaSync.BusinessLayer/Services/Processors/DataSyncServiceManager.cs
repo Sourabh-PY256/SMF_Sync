@@ -1,6 +1,8 @@
-﻿using EWP.SF.Common.Models;
+﻿using System.Net;
+using EWP.SF.Common.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 
@@ -44,46 +46,105 @@ public class DataSyncServiceManager
     public DataSyncService ServiceData { get; set; }
 }
 
-public async Task<ServiceValidationResult> ValidateAndGetService(
-    string serviceType, 
-    TriggerType trigger, 
-    ServiceExecOrigin execOrigin, 
-    string httpMethod = "GET")
+    public async Task<ServiceValidationResult> ValidateAndGetService(
+        string serviceType,
+        TriggerType trigger,
+        ServiceExecOrigin execOrigin,
+        string httpMethod = "GET")
+    {
+        var result = new ServiceValidationResult();
+        var dataService = await _operations.GetBackgroundService(serviceType, httpMethod.ToUpperInvariant()).ConfigureAwait(false);
+
+        if (dataService == null)
+        {
+            result.Status = -1;
+            result.Message = "Service does not exist!";
+            return result;
+        }
+
+        // EnableType enable = EnableType.No;
+        // if (trigger == TriggerType.Erp)
+        //     enable = dataService.ErpTriggerEnable;
+        // else if (trigger == TriggerType.SmartFactory)
+        //     enable = execOrigin == ServiceExecOrigin.Event ? dataService.SfTriggerEnable : dataService.ManualSyncEnable;
+
+        // if (enable != EnableType.Yes)
+        // {
+        //     result.Status = 0;
+        //     result.Message = "Service is disabled";
+        //     return result;
+        // }
+
+        if (dataService.Status != ServiceStatus.Active)
+        {
+            result.Status = 0;
+            result.Message = "Service is not active";
+            return result;
+        }
+
+        result.Status = 1;
+        result.Message = "Service execution request accepted";
+        result.ServiceData = dataService;
+        return result;
+    }
+public async Task<DataSyncHttpResponse> ExecuteServiceEndpoint(
+    string serviceName, 
+    string entityCode = "", 
+    string bodyData = "", 
+    string methodType = "GET",
+    User systemOperator = null)
 {
-    var result = new ServiceValidationResult();
-    var dataService = await _operations.GetBackgroundService(serviceType, httpMethod.ToUpperInvariant()).ConfigureAwait(false);
-
-    if (dataService == null)
+    try
     {
-        result.Status = -1;
-        result.Message = "Service does not exist!";
-        return result;
+        var httpClient = new HttpClient();
+        var dataSyncRequest = new DataSyncExecuteRequest
+        {
+            Services = new List<string> { serviceName },
+            EntityCode = entityCode,
+            BodyData = bodyData,
+            MethodType = methodType
+        };
+
+        var jsonContent = new StringContent(
+            JsonConvert.SerializeObject(dataSyncRequest),
+            System.Text.Encoding.UTF8,
+            "application/json"
+        );
+
+        var response = await httpClient.PostAsync(
+            "http://localhost:5118/DataSyncService/Producer",
+            jsonContent
+        ).ConfigureAwait(false);
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var responseModel = JsonConvert.DeserializeObject<ResponseModel>(responseContent);
+            return new DataSyncHttpResponse
+            {
+                StatusCode = HttpStatusCode.OK,
+                Message = JsonConvert.SerializeObject(responseModel?.Data)
+            };
+        }
+        else
+        {
+            return new DataSyncHttpResponse
+            {
+                StatusCode = response.StatusCode,
+                Message = responseContent
+            };
+        }
     }
-
-    // EnableType enable = EnableType.No;
-    // if (trigger == TriggerType.Erp)
-    //     enable = dataService.ErpTriggerEnable;
-    // else if (trigger == TriggerType.SmartFactory)
-    //     enable = execOrigin == ServiceExecOrigin.Event ? dataService.SfTriggerEnable : dataService.ManualSyncEnable;
-
-    // if (enable != EnableType.Yes)
-    // {
-    //     result.Status = 0;
-    //     result.Message = "Service is disabled";
-    //     return result;
-    // }
-
-    if (dataService.Status != ServiceStatus.Active)
+    catch (Exception ex)
     {
-        result.Status = 0;
-        result.Message = "Service is not active";
-        return result;
+        await InsertDataSyncServiceLog(serviceName, ex.Message, systemOperator ?? new User()).ConfigureAwait(false);
+        return new DataSyncHttpResponse
+        {
+            StatusCode = HttpStatusCode.InternalServerError,
+            Message = ex.Message
+        };
     }
-
-    result.Status = 1;
-    result.Message = "Service execution request accepted";
-    result.ServiceData = dataService;
-    return result;
 }
 
 	
