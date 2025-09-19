@@ -460,14 +460,15 @@ public class ComponentOperation : IComponentOperation
 								ProcessEntryProcess oldOperation = null;
 								if (editMode || !string.IsNullOrEmpty(pe.Id))
 								{
-									oldOperation = oldProcesses?.Find(x => x.ProcessId.ToDouble() == itmOperation.OperationNo.ToDouble());
+									oldOperation = oldProcesses?.Find(x => x.OperationNo.ToDouble() == itmOperation.OperationNo.ToDouble());
 								}
 								ProcessEntryProcess prc = new()
 								{
-									ProcessId = itmOperation.OperationNo.ToStr(),
+									OperationNo = itmOperation.OperationNo.ToStr(),
 									ProcessTypeId = CurrentOperationSubType.ProcessTypeId,
 									ProcessSubTypeId = CurrentOperationSubType.Code,
-									Name = CurrentOperationSubType.Name,
+									Name = itmOperation.OperationName ?? CurrentOperationSubType.Name,
+									//Name = CurrentOperationSubType.Name,
 									Step = Math.Floor(itmOperation.OperationNo).ToInt32(),
 									Sort = itmOperation.OperationNo == 0 ? 0 : (10 * (itmOperation.OperationNo.ToDecimal() % Math.Floor(itmOperation.OperationNo.ToDecimal()))).ToDouble().ToInt32(),
 									TransferType = null,
@@ -652,7 +653,7 @@ public class ComponentOperation : IComponentOperation
 									ProcessEntryProcess oldProcess = oldProcesses.Find(x => x.Name == prc.Name && x.ProcessTypeId == prc.ProcessTypeId && x.Step == prc.Step && x.Sort == prc.Sort);
 									if (oldProcess is not null)
 									{
-										prc.ProcessId = oldProcess.ProcessId;
+										prc.OperationNo = oldProcess.OperationNo;
 										OldOperationTimeType = oldProcess.ProcessTimeType.ToInt32();
 									}
 								}
@@ -686,7 +687,7 @@ public class ComponentOperation : IComponentOperation
 									tasks ??= [];
 									if (!editMode)
 									{
-										tasks.ForEach(tsk => tsk.ProcessId = prc.ProcessId);
+										tasks.ForEach(tsk => tsk.OperationNo = prc.OperationNo);
 										if (pe.Tasks is null)
 										{
 											pe.Tasks = tasks;
@@ -704,7 +705,7 @@ public class ComponentOperation : IComponentOperation
 											{
 												x.ManualDelete = true;
 											});
-											tsk.ProcessId = prc.ProcessId;
+											tsk.OperationNo = prc.OperationNo;
 											pe.Tasks.Add(tsk);
 										});
 									}
@@ -717,7 +718,7 @@ public class ComponentOperation : IComponentOperation
 										pe.Tasks.Add(new Activity
 										{
 											Id = tsk.Id,
-											ProcessId = prc.ProcessId,
+											OperationNo = prc.OperationNo,
 											SortId = tsk.SortId,
 											TriggerId = tsk.TriggerId,
 											IsMandatory = tsk.IsMandatory,
@@ -828,7 +829,7 @@ public class ComponentOperation : IComponentOperation
 									});
 								}
 								//Attributes
-								prc.Attributes?.ForEach(x => x.ProcessId = prc.ProcessId);
+								prc.Attributes?.ForEach(x => x.OperationNo = prc.OperationNo);
 								pe.Processes.Add(prc);
 							}
 							catch (ResponseDataException ex)
@@ -864,7 +865,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						pe.Tools.Where(tooling => string.IsNullOrEmpty(tooling.LineUID))?.ToList()?.ForEach(tlng =>
 						{
-							ProductOperationTool origTool = item.Operations.Find(x => x.OperationNo.ToDouble() == tlng.ProcessId.ToDouble())?.OperationTools.Find(ot => ot.ToolingCode == tlng.ToolId && ot.LineID == tlng.LineId.ToInt32());
+							ProductOperationTool origTool = item.Operations.Find(x => x.OperationNo.ToDouble() == tlng.OperationNo.ToDouble())?.OperationTools.Find(ot => ot.ToolingCode == tlng.ToolId && ot.LineID == tlng.LineId.ToInt32());
 							ProcessEntryTool oldTooling = oldTools?.Find(x => x.LineId.ToInt32() == tlng.LineId.ToInt32());
 							if (oldTooling is not null)
 							{
@@ -895,7 +896,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						pe.Labor.Where(elem => string.IsNullOrEmpty(elem.LineUID))?.ToList()?.ForEach(lbr =>
 						{
-							ProductOperationLabor origLbr = item.Operations.Find(x => x.OperationNo.ToDouble() == lbr.ProcessId.ToDouble())?.OperationLabor.Find(ot => ot.ProfileCode == lbr.LaborId && ot.LineID == lbr.LineId.ToInt32());
+							ProductOperationLabor origLbr = item.Operations.Find(x => x.OperationNo.ToDouble() == lbr.OperationNo.ToDouble())?.OperationLabor.Find(ot => ot.ProfileCode == lbr.LaborId && ot.LineID == lbr.LineId.ToInt32());
 							ProcessEntryLabor OldLabor = oldLabors?.Find(x => x.LineId.ToInt32() == lbr.LineId.ToInt32());
 							if (OldLabor is not null)
 							{
@@ -925,7 +926,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						pe.Components.Where(comp => string.IsNullOrEmpty(comp.LineUID))?.ToList()?.ForEach(cmp =>
 						{
-							ProductOperationItem origItm = item.Operations.Find(x => x.OperationNo.ToDouble() == cmp.ProcessId.ToDouble())?.OperationItems.Find(ot => ot.ItemCode == cmp.ComponentId && ot.LineID == cmp.LineId.ToInt32());
+							ProductOperationItem origItm = item.Operations.Find(x => x.OperationNo.ToDouble() == cmp.OperationNo.ToDouble())?.OperationItems.Find(ot => ot.ItemCode == cmp.ComponentId && ot.LineID == cmp.LineId.ToInt32());
 							ProcessEntryComponent oldComp = oldComponents?.Find(x => x.LineId.ToInt32() == cmp.LineId.ToInt32());
 							if (oldComp is not null)
 							{
@@ -1130,7 +1131,7 @@ public class ComponentOperation : IComponentOperation
 							{
 								foreach (SubProduct z in x.Subproducts)
 								{
-									z.ProcessId = x.ProcessId;
+									z.OperationNo = x.OperationNo;
 									if (string.IsNullOrEmpty(z.LineUID))
 									{
 										z.LineUID = Guid.NewGuid().ToString();
@@ -1161,7 +1162,7 @@ public class ComponentOperation : IComponentOperation
 							}
 							if (x.Alternatives is not null)
 							{
-								x.Alternatives.ForEach(z => { z.ProcessId = x.ProcessId; z.ComponentId = x.ComponentId; });
+								x.Alternatives.ForEach(z => { z.OperationNo = x.OperationNo; z.ComponentId = x.ComponentId; });
 								AllAlternatives.AddRange(x.Alternatives);
 							}
 						});
@@ -1197,7 +1198,7 @@ public class ComponentOperation : IComponentOperation
 								if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 								{
 									task.Id = newActivity.Id;
-									_ = _activityOperation.AssociateActivityProcessEntry(entryResult.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+									_ = _activityOperation.AssociateActivityProcessEntry(entryResult.Id, newActivity.OperationNo, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 								}
 							}
 							else
@@ -1206,7 +1207,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
 								}
-								_ = _activityOperation.AssociateActivityProcessEntry(entryResult.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+								_ = _activityOperation.AssociateActivityProcessEntry(entryResult.Id, task.OperationNo, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 							}
 						}
 					}
@@ -1235,7 +1236,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						if (x.Attributes is not null)
 						{
-							x.Attributes.ForEach(z => z.ProcessId = x.ProcessId);
+							x.Attributes.ForEach(z => z.OperationNo = x.OperationNo);
 						}
 						else
 						{
@@ -1322,7 +1323,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (x.Subproducts is not null)
 									{
-										x.Subproducts.ForEach(z => z.ProcessId = x.ProcessId);
+										x.Subproducts.ForEach(z => z.OperationNo = x.OperationNo);
 										AllSubProducts.AddRange(x.Subproducts);
 									}
 								});
@@ -1349,7 +1350,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (x.Alternatives is not null)
 									{
-										x.Alternatives.ForEach(z => { z.ProcessId = x.ProcessId; z.ComponentId = x.ComponentId; });
+										x.Alternatives.ForEach(z => { z.OperationNo = x.OperationNo; z.ComponentId = x.ComponentId; });
 										AllAlternatives.AddRange(x.Alternatives);
 									}
 								});
@@ -1385,12 +1386,12 @@ public class ComponentOperation : IComponentOperation
 											Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
 											if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 											{
-												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, newActivity.OperationNo, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 											}
 										}
 										else if (task.ManualDelete)
 										{
-											bool tempResult = _activityOperation.RemoveActivityProcessEntryAssociation(entryInfo.Id, task.ProcessId, task.Id, systemOperator);
+											bool tempResult = _activityOperation.RemoveActivityProcessEntryAssociation(entryInfo.Id, task.OperationNo, task.Id, systemOperator);
 										}
 										else
 										{
@@ -1405,11 +1406,11 @@ public class ComponentOperation : IComponentOperation
 												{
 													task.Id = clonedActivity.Id;
 												}
-												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.OperationNo, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 											}
 											else
 											{
-												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.OperationNo, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 											}
 										}
 									}
@@ -1439,7 +1440,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (x.Attributes is not null)
 									{
-										x.Attributes.ForEach(z => z.ProcessId = x.ProcessId);
+										x.Attributes.ForEach(z => z.OperationNo = x.OperationNo);
 									}
 									else
 									{
@@ -1493,7 +1494,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (x.Subproducts is not null)
 									{
-										x.Subproducts.ForEach(z => z.ProcessId = x.ProcessId);
+										x.Subproducts.ForEach(z => z.OperationNo = x.OperationNo);
 										AllSubProducts.AddRange(x.Subproducts);
 									}
 								});
@@ -1507,9 +1508,9 @@ public class ComponentOperation : IComponentOperation
 
 								entryInfo.Components.ForEach(x =>
 								{
-									if (string.IsNullOrEmpty(x.ProcessId))
+									if (string.IsNullOrEmpty(x.OperationNo))
 									{
-										x.ProcessId = Guid.NewGuid().ToString();
+										x.OperationNo = Guid.NewGuid().ToString();
 									}
 								});
 
@@ -1521,7 +1522,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (x.Alternatives is not null)
 									{
-										x.Alternatives.ForEach(z => { z.ProcessId = x.ProcessId; z.ComponentId = x.ComponentId; });
+										x.Alternatives.ForEach(z => { z.OperationNo = x.OperationNo; z.ComponentId = x.ComponentId; });
 										AllAlternatives.AddRange(x.Alternatives);
 									}
 								});
@@ -1542,12 +1543,12 @@ public class ComponentOperation : IComponentOperation
 											Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
 											if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 											{
-												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+												_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, newActivity.OperationNo, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 											}
 										}
 										else if (task.ManualDelete)
 										{
-											bool tempResult = _activityOperation.RemoveActivityProcessEntryAssociation(entryInfo.Id, task.ProcessId, task.Id, systemOperator);
+											bool tempResult = _activityOperation.RemoveActivityProcessEntryAssociation(entryInfo.Id, task.OperationNo, task.Id, systemOperator);
 										}
 										else
 										{
@@ -1555,7 +1556,7 @@ public class ComponentOperation : IComponentOperation
 											{
 												await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
 											}
-											_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+											_ = _activityOperation.AssociateActivityProcessEntry(entryInfo.Id, task.OperationNo, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 										}
 									}
 								}
@@ -1576,7 +1577,7 @@ public class ComponentOperation : IComponentOperation
 								{
 									if (x.Attributes is not null)
 									{
-										x.Attributes.ForEach(z => z.ProcessId = x.ProcessId);
+										x.Attributes.ForEach(z => z.OperationNo = x.OperationNo);
 									}
 									else
 									{
@@ -1651,7 +1652,7 @@ public class ComponentOperation : IComponentOperation
 			entryInfo.Labor ??= [];
 			entryInfo.Tools ??= [];
 
-			int duplicados = entryInfo.Labor.Where(x => !string.IsNullOrEmpty(x.MachineId)).Select(x => new { x.ProcessId, x.MachineId }).Concat(entryInfo.Tools.Where(x => !string.IsNullOrEmpty(x.MachineId)).Select(x => new { x.ProcessId, x.MachineId })).GroupBy(x => new { x.MachineId, x.ProcessId }).Where(g => g.Count() > 1).Select(y => y.Key).Count();
+			int duplicados = entryInfo.Labor.Where(x => !string.IsNullOrEmpty(x.MachineId)).Select(x => new { x.OperationNo, x.MachineId }).Concat(entryInfo.Tools.Where(x => !string.IsNullOrEmpty(x.MachineId)).Select(x => new { x.OperationNo, x.MachineId })).GroupBy(x => new { x.MachineId, x.OperationNo }).Where(g => g.Count() > 1).Select(y => y.Key).Count();
 
 			if (duplicados > 0)
 			{
@@ -1914,7 +1915,7 @@ public class ComponentOperation : IComponentOperation
 				{
 					foreach (SubProduct z in x.Subproducts)
 					{
-						z.ProcessId = x.ProcessId;
+						z.OperationNo = x.OperationNo;
 					}
 					AllSubProducts.AddRange(x.Subproducts);
 				}
@@ -1937,7 +1938,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						foreach (AlternativeComponent z in x.Alternatives)
 						{
-							z.ProcessId = x.ProcessId;
+							z.OperationNo = x.OperationNo;
 							z.ComponentId = x.ComponentId;
 						}
 						AllAlternatives.AddRange(x.Alternatives);
@@ -1970,7 +1971,7 @@ public class ComponentOperation : IComponentOperation
 						if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
 						{
 							task.Id = newActivity.Id;
-							_activityOperation.AssociateActivityProcessEntry(entryResult.Id, newActivity.ProcessId, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
+							_activityOperation.AssociateActivityProcessEntry(entryResult.Id, newActivity.OperationNo, newActivity.Id, newActivity.TriggerId, newActivity.SortId, newActivity.IsMandatory, newActivity.RawMaterials, systemOperator);
 						}
 					}
 					else
@@ -1979,7 +1980,7 @@ public class ComponentOperation : IComponentOperation
 						{
 							await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
 						}
-						_activityOperation.AssociateActivityProcessEntry(entryResult.Id, task.ProcessId, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
+						_activityOperation.AssociateActivityProcessEntry(entryResult.Id, task.OperationNo, task.Id, task.TriggerId, task.SortId, task.IsMandatory, task.RawMaterials, systemOperator);
 					}
 				}
 			}
@@ -2014,7 +2015,7 @@ public class ComponentOperation : IComponentOperation
 				{
 					foreach (ProcessEntryAttribute z in x.Attributes)
 					{
-						z.ProcessId = x.ProcessId;
+						z.OperationNo = x.OperationNo;
 					}
 				}
 				else

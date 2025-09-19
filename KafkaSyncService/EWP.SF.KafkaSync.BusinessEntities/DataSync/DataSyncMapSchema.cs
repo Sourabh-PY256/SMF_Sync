@@ -11,4 +11,13 @@ public class DataSyncMapSchema
 	public string DefaultValue { get; set; }
 
 	public List<DataSyncMapSchema> Children { get; set; }
+	   //  Added MappingValues support
+    public List<MappingValue> MappingValues { get; set; }
 }
+
+public class MappingValue
+{
+    public string SFValue { get; set; }
+    public string ERPValue { get; set; }
+}
+

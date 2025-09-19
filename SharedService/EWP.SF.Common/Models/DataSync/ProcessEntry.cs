@@ -302,10 +302,16 @@ public class ProcessEntryProcess
 		logger = LogManager.GetCurrentClassLogger();
 	}
 
+	 /// <summary>
+	 ///
+	 /// </summary>
+	 public string ProcessId { get; set; }
+
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
+
 
 	/// <summary>
 	///
@@ -517,7 +523,9 @@ public class ProcessEntryLabor
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -598,7 +606,9 @@ public class ProcessEntryTool
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -669,7 +679,8 @@ public class ProcessEntryAttribute
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -695,7 +706,9 @@ public class SubProduct
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -985,7 +998,8 @@ public class ProcessEntryComponent
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///

@@ -18,6 +18,7 @@ public  class DataImportOperation : IDataImportOperation
 {
 
 	//private readonly IComponentOperation _componentOperation;
+		private readonly IComponentRepo _componentRepo;
 
 	private readonly IDeviceOperation _deviceOperation;
 	private readonly IMeasureUnitOperation _measureUnitOperation;
@@ -32,6 +33,7 @@ public  class DataImportOperation : IDataImportOperation
 
 	public DataImportOperation(
 	//IComponentOperation componentOperation,
+	 IComponentRepo componentRepo,
 	IMeasureUnitOperation measureUnitOperation,
 	IProcessTypeOperation processTypeOperation,
 	ICatalogRepo catalogRepo,
@@ -43,6 +45,7 @@ public  class DataImportOperation : IDataImportOperation
 	IProcedureOperation procedureOperation,
 	IDataImportRepo dataImportRepo){
 		//_componentOperation = componentOperation;
+		_componentRepo = componentRepo;
 		_measureUnitOperation = measureUnitOperation;
 		_processTypeOperation = processTypeOperation;
 		_catalogRepo = catalogRepo;
@@ -788,7 +791,7 @@ public  class DataImportOperation : IDataImportOperation
 					IsAvailable = string.Equals(task.Available.Trim(), "YES", StringComparison.OrdinalIgnoreCase),
 					IsShift = false,
 					Origin = OriginActivity.Product.ToStr(),
-					ProcessId = currentProcess.ProcessId,
+					OperationNo = currentProcess.OperationNo,
 					ActivityClassId = activityClassId,
 					ActivityTypeId = activityTypeId,
 					TriggerId = triggerId,
@@ -888,14 +891,14 @@ public  class DataImportOperation : IDataImportOperation
 			ProcessType processType = processTypes.Find(pt => string.Equals(pt.Code, op.OperationType, StringComparison.OrdinalIgnoreCase));
 			if (processType is not null)
 			{
-				ProcessEntryProcess process = pe.Processes.Find(pr => pr.ProcessTypeId == processType.Id);
+				ProcessEntryProcess process = pe.Processes.Find(pr => pr.OperationNo.ToDouble() == op.OperationNo.ToDouble());
 				op.OperationTools ??= [];
 				op.OperationTools.ForEach(tool =>
 				{
 					ToolType currentTool = _toolOperation.ListToolTypes(tool.ToolingCode).Find(x => x.Status != Status.Failed);
 					int UsageId = Array.IndexOf(RegularExpression.UsageRegex.Split('|'), tool.Usage) + 1;
 					returnValue.Add(
-					 new ProcessEntryTool { ProcessId = process.ProcessId, LineId = tool.LineID.ToStr(), ToolId = currentTool.Id, MachineId = "", Quantity = tool.Quantity, Schedule = tool.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = tool.Comments, IsBackflush = tool.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = tool.Source }
+					 new ProcessEntryTool { OperationNo = process.OperationNo, LineId = tool.LineID.ToStr(), ToolId = currentTool.Id, MachineId = "", Quantity = tool.Quantity, Schedule = tool.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = tool.Comments, IsBackflush = tool.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = tool.Source }
 					 );
 				});
 
@@ -907,7 +910,7 @@ public  class DataImportOperation : IDataImportOperation
 								ToolType currentTool = _toolOperation.ListToolTypes(tool.ToolingCode).Find(x => x.Status != Status.Failed);
 								int UsageId = Array.IndexOf(RegularExpression.UsageRegex.Split('|'), tool.Usage) + 1;
 								returnValue.Add(
-								 new ProcessEntryTool { ProcessId = process.ProcessId, LineId = tool.LineID.ToStr(), ToolId = currentTool.Id, MachineId = currentMachine?.Id, Quantity = tool.Quantity, Schedule = tool.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = tool.Comments, IsBackflush = tool.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = tool.Source }
+								 new ProcessEntryTool { OperationNo = process.OperationNo, LineId = tool.LineID.ToStr(), ToolId = currentTool.Id, MachineId = currentMachine?.Id, Quantity = tool.Quantity, Schedule = tool.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = tool.Comments, IsBackflush = tool.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = tool.Source }
 								 );
 							});
 					});
@@ -935,14 +938,14 @@ public  class DataImportOperation : IDataImportOperation
 			ProcessType processType = processTypes.Find(pt => string.Equals(pt.Code, op.OperationType, StringComparison.OrdinalIgnoreCase));
 			if (processType is not null)
 			{
-				ProcessEntryProcess process = pe.Processes.Find(pr => pr.ProcessId.ToDouble() == op.OperationNo.ToDouble());
+				ProcessEntryProcess process = pe.Processes.Find(pr => pr.OperationNo.ToDouble() == op.OperationNo.ToDouble());
 				op.OperationLabor ??= [];
 				op.OperationLabor.ForEach(prof =>
 				{
 					CatProfile currentProfile = _catalogRepo.GetCatalogProfile(prof.ProfileCode).Find(x => x.Status != Status.Failed);
 					int UsageId = Array.IndexOf(RegularExpression.UsageRegex.Split('|'), prof.Usage) + 1;
 					returnValue.Add(
-					 new ProcessEntryLabor { ProcessId = process.ProcessId, LineId = prof.LineID.ToStr(), LaborId = currentProfile.ProfileId, MachineId = "", Quantity = prof.Quantity, Schedule = prof.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = prof.Comments, IsBackflush = prof.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = prof.Source }
+					 new ProcessEntryLabor { OperationNo = process.OperationNo, LineId = prof.LineID.ToStr(), LaborId = currentProfile.ProfileId, MachineId = "", Quantity = prof.Quantity, Schedule = prof.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = prof.Comments, IsBackflush = prof.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = prof.Source }
 					 );
 				});
 
@@ -954,7 +957,7 @@ public  class DataImportOperation : IDataImportOperation
 								CatProfile currentProfile = _catalogRepo.GetCatalogProfile(prof.ProfileCode).Find(x => x.Status != Status.Failed);
 								int UsageId = Array.IndexOf(RegularExpression.UsageRegex.Split('|'), prof.Usage) + 1;
 								returnValue.Add(
-								 new ProcessEntryLabor { ProcessId = process.ProcessId, LineId = prof.LineID.ToStr(), LaborId = currentProfile.ProfileId, MachineId = currentMachine.Id, Quantity = prof.Quantity, Schedule = prof.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = prof.Comments, IsBackflush = prof.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = prof.Source }
+								 new ProcessEntryLabor { OperationNo = process.OperationNo, LineId = prof.LineID.ToStr(), LaborId = currentProfile.ProfileId, MachineId = currentMachine.Id, Quantity = prof.Quantity, Schedule = prof.Schedule.ToStr().Equals("YES", StringComparison.OrdinalIgnoreCase), Usage = UsageId.ToStr(), Cost = 1, Comments = prof.Comments, IsBackflush = prof.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase), Source = prof.Source }
 								 );
 							});
 					});
@@ -980,14 +983,14 @@ public  class DataImportOperation : IDataImportOperation
 			ProcessType processType = processTypes.Find(pt => string.Equals(pt.Code, op.OperationType, StringComparison.OrdinalIgnoreCase));
 			if (processType is not null)
 			{
-				ProcessEntryProcess process = pe.Processes.Find(pr => pr.ProcessId.ToDouble() == op.OperationNo.ToDouble());
+				ProcessEntryProcess process = pe.Processes.Find(pr => pr.OperationNo.ToDouble() == op.OperationNo.ToDouble());
 
 				if (op.OperationItems is not null)
 				{
-					/*
+					
 					foreach (ProductOperationItem itm in op.OperationItems)
 					{
-						Component opComp = (await _componentOperation.GetComponents(itm.ItemCode, true).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
+						Component opComp = (await _componentRepo.ListComponents(itm.ItemCode, true).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
 						if (opComp is not null)
 						{
 							MeasureUnit itmUnit = units.FirstOrDefault(x => string.Equals(x.Code, itm.InventoryUoM, StringComparison.OrdinalIgnoreCase));
@@ -996,7 +999,7 @@ public  class DataImportOperation : IDataImportOperation
 								itm.Schedule = "YES";
 							}
 							returnValue.Add(
-							 new ProcessEntryComponent { ProcessId = process.ProcessId, Code = itm.ItemCode, ComponentId = opComp.Id, ComponentType = ComponentType.Material, Quantity = itm.Quantity, Step = process.Step, ProcessTypeId = process.ProcessTypeId, Name = opComp.Name, UnitId = itmUnit.Code, WarehouseCode = itm.WarehouseCode, IsBackflush = itm.IssueMethod.Contains("backflush", StringComparison.OrdinalIgnoreCase), LineId = itm.LineID.ToStr(), Source = itm.Source, Class = string.Equals(itm.Type.ToStr(), "MATERIAL", StringComparison.OrdinalIgnoreCase) ? 1 : 2, Comments = itm.Comments, IsSchedule = itm.Schedule.ToStr().Equals("YES", StringComparison.Ordinal) }
+							 new ProcessEntryComponent { OperationNo = process.OperationNo, Code = itm.ItemCode, ComponentId = opComp.Id, ComponentType = ComponentType.Material, Quantity = itm.Quantity, Step = process.Step, ProcessTypeId = process.ProcessTypeId, Name = opComp.Name, UnitId = itmUnit.Code, WarehouseCode = itm.WarehouseCode, IsBackflush = itm.IssueMethod.Contains("backflush", StringComparison.OrdinalIgnoreCase), LineId = itm.LineID.ToStr(), Source = itm.Source, Class = string.Equals(itm.Type.ToStr(), "MATERIAL", StringComparison.OrdinalIgnoreCase) ? 1 : 2, Comments = itm.Comments, IsSchedule = itm.Schedule.ToStr().Equals("YES", StringComparison.Ordinal) }
 							 );
 						}
 						else
@@ -1005,7 +1008,7 @@ public  class DataImportOperation : IDataImportOperation
 						}
 					}
 				
-				*/}
+				}
 			}
 			else
 			{

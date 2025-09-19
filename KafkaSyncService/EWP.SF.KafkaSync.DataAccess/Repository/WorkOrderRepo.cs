@@ -319,7 +319,7 @@ public class WorkOrderRepo : IWorkOrderRepo
                 Activity task = new()
                 {
                     Id = rdr[activityIdOrdinal].ToStr(),
-                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    OperationNo = rdr[operationNoOrdinal].ToStr(),
                     AssetId = rdr[machineCodeOrdinal].ToStr(),
                     Name = rdr[nameOrdinal].ToStr(),
                     TriggerId = rdr[triggerIdOrdinal].ToInt32(),
@@ -365,7 +365,7 @@ public class WorkOrderRepo : IWorkOrderRepo
             {
                 SubProduct subproduct = new()
                 {
-                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    OperationNo = rdr[operationNoOrdinal].ToStr(),
                     ComponentId = rdr[itemCodeOrdinal].ToStr(),
                     Factor = rdr[factorOrdinal].ToDouble(),
                     Quantity = rdr[acceptedQtyOrdinal].ToDouble(),
@@ -411,7 +411,7 @@ public class WorkOrderRepo : IWorkOrderRepo
             {
                 WorkOrderLabor labor = new()
                 {
-                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    OperationNo = rdr[operationNoOrdinal].ToStr(),
                     LaborId = rdr[positionCodeOrdinal].ToStr(),
                     LineId = rdr[lineNoOrdinal].ToStr(),
                     MachineId = rdr[machineCodeOrdinal].ToStr(),
@@ -455,7 +455,7 @@ public class WorkOrderRepo : IWorkOrderRepo
             {
                 WorkOrderTool tool = new()
                 {
-                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    OperationNo = rdr[operationNoOrdinal].ToStr(),
                     ToolId = rdr[toolIdOrdinal].ToStr(),
                     PlannedQty = rdr[plannedQtyOrdinal].ToDouble(),
                     Quantity = rdr[quantityOrdinal].ToDouble(),
@@ -521,7 +521,7 @@ public class WorkOrderRepo : IWorkOrderRepo
                 {
                     ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
                     ProcessSubTypeId = rdr[operationSubtypeCodeOrdinal].ToStr(),
-                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    OperationNo = rdr[operationNoOrdinal].ToStr(),
                     Step = rdr[stepOrdinal].ToInt32(),
                     ProductionLineId = rdr[parentCodeOrdinal].ToStr(),
                     MachineId = rdr[machineCodeOrdinal].ToStr(),
@@ -614,7 +614,7 @@ public class WorkOrderRepo : IWorkOrderRepo
             {
                 OrderComponent component = new()
                 {
-                    ProcessId = rdr[operationNoOrdinal].ToStr(),
+                    OperationNo = rdr[operationNoOrdinal].ToStr(),
                     ComponentType = ComponentType.Material,
                     SourceId = rdr[itemCodeOrdinal].ToStr(),
                     ComponentName = rdr[itemNameOrdinal].ToStr(),
@@ -1192,7 +1192,7 @@ public class WorkOrderRepo : IWorkOrderRepo
 				command.Parameters.AddCondition("_OrderCode", workOrderId, !string.IsNullOrEmpty(workOrderId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Work Order"));
 				//  command.Parameters.AddCondition("_MachineCode", request.MachineId, !string.IsNullOrEmpty(request.MachineId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Machine Id"));
 				command.Parameters.AddWithValue("_MachineCode", request.MachineId);
-				command.Parameters.AddCondition("_OperationNo", request.ProcessId, !string.IsNullOrEmpty(request.ProcessId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
+				command.Parameters.AddCondition("_OperationNo", request.OperationNo, !string.IsNullOrEmpty(request.OperationNo), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Process Id"));
 				command.Parameters.AddWithValue("_ItemCode", request.SourceId);
 				command.Parameters.AddWithValue("_LineId", request.LineId);
 				command.Parameters.AddWithValue("_Quantity", request.InputQty);

@@ -95,10 +95,10 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 					{
 						throw new Exception("Order Doesn't Exists");
 					}
-					if (wo.Processes.FirstOrDefault(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
-					{
-						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
-					}
+					// if (wo.Processes.FirstOrDefault(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					// {
+					// 	throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
+					// }
 					// Data
 					OrderTransactionProduct orderTransactionInfo = new()
 					{
@@ -241,7 +241,7 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 					{
 						throw new Exception("Order Doesn't Exists");
 					}
-					if (wo.Processes.FirstOrDefault(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.FirstOrDefault(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}

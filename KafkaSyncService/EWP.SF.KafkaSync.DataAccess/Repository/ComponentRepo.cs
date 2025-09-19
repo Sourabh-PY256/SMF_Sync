@@ -631,7 +631,7 @@ public class ComponentRepo : IComponentRepo
                         // Process additional result sets, similar to your original method
                         if (!string.IsNullOrEmpty(id) || (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(warehouse) && sequence > 0))
                         {
-                            //await ProcessAdditionalResultsAsync(rdr, returnValue, cancel).ConfigureAwait(false);
+                            await ProcessAdditionalResultsAsync(rdr, returnValue, cancel).ConfigureAwait(false);
                         }
                     }
                 }
@@ -650,6 +650,7 @@ public class ComponentRepo : IComponentRepo
             }
         }
     }
+    
     private static async Task ProcessAdditionalResultsAsync(MySqlDataReader rdr, List<ProcessEntry> returnValue, CancellationToken cancel)
     {
         // Processing ProcessEntryProcess
@@ -695,7 +696,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryProcess element = new()
                     {
-                        ProcessId = rdr[operationNoOrdinal].ToStr(),
+                        OperationNo = rdr[operationNoOrdinal].ToStr(),
                         ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
                         ProcessSubTypeId = rdr[operationSubtypeCodeOrdinal].ToStr(),
                         OperationClassId = rdr[operationClassIdOrdinal].ToInt32(),
@@ -764,7 +765,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryComponent element = new()
                     {
-                        ProcessId = rdr[operationNoOrdinal].ToStr(),
+                        OperationNo = rdr[operationNoOrdinal].ToStr(),
                         ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
                         ComponentType = ComponentType.Material,
                         ComponentId = rdr[itemCodeOrdinal].ToStr(),
@@ -814,7 +815,7 @@ public class ComponentRepo : IComponentRepo
                     Activity element = new()
                     {
                         Id = rdr[activityIdOrdinal].ToStr(),
-                        ProcessId = rdr[operationNoOrdinal].ToStr(),
+                        OperationNo = rdr[operationNoOrdinal].ToStr(),
                         Name = rdr[nameOrdinal].ToStr(),
                         TriggerId = rdr[triggerIdOrdinal].ToInt32(),
                         SortId = rdr[sortIdOrdinal].ToInt32(1),
@@ -859,7 +860,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     string processId = rdr[operationNoOrdinal].ToStr();
                     string componentId = rdr[itemCodeOrdinal].ToStr();
-                    ProcessEntryComponent component = entry.Components?.FirstOrDefault(x => x.ProcessId == processId && x.ComponentId == componentId);
+                    ProcessEntryComponent component = entry.Components?.FirstOrDefault(x => x.OperationNo == processId && x.ComponentId == componentId);
                     if (component is not null)
                     {
                         AlternativeComponent element = new()
@@ -905,8 +906,8 @@ public class ComponentRepo : IComponentRepo
                 ProcessEntry entry = returnValue.Find(x => x.Id == rdr[productIdOrdinal].ToStr());
                 if (entry is not null)
                 {
-                    string processid = rdr[operationNoOrdinal].ToStr();
-                    ProcessEntryProcess process = entry.Processes.Find(x => x.ProcessId == processid);
+                    string operationNo = rdr[operationNoOrdinal].ToStr();
+                    ProcessEntryProcess process = entry.Processes.Find(x => x.OperationNo == operationNo);
                     if (process is not null)
                     {
                         SubProduct element = new()
@@ -958,7 +959,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryLabor element = new()
                     {
-                        ProcessId = rdr[operationNoOrdinal].ToStr(),
+                        OperationNo = rdr[operationNoOrdinal].ToStr(),
                         LaborId = rdr[positionCodeOrdinal].ToStr(),
                         Id = rdr[positionCodeOrdinal].ToStr(),
                         LineId = rdr[lineNoOrdinal].ToInt32().ToStr(),
@@ -1006,7 +1007,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryTool element = new()
                     {
-                        ProcessId = rdr[operationNoOrdinal].ToStr(),
+                        OperationNo = rdr[operationNoOrdinal].ToStr(),
                         ToolId = rdr[toolingTypeCodeOrdinal].ToStr(),
                         Id = rdr[toolingTypeCodeOrdinal].ToStr(),
                         LineId = rdr[lineNoOrdinal].ToInt32().ToStr(),
@@ -1043,14 +1044,14 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryAttribute element = new()
                     {
-                        ProcessId = rdr[operationNoOrdinal].ToStr(),
+                        OperationNo = rdr[operationNoOrdinal].ToStr(),
                         AttributeId = rdr[attributeCodeOrdinal].ToStr(),
                         Id = rdr[attributeCodeOrdinal].ToStr(),
                         Selected = rdr[isSelectedOrdinal].ToBool(),
                         Value = rdr[valueOrdinal].ToStr()
                     };
 
-                    ProcessEntryProcess process = entry.Processes?.Find(x => x.ProcessId == element.ProcessId);
+                    ProcessEntryProcess process = entry.Processes?.Find(x => x.OperationNo == element.OperationNo);
                     if (process is not null)
                     {
                         (process.Attributes ??= []).Add(element);
@@ -1059,6 +1060,8 @@ public class ComponentRepo : IComponentRepo
             }
         }
     }
+    
+    
     /// <summary>
     ///
     /// </summary>

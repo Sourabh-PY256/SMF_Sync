@@ -84,7 +84,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						throw new Exception("Order Doesn't Exists");
 					}
 
-					if (wo.Processes.Find(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.Find(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}
@@ -118,20 +118,23 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 								if (!wo.Components.Any(comp => comp.SourceId == otItem.ItemCode && otItem.LineID == otItem.LineID))
 								{
 								}
-								if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
-								{
-									throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
-								}
+								//Need to discuss because acumatica given defaut lots in case of NON-Tracking Item
+								// if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
+								// {
+
+								// 	throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
+								// }
 								if (objItem.ManagedBy == 2 && (otItem.Lots is null || otItem.Lots.Count == 0))
 								{
 									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
 								}
+								//Not Implement Yet 
 								// if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
 								// {
 								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
 								// }
 
-								if (otItem.Lots.Count > 0)
+								if (objItem.ManagedBy != 1 && otItem.Lots.Count > 0)
 								{
 									decimal lotQty = otItem.Lots.Sum(s => s.Quantity);
 									if (otItem.Quantity.ToDouble() != lotQty.ToDouble())
@@ -268,7 +271,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						throw new Exception("Order Doesn't Exists");
 					}
 
-					if (wo.Processes.Find(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.Find(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}
@@ -304,10 +307,10 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 								{
 									throw new Exception(string.Format("Production order {0} does not have material {1} on LineNo {2}", wo.Id, otItem.ItemCode, otItem.LineID));
 								}
-								if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
-								{
-									throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
-								}
+								// if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
+								// {
+								// 	throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
+								// }
 								if (objItem.ManagedBy == 2 && (otItem.Lots is null || otItem.Lots.Count == 0))
 								{
 									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
@@ -316,7 +319,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 								// {
 								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
 								// }
-								if (otItem.Lots.Count > 0)
+								if ( objItem.ManagedBy != 1 && otItem.Lots.Count > 0)
 								{
 									decimal lotQty = otItem.Lots.Sum(s => s.Quantity);
 									if (otItem.Quantity.ToDouble() != lotQty.ToDouble())
@@ -452,7 +455,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						throw new Exception("Order Doesn't Exists");
 					}
 
-					if (wo.Processes.Find(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.Find(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}

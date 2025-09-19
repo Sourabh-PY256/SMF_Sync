@@ -286,6 +286,7 @@ public class AlternativeComponent
 	///
 	/// </summary>
 	public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -955,6 +956,7 @@ public class ProductOperation
 	[Key]
 	[MaxLength(100)]
 	public string OperationSubtype { get; set; }
+	
 
 	/// <summary>
 	///
@@ -1013,6 +1015,12 @@ public class ProductOperation
 	/// </summary>
 	[MaxLength(100)]
 	public string OutputUoM { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[MaxLength(100)]
+	public string OperationName { get; set; }
 
 	/// <summary>
 	///

@@ -13,26 +13,35 @@ public interface IApplicationSettings
 	/// <summary>
 	/// Gets the connection string for the specified connection name.
 	/// </summary>
+	/// <param name="connectionName"></param>
+	/// <returns></returns>
 	string GetConnectionString(string connectionName = "Main");
 
 	/// <summary>
 	/// Gets the connection string for the reports database.
 	/// </summary>
+	/// <returns></returns>
 	string GetReportsConnectionString();
 
 	/// <summary>
 	/// Gets the application setting value for the specified setting name.
 	/// </summary>
+	/// <param name="settingName"></param>
+	/// <returns></returns>
 	string GetAppSetting(string settingName);
 
 	/// <summary>
 	/// Checks if the application settings contain a specific key.
 	/// </summary>
+	/// <param name="settingName"></param>
+	/// <returns></returns>
 	bool ContainsKey(string settingName);
 
 	/// <summary>
 	/// Gets the database name from the connection string for the specified connection name.
 	/// </summary>
+	/// <param name="connectionName"></param>
+	/// <returns></returns>
 	string GetDatabaseFromConnectionString(string connectionName = "Main");
 }
 
@@ -41,7 +50,7 @@ public interface IApplicationSettings
 /// </summary>
 public class ApplicationSettings : IApplicationSettings
 {
-	private static readonly Lazy<ApplicationSettings> _instance = new(static () => new ApplicationSettings());
+	private static readonly Lazy<ApplicationSettings> _instance = new(() => new ApplicationSettings());
 	private readonly IConfiguration? _configuration;
 
 	// Cached values (called once)
@@ -61,35 +70,20 @@ public class ApplicationSettings : IApplicationSettings
 	/// </summary>
 	public ApplicationSettings()
 	{
-#if DEBUG
-		string appDirectory = Directory.GetCurrentDirectory();
-#else
-		string appDirectory = AppContext.BaseDirectory;
-#endif
-		string settingsDirectory1 = Path.GetFullPath(Path.Combine(appDirectory, "..", "Settings"));
-		string settingsDirectory2 = Path.GetFullPath(Path.Combine(appDirectory, "..", "..", "Settings"));
-
-		string settingsDirectory;
-		if (Directory.Exists(settingsDirectory1))
-		{
-			settingsDirectory = settingsDirectory1;
-		}
-		else if (Directory.Exists(settingsDirectory2))
-		{
-			settingsDirectory = settingsDirectory2;
-		}
-		else
-		{
-			throw new DirectoryNotFoundException("Settings directory not found in either location.");
-		}
-
+		// _configuration = new ConfigurationBuilder()
+		// 	.SetBasePath(Directory.GetCurrentDirectory())
+		// 	.AddJsonFile(Path.GetFullPath(Path.Combine("../..", "Settings", "appsettings.json")), optional: false, reloadOnChange: false)
+		// 	.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+		// 	.AddJsonFile(Path.GetFullPath(Path.Combine("../..", "Settings", "appsettings.ConnectionStrings.json")), optional: false, reloadOnChange: false)
+		// 	.AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false)
+		// 	.Build();
 		_configuration = new ConfigurationBuilder()
-			.SetBasePath(appDirectory)
-			.AddJsonFile(Path.Combine(settingsDirectory, "appsettings.json"), optional: false, reloadOnChange: false)
-			.AddJsonFile(Path.Combine(appDirectory, "appsettings.json"), optional: true, reloadOnChange: false)
-			.AddJsonFile(Path.Combine(settingsDirectory, "appsettings.ConnectionStrings.json"), optional: false, reloadOnChange: false)
-			.AddJsonFile(Path.Combine(appDirectory, "appsettings.ConnectionStrings.json"), optional: true, reloadOnChange: false)
-			.Build();
+	.SetBasePath(Directory.GetCurrentDirectory())
+	.AddJsonFile("Settings/appsettings.json", optional: false, reloadOnChange: false)
+	.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+	.AddJsonFile("Settings/appsettings.ConnectionStrings.json", optional: false, reloadOnChange: false)
+	.AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false)
+	.Build();
 
 		// Cache values during object construction
 		appName = Common.GetProjectName();
@@ -103,6 +97,7 @@ public class ApplicationSettings : IApplicationSettings
 	/// <summary>
 	/// Initializes a new instance of the <see cref="ApplicationSettings"/> class with the specified configuration.
 	/// </summary>
+	/// <param name="configuration"></param>
 	public ApplicationSettings(IConfiguration configuration)
 	{
 		_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -118,24 +113,27 @@ public class ApplicationSettings : IApplicationSettings
 	/// <summary>
 	/// Gets the connection string for the specified connection name.
 	/// </summary>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="connectionName"></param>
+	/// <returns></returns>
 	public string GetConnectionString(string connectionName = "Main")
 	{
 		return _configuration?.GetConnectionString(connectionName)?
 			.Replace("{App}", appName, StringComparison.InvariantCultureIgnoreCase)
-			.Replace("{User}", repoUser, StringComparison.InvariantCultureIgnoreCase) ??
-			throw new InvalidOperationException($"Connection string '{connectionName}' not found.");
+			.Replace("{User}", repoUser, StringComparison.InvariantCultureIgnoreCase)
+			?? throw new InvalidOperationException($"Connection string '{connectionName}' not found.");
 	}
 
 	/// <summary>
 	/// Gets the connection string for the reports database.
 	/// </summary>
+	/// <returns></returns>
 	public string GetReportsConnectionString() => GetConnectionString("Reports");
 
 	/// <summary>
 	/// Gets the application setting value for the specified setting name.
 	/// </summary>
-	/// <exception cref="KeyNotFoundException"></exception>
+	/// <param name="settingName"></param>
+	/// <returns></returns>
 	public string GetAppSetting(string settingName)
 	{
 		string? value = _configuration?.GetSection("AppSettings")?[settingName];
@@ -146,35 +144,33 @@ public class ApplicationSettings : IApplicationSettings
 
 		// If the setting is nested, handle OS-specific conditions
 		IConfigurationSection? section = _configuration?.GetSection(settingName);
-		return section?.Exists() == true ?
-			section[osKey] ??
-				section["Windows"] ??
-				throw new KeyNotFoundException($"Setting '{settingName}' not found.") :
-			throw new KeyNotFoundException($"Setting '{settingName}' not found.");
-	}
+		if (section?.Exists() == true)
+		{
+			return section[osKey]
+				?? section["Windows"]
+				?? throw new KeyNotFoundException($"Setting '{settingName}' not found.");
+		}
 
-	/// <summary>
-	/// Gets the application setting value for the specified setting name.
-	/// </summary>
-	/// <exception cref="KeyNotFoundException"></exception>
-	public IConfigurationSection? GetSection(string settingName)
-	{
-		return _configuration?.GetSection(settingName);
+		throw new KeyNotFoundException($"Setting '{settingName}' not found.");
 	}
 
 	/// <summary>
 	/// Checks if the application settings contain a specific key.
 	/// </summary>
+	/// <param name="settingName"></param>
+	/// <returns></returns>
 	public bool ContainsKey(string settingName) => _configuration?.GetSection("AppSettings")?.GetChildren().Any(x => x.Key == settingName) ?? false;
 
 	/// <summary>
 	/// Gets the database name from the connection string for the specified connection name.
 	/// </summary>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="connectionName"></param>
+	/// <returns></returns>
 	public string GetDatabaseFromConnectionString(string connectionName = "Main")
 	{
 		string connectionString = GetConnectionString(connectionName);
 		DbConnectionStringBuilder builder = new() { ConnectionString = connectionString };
-		return builder["Database"]?.ToString() ?? throw new InvalidOperationException($"Database parameter for '{connectionName}' not found.");
+		return builder["Database"]?.ToString()
+			?? throw new InvalidOperationException($"Database parameter for '{connectionName}' not found.");
 	}
 }

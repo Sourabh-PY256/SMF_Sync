@@ -290,6 +290,7 @@ public class Activity : ICloneable, ILoggableEntity
 	///
 	/// </summary>
 	public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///

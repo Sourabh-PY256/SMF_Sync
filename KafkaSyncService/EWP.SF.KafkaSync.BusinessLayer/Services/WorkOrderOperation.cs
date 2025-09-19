@@ -455,7 +455,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					// status
 
 					OrderProcess process = wo.Processes.Find(wop => wop.IsOutput) ?? throw new Exception("Error finding last operation");
-					transaction.OperationNo = process.ProcessId.ToDouble();
+					transaction.OperationNo = process.OperationNo.ToDouble();
 					List<ReturnMaterialContext> orderContext = GetProductReturnContext(transaction.OrderCode, systemOperator);
 
 					transaction.Items.ForEach(itm =>
@@ -682,8 +682,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 							"CANCELLED" => Status.Cancelled,
 							"ON HOLD" => Status.Hold,
 							"FINISHED" => Status.Finished,
-							"COMPLETED" => Status.Finished,
-							"PLANNED" => Status.Active,
+							// "COMPLETED" => Status.Finished,
+							// "PLANNED" => Status.Active,
 							_ => throw new InvalidOperationException($"Unknown work order status: {workOrder.Status}")
 						};
 					}
@@ -793,13 +793,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 								OrderProcess curProcess = new()
 								{//Pass Group of parrel operation 
-									Step = 0,
+									Step = op.Step.ToInt32(),
 									//need to add
 									//SortId = 0,
-									//need discuss
-									ProcessId = op.Step.ToStr(),//need to map oeration numer 
+									//In SF  ProcessId is OperationNo
+									OperationNo = op.OperationNo.ToStr(),//need to map oeration numer 
 									ProcessTypeId = CurrentOperationSubType.ProcessTypeId,
-									//need discuss
+									//As discussed
 									//OperationName = CurrentOperationSubType.Name,
 									OperationName = op.OperationName ?? CurrentOperationSubType.Name,
 									ProcessSubTypeId = op.OperationSubtype,
@@ -831,7 +831,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								if (editMode)
 								{
 									OrderProcess foundProcess = workOrderInfo.Processes.Find(p =>
-										p.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+										p.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
 										p.LineId.ToInt32() == machine.LineNo
 									);
 									if (foundProcess?.Received == 0)
@@ -872,7 +872,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									}
 									else if (foundProcess is not null)
 									{
-										foundProcess = workOrderInfo.Processes.Find(x => x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() && x.MachineId == curProcess.MachineId);
+										foundProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() && x.MachineId == curProcess.MachineId);
 										if (foundProcess is not null)
 										{
 											curProcess = foundProcess;
@@ -908,7 +908,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								ProcessType processType = null;
 								if (string.IsNullOrEmpty(op.OperationType))
 								{
-									ProcessEntryProcess actualProcess = currentProduct.Processes.Where(prc => prc.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble())?.FirstOrDefault();
+									ProcessEntryProcess actualProcess = currentProduct.Processes.Where(prc => prc.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble())?.FirstOrDefault();
 									if (processType is not null)
 									{
 										curProcess.ProcessTypeId = actualProcess.ProcessTypeId;
@@ -951,7 +951,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											SubProduct newComp = new()
 											{
 												ComponentId = bp.ItemCode,
-												ProcessId = curProcess.ProcessId,
+												OperationNo = curProcess.OperationNo,
 												Factor = bp.Quantity,
 												LineId = bp.LineId.ToStr(),
 												LineUID = string.IsNullOrEmpty(bp.LineUID) ? Guid.NewGuid().ToString() : bp.LineUID,
@@ -960,7 +960,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											};
 											if (editMode)
 											{
-												SubProduct foundComponent = workOrderInfo.Subproducts.Find(x => x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() && x.ComponentId == newComp.ComponentId && x.LineId == newComp.LineId);
+												SubProduct foundComponent = workOrderInfo.Subproducts.Find(x => x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() && x.ComponentId == newComp.ComponentId && x.LineId == newComp.LineId);
 												if (foundComponent is not null)
 												{
 													newComp = foundComponent;
@@ -975,7 +975,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 													}
 												}
 											}
-											if (!workOrderInfo.Subproducts.Any(x => x.ComponentId == newComp.ComponentId && x.ProcessId == newComp.ProcessId && x.LineId == newComp.LineId))
+											if (!workOrderInfo.Subproducts.Any(x => x.ComponentId == newComp.ComponentId && x.OperationNo == newComp.OperationNo && x.LineId == newComp.LineId))
 											{
 												workOrderInfo.Subproducts.Add(newComp);
 											}
@@ -1014,7 +1014,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											}
 											OrderComponent newComp = new()
 											{
-												ProcessId = curProcess.ProcessId,
+												OperationNo = curProcess.OperationNo,
 												MaterialType = 1,
 												SourceId = itm.ItemCode,
 												TargetQty = itm.Quantity,
@@ -1035,7 +1035,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											if (editMode)
 											{
 												OrderComponent foundComponent = workOrderInfo.Components.Find(x =>
-													x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+													x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
 													x.SourceId == newComp.SourceId &&
 													x.LineId == newComp.LineId
 												);
@@ -1055,7 +1055,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 													}
 												}
 											}
-											if (!workOrderInfo.Components.Any(x => x.SourceId == newComp.SourceId && x.ProcessId == newComp.ProcessId && x.LineId == newComp.LineId))
+											if (!workOrderInfo.Components.Any(x => x.SourceId == newComp.SourceId && x.OperationNo == newComp.OperationNo && x.LineId == newComp.LineId))
 											{
 												workOrderInfo.Components.Add(newComp);
 											}
@@ -1074,13 +1074,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 										WorkOrderTool newTool = new();
 										ToolType currentToolType = _toolOperation.ListToolTypes(tool.ToolingCode)?.Find(x => x.Status != Status.Failed);
 										ProcessEntryTool productTool = currentProduct.Tools.FirstOrDefault(x =>
-											x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+											x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
 											x.ToolId == tool.ToolingCode
 										);
 										if (currentToolType is not null)
 										{
 											newTool.ToolId = tool.ToolingCode;
-											newTool.ProcessId = curProcess.ProcessId;
+											newTool.OperationNo = curProcess.OperationNo;
 											newTool.LineId = tool.LineId.ToStr();
 											newTool.Quantity = tool.Quantity;
 											newTool.PlannedQty = tool.Quantity;
@@ -1101,7 +1101,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 												}
 											}
 
-											WorkOrderTool existingTool = workOrderInfo.Tools.Find(x => x.ProcessId.ToDouble() == newTool.ProcessId.ToDouble() && x.LineId == newTool.LineId);
+											WorkOrderTool existingTool = workOrderInfo.Tools.Find(x => x.OperationNo.ToDouble() == newTool.OperationNo.ToDouble() && x.LineId == newTool.LineId);
 											if (existingTool is null)
 											{
 												workOrderInfo.Tools.Add(newTool);
@@ -1141,14 +1141,14 @@ public class WorkOrderOperation : IWorkOrderOperation
 									{
 										WorkOrderLabor newLabor = new();
 										ProcessEntryLabor productLabor = currentProduct.Labor.FirstOrDefault(x =>
-											x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
+											x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
 											x.LaborId == labor.ProfileCode
 										);
 										Labor currentLabor = _laborRepo.ListLabors()?.Find(x => string.Equals(x.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
 										if (currentLabor is not null)
 										{
 											newLabor.LaborId = labor.ProfileCode;
-											newLabor.ProcessId = curProcess.ProcessId;
+											newLabor.OperationNo = curProcess.OperationNo;
 											newLabor.LineId = labor.LineId.ToStr();
 											newLabor.Quantity = labor.Quantity;
 											newLabor.PlannedQty = labor.Quantity;
@@ -1170,7 +1170,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											}
 
 											WorkOrderLabor existingLabor = workOrderInfo.Labor.Find(x =>
-												x.ProcessId.ToDouble() == newLabor.ProcessId.ToDouble() &&
+												x.OperationNo.ToDouble() == newLabor.OperationNo.ToDouble() &&
 												x.LineId == newLabor.LineId);
 											if (existingLabor is null)
 											{
@@ -1223,7 +1223,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 															tsk.ManualDelete = true;
 														});
 											}
-											tsk.ProcessId = curProcess.ProcessId;
+											tsk.OperationNo = curProcess.OperationNo;
 											if (!tsk.ManualDelete)
 											{
 												workOrderInfo.Tasks ??= [];
@@ -1237,7 +1237,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								{
 									workOrderInfo.Processes.Add(curProcess);
 								}
-								foreach (OrderProcess previousProcess in workOrderInfo.Processes.Where(x => x.ProcessId == curProcess.ProcessId))
+								foreach (OrderProcess previousProcess in workOrderInfo.Processes.Where(x => x.OperationNo == curProcess.OperationNo))
 								{
 									previousProcess.Total = curProcess.Total;
 									previousProcess.OriginalMachineId = null;
@@ -1310,7 +1310,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						workOrderInfo.Tasks ??= [];
 						foreach (Activity t in currentProduct.Tasks)
 						{
-							OrderProcess existingProcess = workOrderInfo.Processes.Find(x => x.ProcessId.ToDouble() == t.ProcessId.ToDouble());
+							OrderProcess existingProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToDouble() == t.OperationNo.ToDouble());
 							if (existingProcess is not null)
 							{
 								workOrderInfo.Tasks.Add(t);
@@ -1473,7 +1473,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										task.Id = newActivity.Id;
 										_ = _activityOperation.AssociateActivityWorkOrder(
 											returnValue.WorkOrder.Id,
-											newActivity.ProcessId,
+											newActivity.OperationNo,
 											newActivity.AssetId,
 											newActivity.Id,
 											newActivity.TriggerId,
@@ -1497,7 +1497,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									}
 									_ = _activityOperation.AssociateActivityWorkOrder(
 										returnValue.WorkOrder.Id,
-										task.ProcessId,
+										task.OperationNo,
 										task.AssetId,
 										task.Id,
 										task.TriggerId,
@@ -1562,7 +1562,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									{
 										_activityOperation.AssociateActivityWorkOrder(
 											workOrderInfo.Id,
-											newActivity.ProcessId,
+											newActivity.OperationNo,
 											newActivity.AssetId,
 											newActivity.Id,
 											newActivity.TriggerId,
@@ -1575,7 +1575,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								}
 								else if (task.ManualDelete)
 								{
-									bool tempResult = _activityOperation.RemoveActivityWorkOrderAssociation(workOrderInfo.Id, task.ProcessId, task.AssetId, task.Id, systemOperator);
+									bool tempResult = _activityOperation.RemoveActivityWorkOrderAssociation(workOrderInfo.Id, task.OperationNo, task.AssetId, task.Id, systemOperator);
 								}
 								else
 								{
@@ -1585,7 +1585,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									}
 									_activityOperation.AssociateActivityWorkOrder(
 										workOrderInfo.Id,
-										task.ProcessId,
+										task.OperationNo,
 										task.AssetId,
 										task.Id,
 										task.TriggerId,
@@ -1636,12 +1636,12 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 			int duplicated = orderInfo.Labor
 				.Where(x => !string.IsNullOrEmpty(x.MachineId))
-				.Select(x => new { x.ProcessId, x.MachineId })
+				.Select(x => new { x.OperationNo, x.MachineId })
 				.Concat(orderInfo.Tools
 					.Where(x => !string.IsNullOrEmpty(x.MachineId))
-					.Select(x => new { x.ProcessId, x.MachineId })
+					.Select(x => new { x.OperationNo, x.MachineId })
 				)
-				.GroupBy(x => new { x.MachineId, x.ProcessId })
+				.GroupBy(x => new { x.MachineId, x.OperationNo })
 				.Where(g => g.Count() > 1)
 				.Select(y => y.Key)
 				.Count();
@@ -1734,13 +1734,15 @@ public class WorkOrderOperation : IWorkOrderOperation
 				LotNo = order.LotNo,
 				OrderPriority = order.Priority.ToInt32().ToStr()
 			};
-			foreach (var itm in order.Processes.GroupBy(g => g.ProcessId, (key, g) => new { OperationNo = key, Process = g.ToArray() }).ToArray())
+			foreach (var itm in order.Processes.GroupBy(g => g.OperationNo, (key, g) => new { OperationNo = key, Process = g.ToArray() }).ToArray())
 			{
 				Common.Models.WorkOrderOperation op = new();
 				OrderProcess prc = itm.Process.First();
 				op.OperationName = prc.OperationName;
 				op.OperationSubtype = prc.ProcessSubTypeId;
-				op.Step = prc.ProcessId.ToDouble();
+				op.Step = prc.Step.ToDouble();
+				//As Discussed add new field 
+				op.OperationNo = prc.OperationNo.ToDouble();
 				op.Quantity = prc.Total;
 				op.PlannedStartDate = prc.PlannedStart;
 				op.PlannedEndDate = prc.PlannedEnd;
@@ -1758,7 +1760,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 				foreach (OrderProcess machine in itm.Process.Where(x => x.MachineId != "00000000-0000-0000-0000-000000000000"))
 				{
-					ProcessEntryProcess prodProcess = product.Processes.Find(x => x.ProcessId == machine.ProcessId);
+					ProcessEntryProcess prodProcess = product.Processes.Find(x => x.OperationNo == machine.OperationNo);
 					DeviceSpeed ds = null;
 					double orderTimes = 1;
 					double productMachineTime = -1;
@@ -1792,9 +1794,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 						opMachine.OperationTimeInSec = (machine.PlannedEnd - machine.PlannedStart).TotalSeconds;
 					}
 
-					foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => x.MachineId == machine.MachineId && x.ProcessId == machine.ProcessId)])
+					foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => x.MachineId == machine.MachineId && x.OperationNo == machine.OperationNo)])
 					{
-						ProcessEntryLabor pt = product.Labor?.Find(x => x.ProcessId == ml.ProcessId && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
+						ProcessEntryLabor pt = product.Labor?.Find(x => x.OperationNo == ml.OperationNo && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
 						WorkOrderMachineLabor woMl = new()
 						{
 							Quantity = ml.PlannedQty,
@@ -1807,9 +1809,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 						opMachine.Labor.Add(woMl);
 					}
-					foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => x.MachineId == machine.MachineId && x.ProcessId == machine.ProcessId)])
+					foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => x.MachineId == machine.MachineId && x.OperationNo == machine.OperationNo)])
 					{
-						ProcessEntryTool pt = product.Tools?.Find(x => x.ProcessId == mt.ProcessId && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
+						ProcessEntryTool pt = product.Tools?.Find(x => x.OperationNo == mt.OperationNo && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
 						WorkOrderMachineTool woMt = new()
 						{
 							Quantity = mt.PlannedQty,
@@ -1825,9 +1827,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 					op.Machines.Add(opMachine);
 				}
 
-				foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => string.IsNullOrEmpty(x.MachineId) && x.ProcessId == prc.ProcessId)])
+				foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => string.IsNullOrEmpty(x.MachineId) && x.OperationNo == prc.OperationNo)])
 				{
-					ProcessEntryLabor pt = product.Labor?.Find(x => x.ProcessId == ml.ProcessId && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
+					ProcessEntryLabor pt = product.Labor?.Find(x => x.OperationNo == ml.OperationNo && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
 					WorkOrderOperationLabor woOl = new()
 					{
 						Quantity = ml.PlannedQty,
@@ -1840,9 +1842,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 					op.Labor.Add(woOl);
 				}
-				foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => string.IsNullOrEmpty(x.MachineId) && x.ProcessId == prc.ProcessId)])
+				foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => string.IsNullOrEmpty(x.MachineId) && x.OperationNo == prc.OperationNo)])
 				{
-					ProcessEntryTool pt = product.Tools?.Find(x => x.ProcessId == mt.ProcessId && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
+					ProcessEntryTool pt = product.Tools?.Find(x => x.OperationNo == mt.OperationNo && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
 					WorkOrderOperationTool woOt = new()
 					{
 						Quantity = mt.PlannedQty,
@@ -1856,7 +1858,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					op.Tooling.Add(woOt);
 				}
 
-				foreach (OrderComponent mt in (OrderComponent[])[.. order.Components.Where(x => x.ProcessId == prc.ProcessId)])
+				foreach (OrderComponent mt in (OrderComponent[])[.. order.Components.Where(x => x.OperationNo == prc.OperationNo)])
 				{
 					WorkOrderItem itmOrd = new()
 					{
@@ -1872,7 +1874,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					op.Items.Add(itmOrd);
 				}
 
-				foreach (SubProduct mt in order.Subproducts.Where(x => x.ProcessId == prc.ProcessId).ToArray())
+				foreach (SubProduct mt in order.Subproducts.Where(x => x.OperationNo == prc.OperationNo).ToArray())
 				{
 					WorkOrderByProduct byp = new()
 					{
@@ -1933,7 +1935,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 							if (obj.ContainsKey("operationNo"))
 							{
 								OperationNo = obj["operationNo"].ToDouble();
-								currentProcess = order.Processes.Find(pp => pp.ProcessId.ToDouble() == OperationNo);
+								currentProcess = order.Processes.Find(pp => pp.OperationNo.ToDouble() == OperationNo);
 							}
 							if (currentProcess is not null)
 							{
@@ -1985,7 +1987,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										string curUID = jItm["lineUID"].ToStr();
 										string curID = jItm["lineID"].ToStr();
 										WorkOrderLabor woL = order.Labor?.Find(dev =>
-											dev.ProcessId.ToDouble() == OperationNo &&
+											dev.OperationNo.ToDouble() == OperationNo &&
 											dev.LineUID == curUID
 										);
 										if (woL is not null)
@@ -2002,7 +2004,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										string curUID = jItm["lineUID"].ToStr();
 										string curID = jItm["lineID"].ToStr();
 										WorkOrderTool elmt = order.Tools?.Find(dev =>
-											dev.ProcessId.ToDouble() == OperationNo &&
+											dev.OperationNo.ToDouble() == OperationNo &&
 											dev.LineUID == curUID
 										);
 										if (elmt is not null)
@@ -2074,7 +2076,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		{
 			foreach (OrderComponent order in tempOrder.Components)
 			{
-				OrderComponent[] tempValue = [.. componentValues.Where(x => x.ProcessId.ToDouble() == order.ProcessId.ToDouble() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
+				OrderComponent[] tempValue = [.. componentValues.Where(x => x.OperationNo.ToDouble() == order.OperationNo.ToDouble() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
 				if (tempValue.Length > 0)
 				{
 					try
@@ -2118,7 +2120,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 				sf_order_transactions_material = valuesToInsert.Select(x =>
 					new
 					{
-						OperationNo = x.ProcessId,
+						OperationNo = x.OperationNo,
 						OrderCode = workOrderId,
 						LineNo = x.LineId,
 						Quantity = x.InputQty,
@@ -2247,7 +2249,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 							{
 								Type = MessageBrokerType.ManualMaterialIssue,
 								ElementId = workOrderId,
-								ElementValue = tempValue.ProcessId,
+								ElementValue = tempValue.OperationNo,
 								MachineId = tempValue.MachineId,
 								Aux = string.Format("{0}|{1}", tempValue.SourceId, tempValue.InputQty.ToStr())
 							});

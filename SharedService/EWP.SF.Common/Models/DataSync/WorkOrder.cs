@@ -676,11 +676,14 @@ public class OrderProcess
 	///
 	/// </summary>
 	public string ProcessSubTypeId { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
 	public string ProcessId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -923,7 +926,7 @@ public class OrderComponent
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -1278,7 +1281,8 @@ public class ToolValue
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -1533,7 +1537,9 @@ public class WorkOrderLabor
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -1624,7 +1630,8 @@ public class WorkOrderTool
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -1908,6 +1915,12 @@ public class WorkOrderOperation
 	///
 	/// </summary>
 	[Required]
+	public double OperationNo { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[Required]
 	[MaxLength(200)]
 	public string OperationName { get; set; }
 
@@ -2014,6 +2027,8 @@ public class WorkOrderOperation
 	///
 	/// </summary>
 	public List<WorkOrderTask> Tasks { get; set; }
+
+	
 }
 
 /// <summary>
@@ -3186,13 +3201,13 @@ public class ProductionOrder : ILoggableEntity
 		Operations = [];
 		foreach (OrderProcess oldOp in oldOrder.Processes)
 		{
-			ProductionOrderOperation elemOperation = Operations.FirstOrDefault(x => x.OperationNo == oldOp.ProcessId.ToDouble());
+			ProductionOrderOperation elemOperation = Operations.FirstOrDefault(x => x.OperationNo == oldOp.OperationNo.ToDouble());
 			bool isNewOperation = elemOperation is null;
 			elemOperation ??= new ProductionOrderOperation
 			{
 				OperationTypeCode = oldOp.ProcessTypeId,
 				OperationSubTypeCode = oldOp.ProcessSubTypeId,
-				OperationNo = oldOp.ProcessId.ToDouble(),
+				OperationNo = oldOp.OperationNo.ToDouble(),
 				Name = oldOp.OperationName,
 				PlannedStartDate = oldOp.PlannedStart,
 				PlannedEndDate = oldOp.PlannedEnd,
@@ -3203,7 +3218,7 @@ public class ProductionOrder : ILoggableEntity
 				Status = oldOp.Status,
 				Machines = [],
 				Class = oldOp.Class,
-				Byproducts = oldOrder.Subproducts?.Where(x => x.ProcessId == oldOp.ProcessId).Select(x => new ProductionOrderByProduct
+				Byproducts = oldOrder.Subproducts?.Where(x => x.OperationNo == oldOp.OperationNo).Select(x => new ProductionOrderByProduct
 				{
 					ItemCode = x.ComponentId,
 					Quantity = x.Factor,
@@ -3213,7 +3228,7 @@ public class ProductionOrder : ILoggableEntity
 					ReceivedQty = x.Quantity,
 					Comments = x.Comments
 				}).ToList() ?? [],
-				Items = oldOrder.Components?.Where(x => x.ProcessId == oldOp.ProcessId).Select(x => new ProductionOrderItem
+				Items = oldOrder.Components?.Where(x => x.OperationNo == oldOp.OperationNo).Select(x => new ProductionOrderItem
 				{
 					ItemCode = x.SourceId,
 					OriginalItemCode = x.OriginalSourceId,
@@ -3230,7 +3245,7 @@ public class ProductionOrder : ILoggableEntity
 					Class = x.MaterialType,
 					ManagedBy = x.ManagedBy,
 				}).ToList() ?? [],
-				Labor = oldOrder.Labor?.Where(x => x.ProcessId == oldOp.ProcessId && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
+				Labor = oldOrder.Labor?.Where(x => x.OperationNo == oldOp.OperationNo && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
 				{
 					Code = x.LaborId,
 					LineId = x.LineId,
@@ -3242,7 +3257,7 @@ public class ProductionOrder : ILoggableEntity
 					IssuedTime = x.IssuedTime,
 					Consumption = x.IsBackflush ? 1 : 0
 				}).ToList() ?? [],
-				ToolingType = oldOrder.Tools?.Where(x => x.ProcessId == oldOp.ProcessId && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
+				ToolingType = oldOrder.Tools?.Where(x => x.OperationNo == oldOp.OperationNo && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
 				{
 					Code = x.ToolId,
 					LineId = x.LineId,
@@ -3254,7 +3269,7 @@ public class ProductionOrder : ILoggableEntity
 					IssuedTime = x.IssuedTime,
 					Consumption = x.IsBackflush ? 1 : 0
 				}).ToList() ?? [],
-				Tasks = oldOrder.Tasks?.Where(x => x.ProcessId == oldOp.ProcessId).ToList() ?? [],
+				Tasks = oldOrder.Tasks?.Where(x => x.OperationNo == oldOp.OperationNo).ToList() ?? [],
 				ExecTime = oldOp.ExecTime,
 				SetupTime = oldOp.SetupTime,
 				WaitTime = oldOp.WaitTime,
@@ -3282,7 +3297,7 @@ public class ProductionOrder : ILoggableEntity
 				Labor = [],
 				ToolingType = [],
 			};
-			elemMachine.Labor = oldOrder.Labor?.Where(x => x.ProcessId == oldOp.ProcessId && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
+			elemMachine.Labor = oldOrder.Labor?.Where(x => x.OperationNo == oldOp.OperationNo && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
 			{
 				Code = x.LaborId,
 				LineId = x.LineId,
@@ -3295,7 +3310,7 @@ public class ProductionOrder : ILoggableEntity
 				Consumption = x.IsBackflush ? 1 : 0,
 			}).ToList() ?? [];
 
-			elemMachine.ToolingType = oldOrder.Tools?.Where(x => x.ProcessId == oldOp.ProcessId && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
+			elemMachine.ToolingType = oldOrder.Tools?.Where(x => x.OperationNo == oldOp.OperationNo && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
 			{
 				Code = x.ToolId,
 				LineId = x.LineId,
