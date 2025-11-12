@@ -57,7 +57,7 @@ public class DataSyncRepository : IDataSyncRepository
 				try
 				{
 					// Execute reader asynchronously
-					MySqlDataReader rdr = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+					  MySqlDataReader rdr = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
 					await using (rdr.ConfigureAwait(false))
 					{
 						if (rdr.HasRows)

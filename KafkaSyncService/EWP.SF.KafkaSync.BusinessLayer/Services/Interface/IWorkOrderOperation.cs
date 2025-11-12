@@ -14,6 +14,7 @@ public interface IWorkOrderOperation
     Task<List<WorkOrderResponse>> ListUpdateWorkOrder(List<WorkOrderExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, bool isDataSynced = false);
     void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset);
     Task<string> UpdateWorkOrderComponent(string workOrderId, List<OrderComponent> componentValues, string employeeId, User systemOperator);
+    Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default);
 
 
 

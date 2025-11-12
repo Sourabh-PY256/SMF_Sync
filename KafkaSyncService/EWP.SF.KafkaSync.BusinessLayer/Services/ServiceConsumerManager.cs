@@ -52,9 +52,6 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
     using (var scope = _serviceScopeFactory.CreateScope())
     {
-        
-        
-
         // Use the centralized validation
         TriggerType triggerType;
         if (!Enum.TryParse<TriggerType>(message.Trigger, out triggerType))
@@ -62,13 +59,23 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             triggerType = TriggerType.SmartFactory;
         }
 
-        // var validation = await serviceManager.ValidateAndGetService(
-        //     message.Service,
-        //     triggerType,
-        //     message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton
-        // );
+        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
 
-            var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+        // ORDER_TRANSACTION_SERVICE doesn't need full SyncExecution - call dedicated method
+        if (message.Service == SyncERPEntity.ORDER_TRANSACTION_SERVICE)
+        {
+            _logger.LogInformation("Processing ORDER_TRANSACTION_SERVICE message");
+
+            var response = await processor.ProcessOrderTransactionService(
+                message.BodyData ?? string.Empty,
+                message.User ?? new User()
+            ).ConfigureAwait(false);
+
+            _logger.LogInformation("ORDER_TRANSACTION_SERVICE processing complete: {Message}", response.Message);
+        }
+        else
+        {
+            // For other services, use normal SyncExecution
             var response = await processor.SyncExecution(
                 message.ServiceData,
                 message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
@@ -77,9 +84,10 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 message.EntityCode ?? string.Empty,
                 message.BodyData ?? string.Empty
             ).ConfigureAwait(false);
+        }
 
-            // Optionally publish execution result to Kafka if needed
-        
+        // Optionally publish execution result to Kafka if needed
+
     }
 });
             }

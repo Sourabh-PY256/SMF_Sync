@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Http.Headers;
 
 using EWP.SF.KafkaSync.BusinessEntities;
-
+using EWP.SF.KafkaSync.BusinessEntities.Kafka;
 
 using EWP.SF.Helper;
 using EWP.SF.Common;
@@ -73,9 +73,9 @@ public class DataSyncServiceProcessor
 		{
 			LogInfo.Id = loggerId;
 		}
-		// string logId = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
-		// LogInfo.Id = logId;
-		// response.LogId = logId;
+		
+		
+		
 		try
 		{
 			//ContextCache.SetRunningService(ServiceData.Id, true);
@@ -100,7 +100,7 @@ public class DataSyncServiceProcessor
 			}
 			else // Peticiones POST, PUT, PATCH, etc
 			{
-				response = await SendSfDataToErp(LogInfo, ServiceData, requestUser, ExecOrigin, BodyData, response, () =>
+				response = await SendSfDataToErp(LogInfo, ServiceData, requestUser, ExecOrigin, BodyData, EntityCode, response, () =>
 				{
 					if (Trigger != TriggerType.DataSyncSettings && (string.IsNullOrEmpty(EntityCode) || !string.Equals(ServiceData.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase)))
 					{
@@ -2050,17 +2050,101 @@ public class DataSyncServiceProcessor
 		return HttpResponse;
 	}
 
-	private async Task<DataSyncHttpResponse> SendSfDataToErp(DataSyncServiceLog LogInfo, DataSyncService ServiceData, User SystemOperator, ServiceExecOrigin ExecOrigin, string RequestBody, DataSyncHttpResponse HttpResponse, Action onResponse)
+	private async Task<DataSyncHttpResponse> SendSfDataToErp(DataSyncServiceLog LogInfo, DataSyncService ServiceData, User SystemOperator, ServiceExecOrigin ExecOrigin, string RequestBody, string EntityCode, DataSyncHttpResponse HttpResponse, Action onResponse)
 	{
 		if (string.IsNullOrEmpty(RequestBody))
 		{
-					
+
 		switch (ServiceData.Entity.Name)
 		{
 			// Not Applicable for any ERP
+			case SyncERPEntity.MATERIAL_ISSUE_SERVICE:
+				// Get WorkOrderOperation service to call GetMaterialTransactionRequestParams
+				// This will retrieve all transactions where ExternalId is null or empty
+				var workOrderOperation = GetOperation<IWorkOrderOperation>();
+				object requestParams = await workOrderOperation.GetMaterialTransactionRequestParams(SystemOperator).ConfigureAwait(false);
+
+				// Check if we need to process transactions individually
+				dynamic requestParamsObj = JsonConvert.DeserializeObject(JsonConvert.SerializeObject(requestParams));
+				if (requestParamsObj.ProcessIndividually != null && (bool)requestParamsObj.ProcessIndividually)
+				{
+					// Process each transaction individually
+					return await ProcessMaterialTransactionsIndividually(
+						LogInfo, ServiceData, SystemOperator, ExecOrigin,
+						requestParamsObj.Transactions, EntityCode, HttpResponse, onResponse
+					).ConfigureAwait(false);
+				}
+
+				RequestBody = JsonConvert.SerializeObject(requestParams);
+				break;
+
 			case SyncERPEntity.ORDER_TRANSACTION_SERVICE:
-			
-				break;	
+				// Handle order transaction sync from ERP via SyncProducer endpoint
+				// ERP sends TransactionId and ExternalId after processing the material issue
+				if (!string.IsNullOrEmpty(RequestBody))
+				{
+					try
+					{
+						// Parse the request body from ERP
+						dynamic messageData = JsonConvert.DeserializeObject(RequestBody);
+						string transactionId = messageData?.TransactionId?.ToString();
+						string externalId = messageData?.ExternalId?.ToString();
+
+						if (string.IsNullOrEmpty(transactionId))
+						{
+							throw new Exception("TransactionId is required in ORDER_TRANSACTION_SERVICE request");
+						}
+
+						if (string.IsNullOrEmpty(externalId))
+						{
+							throw new Exception("ExternalId is required in ORDER_TRANSACTION_SERVICE request");
+						}
+
+						_logger.LogInformation("Processing ORDER_TRANSACTION_SERVICE for TransactionId: {TransactionId}, ExternalId: {ExternalId}",
+							transactionId, externalId);
+
+						// Update the ExternalId in the database
+						var orderTransactionMaterialRepo = GetOperation<IOrderTransactionMaterialRepo>();
+						bool updateSuccess = await orderTransactionMaterialRepo.UpdateOrderTransactionMaterialExternalId(
+							transactionId,
+							externalId,
+							SystemOperator
+						).ConfigureAwait(false);
+
+						if (updateSuccess)
+						{
+							HttpResponse.StatusCode = HttpStatusCode.OK;
+							HttpResponse.Message = $"Successfully updated ExternalId for transaction {transactionId}";
+							_logger.LogInformation("Successfully updated ExternalId for transaction {TransactionId} with ExternalId {ExternalId}",
+								transactionId, externalId);
+						}
+						else
+						{
+							HttpResponse.StatusCode = HttpStatusCode.InternalServerError;
+							HttpResponse.Message = $"Failed to update ExternalId for transaction {transactionId}";
+							_logger.LogError("Failed to update ExternalId for transaction {TransactionId}", transactionId);
+						}
+
+						return HttpResponse;
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Error processing ORDER_TRANSACTION_SERVICE: {Message}", ex.Message);
+						HttpResponse.StatusCode = HttpStatusCode.BadRequest;
+						HttpResponse.Message = $"Error processing ORDER_TRANSACTION_SERVICE: {ex.Message}";
+						return HttpResponse;
+					}
+				}
+				else
+				{
+					// If no RequestBody, this might be from the internal Kafka notification
+					// (published after material issue sync in ProcessMaterialTransactionsIndividually)
+					_logger.LogInformation("ORDER_TRANSACTION_SERVICE called without body - transaction already updated");
+					HttpResponse.StatusCode = HttpStatusCode.OK;
+					HttpResponse.Message = "Order transaction already processed";
+					return HttpResponse;
+				}
+
 		default:
 		throw new Exception("No request body found");
 		}
@@ -2195,6 +2279,12 @@ public class DataSyncServiceProcessor
 			HttpResponse.Message = LogInfo.ErpReceivedJson;
 			LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
 			//_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+
+			// Handle post-success operations for MATERIAL_ISSUE_SERVICE
+			if (ServiceData.Entity.Name == SyncERPEntity.MATERIAL_ISSUE_SERVICE)
+			{
+				await HandleMaterialIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData).ConfigureAwait(false);
+			}
 		}
 
 		LogSingleInfoFinish = new DataSyncServiceLogDetail
@@ -2578,6 +2668,352 @@ public class DataSyncServiceProcessor
 			//await _dataSyncServiceOperation.InsertDataSyncServiceLogDetail(LogSingleInfo).ConfigureAwait(false);
 		}
 		return (successRecords, failedRecords);
+	}
+
+	/// <summary>
+	/// Processes multiple material transactions individually
+	/// Sends separate POST request for each transaction and publishes to Kafka for each
+	/// </summary>
+	private async Task<DataSyncHttpResponse> ProcessMaterialTransactionsIndividually(
+		DataSyncServiceLog LogInfo,
+		DataSyncService ServiceData,
+		User SystemOperator,
+		ServiceExecOrigin ExecOrigin,
+		dynamic transactions,
+		string EntityCode,
+		DataSyncHttpResponse HttpResponse,
+		Action onResponse)
+	{
+		int successCount = 0;
+		int failureCount = 0;
+		List<string> errorMessages = [];
+
+		// Get Kafka service for publishing messages
+		var kafkaService = GetOperation<IKafkaService>();
+
+		// Process each transaction
+		foreach (var transaction in transactions)
+		{
+			try
+			{
+				string transactionId = transaction.TransactionId;
+				_logger.LogInformation("Processing material transaction {TransactionId}", transactionId);
+
+				// Serialize single transaction as request body
+				string singleRequestBody = JsonConvert.SerializeObject(transaction);
+
+				// Map to ERP format
+				dynamic requestErpMapped = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.RequestMapSchema, singleRequestBody);
+				string requestErpJson = JsonConvert.SerializeObject(requestErpMapped);
+
+				// Send to ERP
+				DataSyncResponse erpResult = await ErpSendRequestAsync(ServiceData, ExecOrigin, requestErpJson, false, LogInfo).ConfigureAwait(false);
+
+				if (erpResult.StatusCode == HttpStatusCode.OK)
+				{
+					// Map response
+					dynamic responseErp = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.ResponseMapSchema, erpResult.Response);
+					string stsResponse = responseErp["Status"];
+
+					if (stsResponse?.Trim() == "Success")
+					{
+						// Extract ExternalId from response - parse docNum from mapped Message property
+						string externalId = null;
+
+						try
+						{
+							// The ResponseMapSchema maps "message" to "Message" property
+							// Parse Message property to get data.docNum
+							string messageJson = responseErp["Message"]?.ToString();
+
+							if (!string.IsNullOrEmpty(messageJson))
+							{
+								JObject messageObject = JObject.Parse(messageJson);
+
+								// Try to get data.docNum from the message object
+								if (messageObject["data"] != null)
+								{
+									var docNum = messageObject["data"]["docNum"];
+									if (docNum != null && !string.IsNullOrEmpty(docNum.ToString()))
+									{
+										externalId = docNum.ToString();
+										_logger.LogInformation("Extracted docNum from Message.data: {ExternalId}", externalId);
+									}
+								}
+							}
+						}
+						catch (Exception ex)
+						{
+							_logger.LogWarning(ex, "Failed to parse docNum from Message property, trying fallback fields");
+						}
+
+						// Fallback to standard fields if docNum parsing failed
+						if (string.IsNullOrEmpty(externalId))
+						{
+							externalId = responseErp["ExternalId"] ?? responseErp["DocEntry"] ?? responseErp["Id"];
+							if (!string.IsNullOrEmpty(externalId))
+							{
+								_logger.LogInformation("Using fallback ExternalId: {ExternalId}", externalId);
+							}
+						}
+
+						if (!string.IsNullOrEmpty(externalId))
+						{
+							// Publish to Kafka - ORDER_TRANSACTION_SERVICE will handle the database update
+							string topic = $"producer-sync-{SyncERPEntity.ORDER_TRANSACTION_SERVICE.ToLower()}";
+							string key = $"order-transaction-{transactionId}-{Guid.NewGuid()}";
+
+							// Create BodyData with TransactionId and ExternalId
+							var bodyData = new
+							{
+								TransactionId = transactionId,
+								ExternalId = externalId
+							};
+
+							var kafkaMessage = new SyncMessage
+							{
+								Service = SyncERPEntity.ORDER_TRANSACTION_SERVICE,
+								Trigger = TriggerType.SmartFactory.ToString(),
+								ExecutionType = (int)ServiceExecOrigin.Event,
+								EntityCode = string.Empty,
+								BodyData = JsonConvert.SerializeObject(bodyData)
+								// ServiceData not needed - ProcessOrderTransactionService doesn't require it
+							};
+
+							await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
+
+							successCount++;
+							_logger.LogInformation("Successfully synced transaction {TransactionId} to ERP with ExternalId {ExternalId}, published to Kafka for database update",
+								transactionId, externalId);
+						}
+						else
+						{
+							failureCount++;
+							errorMessages.Add($"Transaction {transactionId}: No ExternalId in ERP response");
+							_logger.LogWarning("No ExternalId in response for transaction {TransactionId}", transactionId);
+						}
+					}
+					else
+					{
+						failureCount++;
+						string errorMsg = responseErp["Message"] ?? "Unknown error";
+						errorMessages.Add($"Transaction {transactionId}: {errorMsg}");
+						_logger.LogError("ERP returned error for transaction {TransactionId}: {Error}", transactionId, errorMsg);
+					}
+				}
+				else
+				{
+					failureCount++;
+					errorMessages.Add($"Transaction {transactionId}: HTTP {erpResult.StatusCode} - {erpResult.StatusMessage}");
+					_logger.LogError("HTTP error for transaction {TransactionId}: {StatusCode} - {Message}",
+						transactionId, erpResult.StatusCode, erpResult.StatusMessage);
+				}
+			}
+			catch (Exception ex)
+			{
+				failureCount++;
+				string transactionId = transaction.TransactionId ?? "Unknown";
+				errorMessages.Add($"Transaction {transactionId}: {ex.Message}");
+				_logger.LogError(ex, "Exception processing transaction {TransactionId}", transactionId);
+			}
+		}
+
+		// Build final response
+		HttpResponse.StatusCode = failureCount == 0 ? HttpStatusCode.OK : HttpStatusCode.PartialContent;
+		HttpResponse.Message = $"Processed {successCount + failureCount} transactions. Success: {successCount}, Failed: {failureCount}";
+
+		if (errorMessages.Count > 0)
+		{
+			HttpResponse.Message += $"\nErrors:\n{string.Join("\n", errorMessages)}";
+		}
+
+		_logger.LogInformation("Batch processing complete. Success: {SuccessCount}, Failed: {FailureCount}",
+			successCount, failureCount);
+
+		return HttpResponse;
+	}
+
+	/// <summary>
+	/// Public method to handle ORDER_TRANSACTION_SERVICE from Kafka consumer
+	/// Updates ExternalId in database based on TransactionId and ExternalId in RequestBody
+	/// </summary>
+	public async Task<DataSyncHttpResponse> ProcessOrderTransactionService(string requestBody, User systemOperator)
+	{
+		DataSyncHttpResponse httpResponse = new();
+
+		try
+		{
+			// Parse the request body from Kafka message
+			dynamic messageData = JsonConvert.DeserializeObject(requestBody);
+			string transactionId = messageData?.TransactionId?.ToString();
+			string externalId = messageData?.ExternalId?.ToString();
+
+			if (string.IsNullOrEmpty(transactionId))
+			{
+				throw new Exception("TransactionId is required in ORDER_TRANSACTION_SERVICE request");
+			}
+
+			if (string.IsNullOrEmpty(externalId))
+			{
+				throw new Exception("ExternalId is required in ORDER_TRANSACTION_SERVICE request");
+			}
+
+			_logger.LogInformation("Processing ORDER_TRANSACTION_SERVICE for TransactionId: {TransactionId}, ExternalId: {ExternalId}",
+				transactionId, externalId);
+
+			// Update the ExternalId in the database
+			var orderTransactionMaterialRepo = GetOperation<IOrderTransactionMaterialRepo>();
+			bool updateSuccess = await orderTransactionMaterialRepo.UpdateOrderTransactionMaterialExternalId(
+				transactionId,
+				externalId,
+				systemOperator
+			).ConfigureAwait(false);
+
+			if (updateSuccess)
+			{
+				httpResponse.StatusCode = HttpStatusCode.OK;
+				httpResponse.Message = $"Successfully updated ExternalId for transaction {transactionId}";
+				_logger.LogInformation("Successfully updated ExternalId for transaction {TransactionId} with ExternalId {ExternalId}",
+					transactionId, externalId);
+			}
+			else
+			{
+				httpResponse.StatusCode = HttpStatusCode.InternalServerError;
+				httpResponse.Message = $"Failed to update ExternalId for transaction {transactionId}";
+				_logger.LogError("Failed to update ExternalId for transaction {TransactionId}", transactionId);
+			}
+
+			return httpResponse;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error processing ORDER_TRANSACTION_SERVICE: {Message}", ex.Message);
+			httpResponse.StatusCode = HttpStatusCode.BadRequest;
+			httpResponse.Message = $"Error processing ORDER_TRANSACTION_SERVICE: {ex.Message}";
+			return httpResponse;
+		}
+	}
+
+	/// <summary>
+	/// Handles post-success operations for Material Issue Service
+	/// Publishes to Kafka for ORDER_TRANSACTION_SERVICE to handle database update
+	/// Supports both single transaction and array of transactions
+	/// </summary>
+	private async Task HandleMaterialIssueSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData)
+	{
+		try
+		{
+			var kafkaService = GetOperation<IKafkaService>();
+			string topic = $"producer-sync-{SyncERPEntity.ORDER_TRANSACTION_SERVICE.ToLower()}";
+
+			// Parse request body - could be single object or array
+			dynamic requestData = JsonConvert.DeserializeObject(requestBody);
+
+			// Check if request is an array
+			bool isArray = requestData is JArray;
+
+			if (isArray)
+			{
+				// Handle array of transactions
+				JArray requestArray = (JArray)requestData;
+				JArray responseArray = responseErp is JArray ? (JArray)responseErp : null;
+
+				if (responseArray == null || requestArray.Count != responseArray.Count)
+				{
+					throw new Exception($"Request/Response count mismatch. Request: {requestArray.Count}, Response: {responseArray?.Count ?? 0}");
+				}
+
+				// Process each transaction
+				for (int i = 0; i < requestArray.Count; i++)
+				{
+					dynamic request = requestArray[i];
+					dynamic response = responseArray[i];
+
+					string transactionId = request["TransactionId"];
+					string externalId = response["ExternalId"] ?? response["DocEntry"] ?? response["Id"];
+
+					if (string.IsNullOrEmpty(transactionId))
+					{
+						_logger.LogWarning("TransactionId not found in request at index {Index}", i);
+						continue;
+					}
+
+					if (string.IsNullOrEmpty(externalId))
+					{
+						_logger.LogWarning("ExternalId not found in response for transaction {TransactionId}", transactionId);
+						continue;
+					}
+
+					// Publish to Kafka - ORDER_TRANSACTION_SERVICE will handle the database update
+					string key = $"order-transaction-{transactionId}-{Guid.NewGuid()}";
+
+					// Create BodyData with TransactionId and ExternalId
+					var bodyData = new
+					{
+						TransactionId = transactionId,
+						ExternalId = externalId
+					};
+
+					var kafkaMessage = new SyncMessage
+					{
+						Service = SyncERPEntity.ORDER_TRANSACTION_SERVICE,
+						Trigger = TriggerType.SmartFactory.ToString(),
+						ExecutionType = (int)ServiceExecOrigin.Event,
+						EntityCode = string.Empty,
+						BodyData = JsonConvert.SerializeObject(bodyData)
+					};
+
+					await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
+					_logger.LogInformation("Published Kafka message for transaction {TransactionId} with ExternalId {ExternalId}", transactionId, externalId);
+				}
+			}
+			else
+			{
+				// Handle single transaction (backward compatibility)
+				string transactionId = requestData["TransactionId"];
+				string externalId = responseErp["ExternalId"] ?? responseErp["DocEntry"] ?? responseErp["Id"];
+
+				if (string.IsNullOrEmpty(transactionId))
+				{
+					throw new Exception("TransactionId not found in request body");
+				}
+
+				if (string.IsNullOrEmpty(externalId))
+				{
+					throw new Exception("ExternalId not found in ERP response");
+				}
+
+				// Publish to Kafka - ORDER_TRANSACTION_SERVICE will handle the database update
+				string key = $"order-transaction-{transactionId}-{Guid.NewGuid()}";
+
+				// Create BodyData with TransactionId and ExternalId
+				var bodyData = new
+				{
+					TransactionId = transactionId,
+					ExternalId = externalId
+				};
+
+				var kafkaMessage = new SyncMessage
+				{
+					Service = SyncERPEntity.ORDER_TRANSACTION_SERVICE,
+					Trigger = TriggerType.SmartFactory.ToString(),
+					ExecutionType = (int)ServiceExecOrigin.Event,
+					EntityCode = string.Empty,
+					BodyData = JsonConvert.SerializeObject(bodyData)
+					// ServiceData not needed - ProcessOrderTransactionService doesn't require it
+				};
+
+				await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
+				_logger.LogInformation("Published Kafka message for transaction {TransactionId} with ExternalId {ExternalId}", transactionId, externalId);
+			}
+		}
+		catch (Exception ex)
+		{
+			// Log error but don't fail the main operation
+			// The material issue was successful in ERP, this is just post-processing
+			_logger.LogError(ex, "Post-success processing failed: {Message}", ex.Message);
+			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
+		}
 	}
 
 }

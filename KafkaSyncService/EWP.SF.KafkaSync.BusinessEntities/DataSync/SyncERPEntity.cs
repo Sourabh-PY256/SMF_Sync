@@ -76,7 +76,7 @@ public static class SyncERPEntity
 
 	public const string PRODUCT_SERVICE = "Products";
 
-	// public const string MACHINE_ISSUE_SERVICE = "MachineIssue";
+	 public const string MACHINE_ISSUE_SERVICE = "MachineIssue";
 	// public const string LABOR_ISSUE_SERVICE = "LaborIssue";
 
 	public const string PRODUCTION_ORDER_SERVICE = "ProductionOrder";

@@ -948,7 +948,7 @@ public class ProductOperation
 	/// </summary>
 	[Key]
 	[Required]
-	public double OperationNo { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///

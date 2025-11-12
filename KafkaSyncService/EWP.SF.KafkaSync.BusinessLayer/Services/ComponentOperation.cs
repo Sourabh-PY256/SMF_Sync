@@ -202,7 +202,7 @@ public class ComponentOperation : IComponentOperation
 						}
 					}
 
-					double[] duplicatedOperations = [.. item.Operations.GroupBy(x => x.OperationNo).Where(g => g.Count() > 1).Select(y => y.Key)];
+					string[] duplicatedOperations = [.. item.Operations.GroupBy(x => x.OperationNo).Where(g => g.Count() > 1).Select(y => y.Key)];
 					if (duplicatedOperations?.Length > 0)
 					{
 						throw new Exception(string.Format("Product one or more OperationNo values are duplicated"));
@@ -214,7 +214,8 @@ public class ComponentOperation : IComponentOperation
 					{
 						opCount++;
 
-						if (operation.OperationNo < 0)
+						//if (operation.OperationNo < 0)
+						if (String.IsNullOrEmpty(operation.OperationNo ))
 						{
 							throw new Exception(string.Format("Product Operation at position [{0}] : OperationNo is required. ", opCount));
 						}
@@ -460,7 +461,7 @@ public class ComponentOperation : IComponentOperation
 								ProcessEntryProcess oldOperation = null;
 								if (editMode || !string.IsNullOrEmpty(pe.Id))
 								{
-									oldOperation = oldProcesses?.Find(x => x.OperationNo.ToDouble() == itmOperation.OperationNo.ToDouble());
+									oldOperation = oldProcesses?.Find(x => x.OperationNo.ToStr() == itmOperation.OperationNo.ToStr());
 								}
 								ProcessEntryProcess prc = new()
 								{
@@ -469,8 +470,9 @@ public class ComponentOperation : IComponentOperation
 									ProcessSubTypeId = CurrentOperationSubType.Code,
 									Name = itmOperation.OperationName ?? CurrentOperationSubType.Name,
 									//Name = CurrentOperationSubType.Name,
-									Step = Math.Floor(itmOperation.OperationNo).ToInt32(),
-									Sort = itmOperation.OperationNo == 0 ? 0 : (10 * (itmOperation.OperationNo.ToDecimal() % Math.Floor(itmOperation.OperationNo.ToDecimal()))).ToDouble().ToInt32(),
+									//Need to discuss with Mario
+									//Step = Math.Floor(itmOperation.OperationNo).ToInt32(),
+									//Sort = itmOperation.OperationNo == 0 ? 0 : (10 * (itmOperation.OperationNo.ToDecimal() % Math.Floor(itmOperation.OperationNo.ToDecimal()))).ToDouble().ToInt32(),
 									TransferType = null,
 									TransferQty = null,
 									SlackTimeAfterPrevOp = null,
@@ -865,7 +867,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						pe.Tools.Where(tooling => string.IsNullOrEmpty(tooling.LineUID))?.ToList()?.ForEach(tlng =>
 						{
-							ProductOperationTool origTool = item.Operations.Find(x => x.OperationNo.ToDouble() == tlng.OperationNo.ToDouble())?.OperationTools.Find(ot => ot.ToolingCode == tlng.ToolId && ot.LineID == tlng.LineId.ToInt32());
+							ProductOperationTool origTool = item.Operations.Find(x => x.OperationNo.ToStr() == tlng.OperationNo.ToStr())?.OperationTools.Find(ot => ot.ToolingCode == tlng.ToolId && ot.LineID == tlng.LineId.ToInt32());
 							ProcessEntryTool oldTooling = oldTools?.Find(x => x.LineId.ToInt32() == tlng.LineId.ToInt32());
 							if (oldTooling is not null)
 							{
@@ -896,7 +898,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						pe.Labor.Where(elem => string.IsNullOrEmpty(elem.LineUID))?.ToList()?.ForEach(lbr =>
 						{
-							ProductOperationLabor origLbr = item.Operations.Find(x => x.OperationNo.ToDouble() == lbr.OperationNo.ToDouble())?.OperationLabor.Find(ot => ot.ProfileCode == lbr.LaborId && ot.LineID == lbr.LineId.ToInt32());
+							ProductOperationLabor origLbr = item.Operations.Find(x => x.OperationNo.ToStr() == lbr.OperationNo.ToStr())?.OperationLabor.Find(ot => ot.ProfileCode == lbr.LaborId && ot.LineID == lbr.LineId.ToInt32());
 							ProcessEntryLabor OldLabor = oldLabors?.Find(x => x.LineId.ToInt32() == lbr.LineId.ToInt32());
 							if (OldLabor is not null)
 							{
@@ -926,7 +928,7 @@ public class ComponentOperation : IComponentOperation
 					{
 						pe.Components.Where(comp => string.IsNullOrEmpty(comp.LineUID))?.ToList()?.ForEach(cmp =>
 						{
-							ProductOperationItem origItm = item.Operations.Find(x => x.OperationNo.ToDouble() == cmp.OperationNo.ToDouble())?.OperationItems.Find(ot => ot.ItemCode == cmp.ComponentId && ot.LineID == cmp.LineId.ToInt32());
+							ProductOperationItem origItm = item.Operations.Find(x => x.OperationNo.ToStr() == cmp.OperationNo.ToStr())?.OperationItems.Find(ot => ot.ItemCode == cmp.ComponentId && ot.LineID == cmp.LineId.ToInt32());
 							ProcessEntryComponent oldComp = oldComponents?.Find(x => x.LineId.ToInt32() == cmp.LineId.ToInt32());
 							if (oldComp is not null)
 							{

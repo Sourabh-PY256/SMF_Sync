@@ -38,6 +38,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 	private readonly IBinLocationRepo _binLocationRepo;
 	private readonly DataSyncServiceManager _dataSyncServiceManager;
+	private readonly IOrderTransactionMaterialRepo _orderTransactionMaterialRepo;
 
 
 
@@ -48,7 +49,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 	, IComponentOperation componentOperation, IActivityOperation activityOperation
 	, IDataImportOperation dataImportOperation, IInventoryOperation inventoryOperation
 	, IMachineRepo machineRepo, IToolOperation toolOperation, IDeviceOperation deviceOperation,
-	 IBinLocationRepo binLocationRepo, ILaborRepo laborRepo, DataSyncServiceManager dataSyncServiceManager)
+	 IBinLocationRepo binLocationRepo, ILaborRepo laborRepo, DataSyncServiceManager dataSyncServiceManager,
+	 IOrderTransactionMaterialRepo orderTransactionMaterialRepo)
 	{
 		_workOrderRepo = workOrderRepo;
 		_measureUnitOperation = measureUnitOperation;
@@ -67,6 +69,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		_laborRepo = laborRepo;
 		_binLocationRepo = binLocationRepo;
 		_dataSyncServiceManager = dataSyncServiceManager;
+		_orderTransactionMaterialRepo = orderTransactionMaterialRepo;
 	}
 	private static string RemoveXMLHeader(string xml) => xml.Replace("'", "´").Replace("<?xml version=\"1.0\"?>", "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>");
 	/// <summary>
@@ -455,7 +458,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					// status
 
 					OrderProcess process = wo.Processes.Find(wop => wop.IsOutput) ?? throw new Exception("Error finding last operation");
-					transaction.OperationNo = process.OperationNo.ToDouble();
+					transaction.OperationNo = process.OperationNo.ToStr();
 					List<ReturnMaterialContext> orderContext = GetProductReturnContext(transaction.OrderCode, systemOperator);
 
 					transaction.Items.ForEach(itm =>
@@ -793,6 +796,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 								OrderProcess curProcess = new()
 								{//Pass Group of parrel operation 
+									OperationId = op.OperationId,
 									Step = op.Step.ToInt32(),
 									//need to add
 									//SortId = 0,
@@ -805,7 +809,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 									ProcessSubTypeId = op.OperationSubtype,
 									Total = op.Quantity,
 									MachineId = machine.MachineCode,
-									LineId = machine.LineNo.ToStr(),
+									//LineId = machine.LineNo,
+									LineId = op.LineNo,
 									PlannedEnd = op.PlannedEndDate,
 									PlannedStart = op.PlannedStartDate,
 									Comments = machine.Comments,
@@ -831,7 +836,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								if (editMode)
 								{
 									OrderProcess foundProcess = workOrderInfo.Processes.Find(p =>
-										p.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
+										p.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
 										p.LineId.ToInt32() == machine.LineNo
 									);
 									if (foundProcess?.Received == 0)
@@ -872,7 +877,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									}
 									else if (foundProcess is not null)
 									{
-										foundProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() && x.MachineId == curProcess.MachineId);
+										foundProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() && x.MachineId == curProcess.MachineId);
 										if (foundProcess is not null)
 										{
 											curProcess = foundProcess;
@@ -908,7 +913,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								ProcessType processType = null;
 								if (string.IsNullOrEmpty(op.OperationType))
 								{
-									ProcessEntryProcess actualProcess = currentProduct.Processes.Where(prc => prc.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble())?.FirstOrDefault();
+									ProcessEntryProcess actualProcess = currentProduct.Processes.Where(prc => prc.OperationNo.ToStr() == curProcess.OperationNo.ToStr())?.FirstOrDefault();
 									if (processType is not null)
 									{
 										curProcess.ProcessTypeId = actualProcess.ProcessTypeId;
@@ -960,7 +965,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											};
 											if (editMode)
 											{
-												SubProduct foundComponent = workOrderInfo.Subproducts.Find(x => x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() && x.ComponentId == newComp.ComponentId && x.LineId == newComp.LineId);
+												SubProduct foundComponent = workOrderInfo.Subproducts.Find(x => x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() && x.ComponentId == newComp.ComponentId && x.LineId == newComp.LineId);
 												if (foundComponent is not null)
 												{
 													newComp = foundComponent;
@@ -1035,7 +1040,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											if (editMode)
 											{
 												OrderComponent foundComponent = workOrderInfo.Components.Find(x =>
-													x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
+													x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
 													x.SourceId == newComp.SourceId &&
 													x.LineId == newComp.LineId
 												);
@@ -1074,7 +1079,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										WorkOrderTool newTool = new();
 										ToolType currentToolType = _toolOperation.ListToolTypes(tool.ToolingCode)?.Find(x => x.Status != Status.Failed);
 										ProcessEntryTool productTool = currentProduct.Tools.FirstOrDefault(x =>
-											x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
+											x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
 											x.ToolId == tool.ToolingCode
 										);
 										if (currentToolType is not null)
@@ -1101,7 +1106,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 												}
 											}
 
-											WorkOrderTool existingTool = workOrderInfo.Tools.Find(x => x.OperationNo.ToDouble() == newTool.OperationNo.ToDouble() && x.LineId == newTool.LineId);
+											WorkOrderTool existingTool = workOrderInfo.Tools.Find(x => x.OperationNo.ToStr() == newTool.OperationNo.ToStr() && x.LineId == newTool.LineId);
 											if (existingTool is null)
 											{
 												workOrderInfo.Tools.Add(newTool);
@@ -1141,7 +1146,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 									{
 										WorkOrderLabor newLabor = new();
 										ProcessEntryLabor productLabor = currentProduct.Labor.FirstOrDefault(x =>
-											x.OperationNo.ToDouble() == curProcess.OperationNo.ToDouble() &&
+											x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
 											x.LaborId == labor.ProfileCode
 										);
 										Labor currentLabor = _laborRepo.ListLabors()?.Find(x => string.Equals(x.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
@@ -1170,7 +1175,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 											}
 
 											WorkOrderLabor existingLabor = workOrderInfo.Labor.Find(x =>
-												x.OperationNo.ToDouble() == newLabor.OperationNo.ToDouble() &&
+												x.OperationNo.ToStr() == newLabor.OperationNo.ToStr() &&
 												x.LineId == newLabor.LineId);
 											if (existingLabor is null)
 											{
@@ -1310,7 +1315,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						workOrderInfo.Tasks ??= [];
 						foreach (Activity t in currentProduct.Tasks)
 						{
-							OrderProcess existingProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToDouble() == t.OperationNo.ToDouble());
+							OrderProcess existingProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToStr() == t.OperationNo.ToStr());
 							if (existingProcess is not null)
 							{
 								workOrderInfo.Tasks.Add(t);
@@ -1742,7 +1747,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 				op.OperationSubtype = prc.ProcessSubTypeId;
 				op.Step = prc.Step.ToDouble();
 				//As Discussed add new field 
-				op.OperationNo = prc.OperationNo.ToDouble();
+				op.OperationNo = prc.OperationNo.ToStr();
 				op.Quantity = prc.Total;
 				op.PlannedStartDate = prc.PlannedStart;
 				op.PlannedEndDate = prc.PlannedEnd;
@@ -1930,12 +1935,12 @@ public class WorkOrderOperation : IWorkOrderOperation
 						}
 						foreach (JObject obj in msg["operations"].Cast<JObject>())
 						{
-							double OperationNo = 0;
+							string OperationNo = "0";
 							OrderProcess currentProcess = null;
 							if (obj.ContainsKey("operationNo"))
 							{
-								OperationNo = obj["operationNo"].ToDouble();
-								currentProcess = order.Processes.Find(pp => pp.OperationNo.ToDouble() == OperationNo);
+								OperationNo = obj["operationNo"].ToStr();
+								currentProcess = order.Processes.Find(pp => pp.OperationNo.ToStr() == OperationNo);
 							}
 							if (currentProcess is not null)
 							{
@@ -1962,7 +1967,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 										OrderProcess spd = order.Processes.Find(dev => dev.LineUID == curUID);
 										if (spd is not null)
 										{
-											spd.LineId = curID.ToInt32().ToStr();
+											//spd.LineId = curID.ToInt32().ToStr();
+											spd.LineId = curID.ToInt32();
 										}
 									}
 								}
@@ -1987,7 +1993,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										string curUID = jItm["lineUID"].ToStr();
 										string curID = jItm["lineID"].ToStr();
 										WorkOrderLabor woL = order.Labor?.Find(dev =>
-											dev.OperationNo.ToDouble() == OperationNo &&
+											dev.OperationNo.ToStr() == OperationNo &&
 											dev.LineUID == curUID
 										);
 										if (woL is not null)
@@ -2004,7 +2010,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										string curUID = jItm["lineUID"].ToStr();
 										string curID = jItm["lineID"].ToStr();
 										WorkOrderTool elmt = order.Tools?.Find(dev =>
-											dev.OperationNo.ToDouble() == OperationNo &&
+											dev.OperationNo.ToStr() == OperationNo &&
 											dev.LineUID == curUID
 										);
 										if (elmt is not null)
@@ -2076,7 +2082,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		{
 			foreach (OrderComponent order in tempOrder.Components)
 			{
-				OrderComponent[] tempValue = [.. componentValues.Where(x => x.OperationNo.ToDouble() == order.OperationNo.ToDouble() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
+				OrderComponent[] tempValue = [.. componentValues.Where(x => x.OperationNo.ToStr() == order.OperationNo.ToStr() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
 				if (tempValue.Length > 0)
 				{
 					try
@@ -2132,7 +2138,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						ExternalDate = string.Empty
 					}
 				).ToArray(),
-				sf_order_transactions_material_detail = valuesToInsert.SelectMany(x => x.Batches, (parent, detail) =>
+				c = valuesToInsert.SelectMany(x => x.Batches, (parent, detail) =>
 				new
 				{
 					TransactionId = transactionId,
@@ -2190,14 +2196,23 @@ public class WorkOrderOperation : IWorkOrderOperation
 					object requestParams = new
 					{
 						TransactionId = transactionId,
-						tempOrder.ExternalId,
+						//tempOrder.ExternalId,
+						tempOrder.OrderType,
+						tempOrder.OrderCode,
 						Date = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
 						Type = movType,
-						OrderBatch = tempOrder.LotNo,
+						comps[0].OperationNo,
 						Components = comps,
 						Comments = "",
 						Employee = systemOperator.EmployeeId
 					};
+					// 		var endpointResponse = await _dataSyncServiceManager.ExecuteServiceEndpoint(
+					// 	movEvent,
+					// 	string.Empty,
+					// 	JsonConvert.SerializeObject(requestParams),
+					// 	"POST",
+					// 	systemOperator
+					// ).ConfigureAwait(false);
 					//Not saved in Temp table 
 					//BrokerDAL.TrySaveTempWorkOrderTransaction(movEvent, objectToInsert);
 					// This logic replace with kafka
@@ -2232,80 +2247,530 @@ public class WorkOrderOperation : IWorkOrderOperation
 					// 			ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + resp.Message));
 					// 		}
 				}
-			}
+				//}
 
-			if (CanProceed)
-			{
-				try
+				if (CanProceed)
 				{
-					List<MessageBroker> messagesToPush = [];
-					using TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled);
-					valuesToInsert.ForEach(tempValue =>
+					try
 					{
-						string result = _workOrderRepo.UpdateMaterialManual(transactionId, tempValue, employeeId, workOrderId, externalId, systemOperator);
-						if (!string.IsNullOrEmpty(result))
+						List<MessageBroker> messagesToPush = [];
+						using TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled);
+						valuesToInsert.ForEach(tempValue =>
 						{
-							messagesToPush.Add(new MessageBroker
+							string result = _workOrderRepo.UpdateMaterialManual(transactionId, tempValue, employeeId, workOrderId, externalId, systemOperator);
+							if (!string.IsNullOrEmpty(result))
 							{
-								Type = MessageBrokerType.ManualMaterialIssue,
-								ElementId = workOrderId,
-								ElementValue = tempValue.OperationNo,
-								MachineId = tempValue.MachineId,
-								Aux = string.Format("{0}|{1}", tempValue.SourceId, tempValue.InputQty.ToStr())
-							});
+								messagesToPush.Add(new MessageBroker
+								{
+									Type = MessageBrokerType.ManualMaterialIssue,
+									ElementId = workOrderId,
+									ElementValue = tempValue.OperationNo,
+									MachineId = tempValue.MachineId,
+									Aux = string.Format("{0}|{1}", tempValue.SourceId, tempValue.InputQty.ToStr())
+								});
 
-							messagesToPush.Add(new MessageBroker
-							{
-								Type = MessageBrokerType.ExternalMaterialIssue,
-								ElementId = result
-							});
+								messagesToPush.Add(new MessageBroker
+								{
+									Type = MessageBrokerType.ExternalMaterialIssue,
+									ElementId = result
+								});
+							}
+						});
+
+						tempOrder.Components = [.. tempOrder.Components.Where(x => x.SourceId == x.OriginalSourceId)];
+						if (tempOrder.Components?.Count > 0)
+						{
+							string componentDetailsJSON = JsonConvert.SerializeObject(tempOrder.Components);
+							bool success = _workOrderRepo.MergeWorkOrderComponents(tempOrder, componentDetailsJSON, systemOperator);
 						}
-					});
 
-					tempOrder.Components = [.. tempOrder.Components.Where(x => x.SourceId == x.OriginalSourceId)];
-					if (tempOrder.Components?.Count > 0)
-					{
-						string componentDetailsJSON = JsonConvert.SerializeObject(tempOrder.Components);
-						bool success = _workOrderRepo.MergeWorkOrderComponents(tempOrder, componentDetailsJSON, systemOperator);
+						scope.Complete();
+						returnValue = transactionId;
+
+						//messagesToPush.ForEach(SyncInitializer.ForcePush);
 					}
-
-					scope.Complete();
-					returnValue = transactionId;
-
-					//messagesToPush.ForEach(SyncInitializer.ForcePush);
+					catch (Exception ex)
+					{
+						//await BrokerDAL.SaveTransactionErrorLog(transactionId, movEvent, ex.Message + "|" + ex.StackTrace, objectToInsert).ConfigureAwait(false);
+						throw;
+					}
 				}
-				catch (Exception ex)
+
+				if (!CanProceed && ErrorList.Count > 0)
 				{
-					//await BrokerDAL.SaveTransactionErrorLog(transactionId, movEvent, ex.Message + "|" + ex.StackTrace, objectToInsert).ConfigureAwait(false);
-					throw;
+					throw new Exception(ErrorList.FirstOrDefault().Value);
 				}
 			}
 
-			if (!CanProceed && ErrorList.Count > 0)
-			{
-				throw new Exception(ErrorList.FirstOrDefault().Value);
-			}
-		}
-	
-   // Replace with DataSyncServiceManager ExecuteServiceEndpoint
-var endpointResponse = await _dataSyncServiceManager.ExecuteServiceEndpoint(
-    movEvent,
-    string.Empty,
-    "",
-    "POST",
-    systemOperator
+			   // Replace with DataSyncServiceManager ExecuteServiceEndpoint
+			// var endpointResponse = await _dataSyncServiceManager.ExecuteServiceEndpoint(
+			// 	SyncERPEntity.MATERIAL_ISSUE_SERVICE,
+			// 	string.Empty,
+			// 	string.Empty,
+			// 	"POST",
+			// 	systemOperator
+			// ).ConfigureAwait(false);
+
+			//CanProceed = endpointResponse.StatusCode == HttpStatusCode.OK;
+			using var httpClient = new HttpClient();
+
+var request = new
+{
+    Services = new[] { "MaterialIssue" },
+    EntityCode = "",
+    BodyData = "",
+    MethodType = "POST"
+};
+
+var jsonContent = new StringContent(
+    JsonConvert.SerializeObject(request),
+    System.Text.Encoding.UTF8,
+    "application/json"
+);
+
+var response = await httpClient.PostAsync(
+    "http://localhost:8080/DataSyncService/Producer",
+    jsonContent
 ).ConfigureAwait(false);
 
-CanProceed = endpointResponse.StatusCode == HttpStatusCode.OK;
-if (CanProceed)
-{
-   
-}
-else
-{
-   // ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + endpointResponse.Message));
-}
+CanProceed = response.IsSuccessStatusCode;
+			if (CanProceed)
+			{
+
+			}
+			else
+			{
+			   // ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + endpointResponse.Message));
+			}
+			
+		}
 		return returnValue;
 	}
-			
+	// public async Task<bool> CreateOrderProgressEntry(ManualOrderProgressRequest request, User systemOperator, DataSyncServiceManager ServiceManager)
+	// {
+	// 	#region Permission validation
+
+	// 	if (!systemOperator.Permissions.Any(x => x.Code == Permissions.PRD_ORDERPROGRESS_MANAGE))
+	// 	{
+	// 		throw new UnauthorizedAccessException(noPermission);
+	// 	}
+
+	// 	#endregion Permission validation
+
+	// 	string objectToInsert = "";
+	// 	Machine m = GetDevice(request.MachineId);
+	// 	double performanceValue = -1;
+	// 	bool CanProceed = true;
+	// 	OrderProcess lastProcess = null;
+	// 	if (m?.OEEConfiguration is not null)
+	// 	{
+	// 		if (m.OEEConfiguration.PerformanceDefaultType == 1)
+	// 		{
+	// 			Sensor s = m.Sensors.Find(x => x.Id == m.OEEConfiguration.PerformanceDefaultValue);
+	// 			if (s is not null)
+	// 			{
+	// 				performanceValue = SyncService.GetMachineValue(m.Id, s.Code).ToDouble(-1);
+	// 			}
+	// 		}
+	// 		else if (m.OEEConfiguration.PerformanceDefaultType == 2)
+	// 		{
+	// 			MachineParam s = m.Parameters.Find(x => x.Id == m.OEEConfiguration.PerformanceDefaultValue);
+	// 			if (s is not null)
+	// 			{
+	// 				performanceValue = SyncService.GetMachineValue(m.Id, s.Code).ToDouble(-1);
+	// 			}
+	// 		}
+	// 		else
+	// 		{
+	// 			performanceValue = m.OEEConfiguration.PerformanceDefaultValue.ToDouble(-1);
+	// 		}
+	// 	}
+	// 	List<KeyValuePair<string, string>> ErrorList = [];
+	// 	string transactionId = Guid.NewGuid().ToStr();
+	// 	WorkOrder tempOrder = (await GetWorkOrder(request.WorkOrderId).ConfigureAwait(false)).FirstOrDefault();
+
+	// 	#region Object to Insert Test
+
+	// 	List<SubProduct> subs = request.Subproducts?.ToList();
+	// 	subs ??= [];
+	// 	subs.Add(new SubProduct
+	// 	{
+	// 		Batch = request.Batch,
+	// 		ComponentId = lastProcess?.Output,
+	// 		Pallet = request.Pallet,
+	// 		LineId = string.Empty,
+	// 		Quantity = request.Quantity
+	// 	});
+	// 	object ob2Ins = new
+	// 	{
+	// 		sf_order_transactions_product = new[]
+	// 		{
+	// 				new
+	// 				{
+	// 					TransactionId=transactionId,
+	// 					OperationNo = request.ProcessId,
+	// 					OrderCode = request.WorkOrderId,
+	// 					StartEntryDate = request.StartEntry,
+	// 					EndEntryDate = request.EndEntry,
+	// 					Quantity     = 1,
+	// 					OrderFactor =  1,
+	// 					ProcessFactor = 1,
+	// 					request.EmployeeId,
+	// 					UserId = systemOperator.Id,
+	// 					request.ActivityInstanceId,
+	// 					request.IsPartial,
+	// 					request.IssuedLot,
+	// 					request.Comments,
+	// 					ExternalId = string.Empty,
+	// 					ExternalDate = string.Empty
+	// 				}
+	// 			},
+	// 		sf_order_transactions_product_detail = subs.Select(x =>
+	// 		new
+	// 		{
+	// 			TransactionId = transactionId,
+	// 			ItemCode = x.ComponentId,
+	// 			LotNumber = x.Batch,
+	// 			x.Pallet,
+	// 			BinLocationCode = request.Location,
+	// 			x.Quantity,
+	// 			LotStatusCode = "",
+	// 			InventoryStatusCode = request.InventoryStatus,
+	// 			LineNo = x.LineId,
+	// 			x.WarehouseCode,
+	// 			MachineCode = request.MachineId,
+	// 			OriginalMachine = request.OriginalMachineId
+	// 		}).ToArray()
+	// 	};
+	// 	objectToInsert = JsonConvert.SerializeObject(ob2Ins);
+
+	// 	#endregion Object to Insert Test
+
+	// 	string ExternalId = string.Empty;
+	// 	if (tempOrder is not null && !string.IsNullOrEmpty(tempOrder.ExternalId))
+	// 	{
+	// 		lastProcess = tempOrder.Processes.Find(x => x.IsOutput);
+	// 		if (lastProcess is not null && lastProcess.ProcessId.ToDouble() == request.ProcessId.ToDouble())
+	// 		{
+	// 			List<KeyValuePair<string, object>> customData = [];
+	// 			request.Subproducts ??= [];
+	// 			request.Subproducts.ForEach(sp =>
+	// 			{
+	// 				sp.Pallet = request.Pallet;
+	// 				if (string.IsNullOrEmpty(sp.LineId))
+	// 				{
+	// 					sp.LineId = "0";
+	// 				}
+	// 			});
+	// 			Employee employee = GetEmployee(request.EmployeeId);
+	// 			string operador = string.Empty;
+	// 			if (employee is not null)
+	// 			{
+	// 				operador = employee.Name;
+	// 				systemOperator.EmployeeId = request.EmployeeId;
+	// 			}
+	// 			customData.Add(new KeyValuePair<string, object>("Comments", request.Comments));
+	// 			customData.Add(new KeyValuePair<string, object>("IssuedLot", request.IssuedLot));
+	// 			customData.Add(new KeyValuePair<string, object>("Employee", operador));
+
+	// 			List<MaterialIssueProductModel> productsErp = [];
+	// 			MaterialIssueProductModel firstPart = new()
+	// 			{
+	// 				ItemCode = lastProcess?.Output,
+	// 				LineId = "0",
+	// 				Quantity = request.Quantity,
+	// 				LineType = "Product",
+	// 				Warehouse = tempOrder.WarehouseId,
+	// 				Lots = []
+	// 			};
+	// 			firstPart.Lots.Add(new ComponentBatch
+	// 			{
+	// 				WarehouseCode = tempOrder.WarehouseId,
+	// 				Batch = request.Batch,
+	// 				Pallet = request.Pallet,
+	// 				Location = request.Location,
+	// 				LineId = "0",
+	// 				Quantity = request.Quantity,
+	// 				InventoryStatus = request.InventoryStatus,
+	// 			});
+	// 			productsErp.Add(firstPart);
+	// 			if (request.Rejected > 0)
+	// 			{
+	// 				MaterialIssueProductModel secondPart = new()
+	// 				{
+	// 					ItemCode = lastProcess?.Output,
+	// 					LineId = "0",
+	// 					Quantity = Math.Abs(request.Rejected) * -1,
+	// 					LineType = "Product",
+	// 					Warehouse = tempOrder.WarehouseId,
+	// 					Lots = []
+	// 				};
+	// 				secondPart.Lots.Add(new ComponentBatch
+	// 				{
+	// 					WarehouseCode = tempOrder.WarehouseId,
+	// 					Batch = request.Batch,
+	// 					Pallet = request.Pallet,
+	// 					Location = request.Location,
+	// 					LineId = "0",
+	// 					Quantity = Math.Abs(request.Rejected) * -1,
+	// 					InventoryStatus = request.InventoryStatus,
+	// 				});
+	// 				productsErp.Add(secondPart);
+	// 			}
+	// 			request.Subproducts?.ForEach(sub =>
+	// 				{
+	// 					if (string.IsNullOrEmpty(sub.LineId))
+	// 					{
+	// 						sub.LineId = "0";
+	// 					}
+	// 					SubProduct orderSubproduct = tempOrder.Subproducts.Find(osp => osp.ComponentId == sub.ComponentId && osp.ProcessId == lastProcess.ProcessId);
+	// 					MaterialIssueProductModel mod = new()
+	// 					{
+	// 						ItemCode = sub.ComponentId,
+	// 						LineId = sub.LineId,
+	// 						Quantity = sub.Quantity,
+	// 						LineType = "ByProduct",
+	// 						Warehouse = orderSubproduct is not null ? orderSubproduct.WarehouseCode : tempOrder.WarehouseId,
+	// 						Lots = []
+	// 					};
+	// 					mod.Lots.Add(new ComponentBatch
+	// 					{
+	// 						Batch = sub.Batch,
+	// 						Pallet = sub.Pallet,
+	// 						Location = sub.Location,
+	// 						LineId = sub.LineId,
+	// 						Quantity = sub.Quantity,
+	// 						InventoryStatus = sub.InventoryStatus,
+	// 						WarehouseCode = orderSubproduct is not null ? orderSubproduct.WarehouseCode : tempOrder.WarehouseId
+	// 					});
+	// 					productsErp.Add(mod);
+
+	// 					if (sub.Rejected > 0)
+	// 					{
+	// 						MaterialIssueProductModel rej = new()
+	// 						{
+	// 							ItemCode = sub.ComponentId,
+	// 							LineId = sub.LineId,
+	// 							Quantity = Math.Abs(sub.Rejected) * -1,
+	// 							LineType = "ByProduct",
+	// 							Warehouse = orderSubproduct is not null ? orderSubproduct.WarehouseCode : tempOrder.WarehouseId,
+	// 							Lots = []
+	// 						};
+	// 						rej.Lots.Add(new ComponentBatch
+	// 						{
+	// 							Batch = sub.Batch,
+	// 							Pallet = sub.Pallet,
+	// 							Location = sub.Location,
+	// 							LineId = sub.LineId,
+	// 							Quantity = Math.Abs(sub.Rejected) * -1,
+	// 							InventoryStatus = sub.InventoryStatus,
+	// 							WarehouseCode = orderSubproduct is not null ? orderSubproduct.WarehouseCode : tempOrder.WarehouseId
+	// 						});
+	// 						productsErp.Add(rej);
+	// 					}
+	// 				});
+	// 			string movEvent = BackgroundServices.PRODUCT_RECEIPT_SERVICE;
+	// 			object requestParams = new
+	// 			{
+	// 				TransactionId = transactionId,
+	// 				tempOrder.ExternalId,
+	// 				ExternalComponentId = lastProcess.Output,
+	// 				OperationNo = lastProcess.ProcessId,
+	// 				Date = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+	// 				request.Batch,
+	// 				request.Pallet,
+	// 				request.Quantity,
+	// 				request.Rejected,
+	// 				CustomData = customData,
+	// 				Products = productsErp,
+	// 				request.Comments,
+	// 				Employee = systemOperator.EmployeeId,
+	// 				request.Location,
+	// 				request.InventoryStatus
+	// 			};
+	// 			_ = BrokerDAL.TrySaveTempWorkOrderTransaction(movEvent, objectToInsert);
+	// 			DataSyncHttpResponse resp = await ServiceManager.ExecuteService(
+	// 				movEvent,
+	// 				TriggerType.SmartFactory,
+	// 				ServiceExecOrigin.Event,
+	// 				systemOperator,
+	// 				"POST",
+	// 				string.Empty,
+	// 				JsonConvert.SerializeObject(requestParams)
+	// 			).ConfigureAwait(false);
+
+	// 			CanProceed = resp.StatusCode == HttpStatusCode.OK;
+	// 			if (!CanProceed)
+	// 			{
+	// 				ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + resp.Message));
+	// 			}
+	// 			else
+	// 			{
+	// 				try
+	// 				{
+	// 					if (!string.IsNullOrEmpty(resp.Message))
+	// 					{
+	// 						JObject o = JObject.Parse(resp.Message);
+	// 						JObject msg = JObject.Parse(o["Message"].ToString());
+	// 						JObject d = JObject.Parse(msg["data"].ToString());
+	// 						ExternalId = d["docNum"].ToString();
+	// 					}
+	// 				}
+	// 				catch
+	// 				{
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// 	if (CanProceed)
+	// 	{
+	// 		List<MessageBroker> result = null;
+	// 		try
+	// 		{
+	// 			using (TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled))
+	// 			{
+	// 				result = BrokerDAL.CreateOrderProgressManual(request, performanceValue, systemOperator, ExternalId, ref transactionId);
+
+	// 				if (request.Subproducts?.Count > 0)
+	// 				{
+	// 					request.Subproducts.ForEach(sub =>
+	// 						BrokerDAL.EmitSubproduct(
+	// 							request,
+	// 							sub.ComponentId,
+	// 							sub.Quantity,
+	// 							sub.Rejected,
+	// 							sub.Batch, sub.Pallet, transactionId, sub.LineId, sub.InventoryStatus, sub.Location));
+	// 				}
+
+	// 				scope.Complete();
+	// 			}
+	// 			if (result?.Count > 0)
+	// 			{
+	// 				result.ForEach(SyncInitializer.ForcePush);
+	// 			}
+	// 		}
+	// 		catch (Exception ex)
+	// 		{
+	// 			//logger.Error(ex);
+	// 			//await BrokerDAL.SaveTransactionErrorLog(transactionId, "onProductReceipt", ex.Message + "|" + ex.StackTrace, objectToInsert).ConfigureAwait(false);
+	// 			throw;
+	// 		}
+	// 	}
+
+	// 	return !CanProceed && ErrorList.Count > 0 ? throw new Exception(ErrorList.FirstOrDefault().Value) : true;
+	// }
+
+	/// <summary>
+	/// Gets data from sf_order_transactions_material and detail tables and creates requestParams type object for push data
+	/// Only retrieves transactions where ExternalId is null or empty
+	///
+	/// IMPORTANT: This method processes ALL pending transactions.
+	/// Returns a special object that signals the processor to send individual POST requests for each transaction.
+	/// </summary>
+	/// <param name="systemOperator">The system operator user</param>
+	/// <param name="cancel">Cancellation token</param>
+	/// <returns>Object containing list of all pending transactions to process individually</returns>
+	public async Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default)
+	{
+		// Get all transactions where ExternalId is null or empty
+		List<OrderTransactionMaterial> transactions = await _orderTransactionMaterialRepo.GetOrderTransactionMaterialWithoutExternalId(cancel).ConfigureAwait(false);
+
+		if (transactions == null || transactions.Count == 0)
+		{
+			throw new Exception("No transactions found without ExternalId");
+		}
+
+		// Build a list of request params for each transaction
+		List<object> allTransactionParams = [];
+
+		foreach (var transaction in transactions)
+		{
+			// Get work order information
+			List<WorkOrder> workOrders = await GetWorkOrder(transaction.OrderId).ConfigureAwait(false);
+			WorkOrder? workOrder = workOrders?.FirstOrDefault();
+
+			if (workOrder == null)
+			{
+				// Skip this transaction if work order not found
+				continue;
+			}
+
+			// Determine movement type based on direction
+			string movType = transaction.Direction == 1 ? "Issue" :
+			                 transaction.Direction == 2 ? "Return" : "Scrap";
+
+			// Build components list from transaction details
+			List<object> components = [];
+
+			foreach (var detail in transaction.Details)
+			{
+				// Get component information
+				Component? component = (await _componentOperation.GetComponents(detail.ItemId, true).ConfigureAwait(false))
+					.Where(x => x.Status != Status.Failed)?.FirstOrDefault();
+
+				if (component != null)
+				{
+					var componentObj = new
+					{
+						OperationNo = transaction.OperationId,
+						SourceId = component.Code,
+						ItemCode = component.ExternalId,
+						InputQty = Math.Abs(detail.Quantity),
+						LineId = detail.LineId,
+						WarehouseCode = detail.WarehouseCode,
+						Batches = new[]
+						{
+							new
+							{
+								ComponentId = component.Code,
+								Quantity = Math.Abs(detail.Quantity),
+								Batch = detail.LotNumber,
+								Pallet = detail.Pallet,
+								Location = detail.LocationCode,
+								InventoryStatus = detail.InventoryStatus,
+								BatchDate = detail.ExpDate,
+								WarehouseCode = detail.WarehouseCode,
+								Type = detail.Type,
+								OrderId = detail.OrderId,
+								LineId = detail.LineId
+							}
+						}
+					};
+
+					components.Add(componentObj);
+				}
+			}
+
+			// Create request parameters object for this transaction
+			var transactionParams = new
+			{
+				TransactionId = transaction.TransactionId,
+				OrderType = workOrder.OrderType,
+				WorkOrderId = workOrder.OrderCode,
+				Date = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+				Type = movType,
+				OperationNo = transaction.OperationId,
+				Components = components,
+				Comments = transaction.Comments ?? string.Empty,
+				Employee = transaction.EmployeeId ?? systemOperator.EmployeeId
+			};
+
+			allTransactionParams.Add(transactionParams);
+		}
+
+		if (allTransactionParams.Count == 0)
+		{
+			throw new Exception("No valid transactions to process");
+		}
+
+		// Return object with special flag to indicate multiple transactions
+		// The processor will detect this and send individual POST requests
+		return new
+		{
+			ProcessIndividually = true,
+			Transactions = allTransactionParams
+		};
+	}
+
+
 		}

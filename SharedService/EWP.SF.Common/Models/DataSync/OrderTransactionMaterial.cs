@@ -70,6 +70,11 @@ public class OrderTransactionMaterial
 	/// <summary>
 	///
 	/// </summary>
+	public string ExternalId { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	public List<OrderTransactionMaterialDetail> Details { get; set; }
 
 	/// <summary>

@@ -663,7 +663,7 @@ public class OrderTransactionProductStatus
 	/// <summary>
 	///
 	/// </summary>
-	public double OperationNo { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -759,7 +759,7 @@ public class ProductTransferExternal
 	/// <summary>
 	///
 	/// </summary>
-	public double OperationNo { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///

@@ -662,6 +662,7 @@ public class WorkOrder : ILoggableEntity
 /// </summary>
 public class OrderProcess
 {
+	public string OperationId { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -679,7 +680,7 @@ public class OrderProcess
 	/// <summary>
 	///
 	/// </summary>
-	public string ProcessId { get; set; }
+	//public string ProcessId { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -795,7 +796,7 @@ public class OrderProcess
 	/// <summary>
 	///
 	/// </summary>
-	public string LineId { get; set; }
+	public int LineId { get; set; }
 
 	/// <summary>
 	///
@@ -1904,7 +1905,10 @@ public class WorkOrderExternal
 ///
 /// </summary>
 public class WorkOrderOperation
+
 {
+	[Required]
+	public string OperationId { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -1915,7 +1919,7 @@ public class WorkOrderOperation
 	///
 	/// </summary>
 	[Required]
-	public double OperationNo { get; set; }
+	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -1978,6 +1982,11 @@ public class WorkOrderOperation
 	/// <summary>
 	///
 	/// </summary>
+	public int LineNo { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	[MaxLength(100)]
 	public string OutputUoM { get; set; }
 
@@ -2028,7 +2037,7 @@ public class WorkOrderOperation
 	/// </summary>
 	public List<WorkOrderTask> Tasks { get; set; }
 
-	
+
 }
 
 /// <summary>
@@ -3705,7 +3714,7 @@ public class ProductionOrderMachine
 	/// <summary>
 	///
 	/// </summary>
-	public string LineId { get; set; }
+	public int LineId { get; set; }
 
 	/// <summary>
 	///

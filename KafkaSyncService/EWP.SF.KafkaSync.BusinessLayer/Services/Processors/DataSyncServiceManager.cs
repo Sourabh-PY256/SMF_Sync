@@ -2,6 +2,7 @@
 using EWP.SF.Common.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
@@ -11,15 +12,18 @@ public class DataSyncServiceManager
 	private readonly ILogger<DataSyncServiceManager> _logger;
 	private readonly IDataSyncServiceOperation _operations;
 	private readonly IServiceConsumerManager _serviceConsumerManager;
+	private readonly IConfiguration _configuration;
 
 	public DataSyncServiceManager(
 		ILogger<DataSyncServiceManager> logger,
 		IDataSyncServiceOperation operations,
-		IServiceConsumerManager serviceConsumerManager)
+		IServiceConsumerManager serviceConsumerManager,
+		IConfiguration configuration)
 	{
 		_logger = logger;
 		_operations = operations;
 		_serviceConsumerManager = serviceConsumerManager;
+		_configuration = configuration;
 	}
 
 	public  async Task InsertDataSyncServiceLog(string serviceName, string ErrorMessage, User systemOperator)
@@ -88,9 +92,9 @@ public class DataSyncServiceManager
         return result;
     }
 public async Task<DataSyncHttpResponse> ExecuteServiceEndpoint(
-    string serviceName, 
-    string entityCode = "", 
-    string bodyData = "", 
+    string serviceName,
+    string entityCode = "",
+    string bodyData = "",
     string methodType = "GET",
     User systemOperator = null)
 {
@@ -111,8 +115,12 @@ public async Task<DataSyncHttpResponse> ExecuteServiceEndpoint(
             "application/json"
         );
 
+        // Get the DataSync service URL from configuration
+        string dataSyncServiceUrl = _configuration["DataSyncServiceUrl"] ?? "http://localhost:8080";
+        string endpointUrl = $"{dataSyncServiceUrl}/DataSyncService/Producer";
+
         var response = await httpClient.PostAsync(
-            "http://localhost:5118/DataSyncService/Producer",
+            endpointUrl,
             jsonContent
         ).ConfigureAwait(false);
 

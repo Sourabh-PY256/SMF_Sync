@@ -160,6 +160,7 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 										LineId = otItem.LineID.ToString(),
 										Quantity = otItem.Quantity,
 										Warehouse = otItem.WarehouseCode
+
 									};
 									if (itemDetail is not null && itemDetail.Quantity != 0)
 									{
