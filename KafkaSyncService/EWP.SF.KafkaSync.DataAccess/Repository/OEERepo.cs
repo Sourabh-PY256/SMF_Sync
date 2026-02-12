@@ -68,14 +68,17 @@ public class OEERepo : IOEERepo
 	/// <summary>
 	///
 	/// </summary>
-	public MachineOEEConfiguration GetMachineOeeConfiguration(string machineId)
+	/// <summary>
+	/// Gets the OEE configuration for a specific machine.
+	/// </summary>
+	public async Task<MachineOEEConfiguration> GetMachineOeeConfiguration(string machineId)
 	{
 		MachineOEEConfiguration returnValue = null;
-		using (EWP_Connection connection = new(ConnectionString))
+		await using (EWP_Connection connection = new(ConnectionString))
 		{
 			try
 			{
-				using EWP_Command command = new("SP_SF_MachineOEEConfiguration_SEL", connection)
+				await using EWP_Command command = new("SP_SF_MachineOEEConfiguration_SEL", connection)
 				{
 					CommandType = CommandType.StoredProcedure
 				};
@@ -83,10 +86,10 @@ public class OEERepo : IOEERepo
 
 				command.Parameters.AddCondition("_MachineCode", machineId, !string.IsNullOrEmpty(machineId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Machine"));
 
-				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.OpenAsync().ConfigureAwait(false);
+				await using MySqlDataReader rdr = await command.ExecuteReaderAsync().ConfigureAwait(false);
 
-				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				while (await rdr.ReadAsync().ConfigureAwait(false))
 				{
 					returnValue = new MachineOEEConfiguration
 					{
@@ -134,7 +137,7 @@ public class OEERepo : IOEERepo
 			}
 			finally
 			{
-				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.CloseAsync().ConfigureAwait(false);
 			}
 		}
 		return returnValue;
@@ -143,15 +146,15 @@ public class OEERepo : IOEERepo
 	/// <summary>
 	///
 	/// </summary>
-	public List<MachineOEEConfiguration> GetMachineOeeConfiguration()
+	public async Task<List<MachineOEEConfiguration>> GetMachineOeeConfiguration()
 	{
 		List<MachineOEEConfiguration> returnValue = null;
 		MachineOEEConfiguration element;
-		using (EWP_Connection connection = new(ConnectionString))
+		await using (EWP_Connection connection = new(ConnectionString))
 		{
 			try
 			{
-				using EWP_Command command = new("SP_SF_MachineOEEConfiguration_SEL", connection)
+				await using EWP_Command command = new("SP_SF_MachineOEEConfiguration_SEL", connection)
 				{
 					CommandType = CommandType.StoredProcedure
 				};
@@ -159,10 +162,10 @@ public class OEERepo : IOEERepo
 
 				command.Parameters.AddNull("_MachineCode");
 
-				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.OpenAsync().ConfigureAwait(false);
+				await using MySqlDataReader rdr = await command.ExecuteReaderAsync().ConfigureAwait(false);
 
-				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				while (await rdr.ReadAsync().ConfigureAwait(false))
 				{
 					returnValue ??= [];
 					element = new MachineOEEConfiguration
@@ -211,7 +214,7 @@ public class OEERepo : IOEERepo
 			}
 			finally
 			{
-				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.CloseAsync().ConfigureAwait(false);
 			}
 		}
 		return returnValue;

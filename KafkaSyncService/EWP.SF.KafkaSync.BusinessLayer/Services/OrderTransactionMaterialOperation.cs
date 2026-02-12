@@ -34,10 +34,10 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	{
 		#region Permission validation
 
-		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		{
-			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-		}
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		// }
 
 		#endregion Permission validation
 
@@ -45,7 +45,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	}
 
 	/// <summary>
-	///
+	/// Updates a list of material return transactions.
 	/// </summary>
 	public async Task<List<ResponseData>> ListUpdateMaterialReturn(List<MaterialReturnExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level)
 	{
@@ -70,9 +70,8 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					{
 						throw new Exception($"{results[0]}");
 					}
-					string transactionId = Guid.NewGuid().ToString();
-					// Order
 
+					// Order
 					string orderId = string.Empty;
 					WorkOrder wo = (await _workOrderOperation.GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
 					if (wo is not null)
@@ -84,10 +83,11 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						throw new Exception("Order Doesn't Exists");
 					}
 
-					if (wo.Processes.Find(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.Find(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}
+
 					// Data
 					OrderTransactionMaterial orderTransactionInfo = new()
 					{
@@ -106,74 +106,45 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					if (orderTransaction.Items.Count > 0)
 					{
 						OrderTransactionMaterialDetail itemDetail = null;
-						orderTransaction.Items.ForEach(otItem =>
+						foreach (ItemMaterialTransactionExternal otItem in orderTransaction.Items)
 						{
-							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode);
-							if (objItem is not null)
+							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode) ?? throw new Exception($"Item code does not exist: {otItem.ItemCode}");
+							if (objItem.Status == Status.Failed)
 							{
-								if (objItem.Status == Status.Failed)
-								{
-									throw new Exception(string.Format("Item {0} does not exist", otItem.ItemCode));
-								}
-								if (!wo.Components.Any(comp => comp.SourceId == otItem.ItemCode && otItem.LineID == otItem.LineID))
-								{
-								}
-								//Need to discuss because acumatica given defaut lots in case of NON-Tracking Item
-								// if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
-								// {
+								throw new Exception(string.Format("Item {0} does not exist", otItem.ItemCode));
+							}
+							if (!wo.Components.Any(x => x.SourceId == otItem.ItemCode && otItem.LineID == otItem.LineID))
+							{
+							}
+							if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
+							{
+								throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
+							}
+							if (objItem.ManagedBy == 2 && (otItem.Lots is null || otItem.Lots.Count == 0))
+							{
+								throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
+							}
+							if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
+							{
+								throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
+							}
 
-								// 	throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
-								// }
-								if (objItem.ManagedBy == 2 && (otItem.Lots is null || otItem.Lots.Count == 0))
+							if (otItem.Lots.Count > 0)
+							{
+								decimal lotQty = otItem.Lots.Sum(x => x.Quantity);
+								if (otItem.Quantity.ToDouble() != lotQty.ToDouble())
 								{
-									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
+									throw new Exception(string.Format("Item {0} Lot quantities must be equal to Line quantity", otItem.ItemCode));
 								}
-								//Not Implement Yet 
-								// if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
-								// {
-								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
-								// }
-
-								if (objItem.ManagedBy != 1 && otItem.Lots.Count > 0)
+								foreach (ItemLotMaterialTransactionExternal otItemLot in otItem.Lots)
 								{
-									decimal lotQty = otItem.Lots.Sum(s => s.Quantity);
-									if (otItem.Quantity.ToDouble() != lotQty.ToDouble())
+									if (string.IsNullOrEmpty(otItemLot.LotNo))
 									{
-										throw new Exception(string.Format("Item {0} Lot quantities must be equal to Line quantity", otItem.ItemCode));
+										throw new Exception(string.Format("Item {0} Lot number is required", otItem.ItemCode));
 									}
-									otItem.Lots.ForEach(otItemLot =>
+									if (otItemLot.Quantity <= 0)
 									{
-										if (string.IsNullOrEmpty(otItemLot.LotNo))
-										{
-											throw new Exception(string.Format("Item {0} Lot number is required", otItem.ItemCode));
-										}
-										if (otItemLot.Quantity <= 0)
-										{
-											throw new Exception(string.Format("Item {0} Lot quantity must be greater than zero", otItem.ItemCode));
-										}
-										itemDetail = new OrderTransactionMaterialDetail
-										{
-											// TransactionId = transactionId,
-											MachineId = null,
-											OriginalItemId = null,
-											ItemId = objItem.Id,
-											BatchId = null,
-											LineId = otItem.LineID.ToString(),
-											LotNumber = otItemLot.LotNo,
-											Pallet = otItemLot.Pallet,
-											WarehouseCode = otItemLot.WarehouseCode,
-											LocationCode = otItemLot.LocationCode,
-											ExpDate = otItemLot.ExpDate,
-											Quantity = Math.Abs(otItemLot.Quantity) * -1,
-											InventoryStatus = otItemLot.InventoryStatusCode
-										};
-									});
-								}
-								else
-								{
-									if (otItem.Quantity == 0)
-									{
-										throw new Exception($"Item quantity is required: {otItem.ItemCode}");
+										throw new Exception(string.Format("Item {0} Lot quantity must be greater than zero", otItem.ItemCode));
 									}
 									itemDetail = new OrderTransactionMaterialDetail
 									{
@@ -183,26 +154,45 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 										ItemId = objItem.Id,
 										BatchId = null,
 										LineId = otItem.LineID.ToString(),
-										Quantity = Math.Abs(otItem.Quantity) * -1,
-										WarehouseCode = otItem.WarehouseCode,
-										Pallet = string.Empty,
-										LocationCode = string.Empty,
-										LotNumber = string.Empty,
-										InventoryStatus = string.Empty
+										LotNumber = otItemLot.LotNo,
+										Pallet = otItemLot.Pallet,
+										WarehouseCode = otItemLot.WarehouseCode,
+										LocationCode = otItemLot.LocationCode,
+										ExpDate = otItemLot.ExpDate,
+										Quantity = Math.Abs(otItemLot.Quantity) * -1,
+										InventoryStatus = otItemLot.InventoryStatusCode
 									};
-								}
-								if (itemDetail is not null && itemDetail.Quantity != 0)
-								{
-									orderTransactionInfo.Details.Add(itemDetail);
 								}
 							}
 							else
 							{
-								throw new Exception($"Item code does not exist: {otItem.ItemCode}");
+								if (otItem.Quantity == 0)
+								{
+									throw new Exception($"Item quantity is required: {otItem.ItemCode}");
+								}
+								itemDetail = new OrderTransactionMaterialDetail
+								{
+									// TransactionId = transactionId,
+									MachineId = null,
+									OriginalItemId = null,
+									ItemId = objItem.Id,
+									BatchId = null,
+									LineId = otItem.LineID.ToString(),
+									Quantity = Math.Abs(otItem.Quantity) * -1,
+									WarehouseCode = otItem.WarehouseCode,
+									Pallet = string.Empty,
+									LocationCode = string.Empty,
+									LotNumber = string.Empty,
+									InventoryStatus = string.Empty
+								};
 							}
-						});
+							if (itemDetail is not null && itemDetail.Quantity != 0)
+							{
+								orderTransactionInfo.Details.Add(itemDetail);
+							}
+						}
 					}
-					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate);
+					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator);
 					returnValue.Add(response);
 				}
 				catch (Exception ex)
@@ -234,7 +224,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	}
 
 	/// <summary>
-	///
+	/// Updates a list of material issue transactions.
 	/// </summary>
 	public async Task<List<ResponseData>> ListUpdateMaterialIssue(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level)
 	{
@@ -258,7 +248,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					{
 						throw new Exception($"{results[0]}");
 					}
-					string transactionId = Guid.NewGuid().ToString();
+
 					// Order
 					string orderId = string.Empty;
 					WorkOrder wo = (await _workOrderOperation.GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
@@ -271,15 +261,13 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						throw new Exception("Order Doesn't Exists");
 					}
 
-					if (wo.Processes.Find(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.Find(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}
 					// Data
 					OrderTransactionMaterial orderTransactionInfo = new()
 					{
-						// TransactionId = transactionId,
-
 						DocCode = orderTransaction.DocCode,
 						Comments = orderTransaction.Comments,
 						DocDate = orderTransaction.DocDate,
@@ -294,69 +282,45 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 					if (orderTransaction.Items.Count > 0)
 					{
 						OrderTransactionMaterialDetail itemDetail = null;
-						orderTransaction.Items.ForEach(otItem =>
+						foreach (ItemMaterialTransactionExternal otItem in orderTransaction.Items)
 						{
-							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode);
-							if (objItem is not null)
+							Component objItem = _componentOperation.GetComponentByCode(otItem.ItemCode) ?? throw new Exception($"Item code does not exist: {otItem.ItemCode}");
+							if (objItem.Status == Status.Failed)
 							{
-								if (objItem.Status == Status.Failed)
+								throw new Exception(string.Format("Item {0} does not exist", otItem.ItemCode));
+							}
+							if (!wo.Components.Any(comp => comp.SourceId == otItem.ItemCode && otItem.LineID == otItem.LineID))
+							{
+								throw new Exception(string.Format("Production order {0} does not have material {1} on LineNo {2}", wo.Id, otItem.ItemCode, otItem.LineID));
+							}
+							if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
+							{
+								throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
+							}
+							if (objItem.ManagedBy == 2 && (otItem.Lots is null || otItem.Lots.Count == 0))
+							{
+								throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
+							}
+							if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
+							{
+								throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
+							}
+							if (otItem.Lots.Count > 0)
+							{
+								decimal lotQty = otItem.Lots.Sum(x => x.Quantity);
+								if (otItem.Quantity.ToDouble() != lotQty.ToDouble())
 								{
-									throw new Exception(string.Format("Item {0} does not exist", otItem.ItemCode));
+									throw new Exception(string.Format("Item {0} Lot quantities must be equal to Line quantity", otItem.ItemCode));
 								}
-								if (!wo.Components.Any(comp => comp.SourceId == otItem.ItemCode && otItem.LineID == otItem.LineID))
+								foreach (ItemLotMaterialTransactionExternal otItemLot in otItem.Lots)
 								{
-									throw new Exception(string.Format("Production order {0} does not have material {1} on LineNo {2}", wo.Id, otItem.ItemCode, otItem.LineID));
-								}
-								// if (objItem.ManagedBy == 1 && ((otItem.Lots?.Count > 0) || (otItem.SerialNumbers?.Count > 0)))
-								// {
-								// 	throw new Exception(string.Format("Item {0} cannot have lots nor serial numbers due its management", otItem.ItemCode));
-								// }
-								if (objItem.ManagedBy == 2 && (otItem.Lots is null || otItem.Lots.Count == 0))
-								{
-									throw new Exception(string.Format("Item {0} lots are required due its management", otItem.ItemCode));
-								}
-								// if (objItem.ManagedBy == 3 && (otItem.SerialNumbers is null || otItem.SerialNumbers.Count == 0))
-								// {
-								// 	throw new Exception(string.Format("Item {0} serial numbers are required due its management", otItem.ItemCode));
-								// }
-								if ( objItem.ManagedBy != 1 && otItem.Lots.Count > 0)
-								{
-									decimal lotQty = otItem.Lots.Sum(s => s.Quantity);
-									if (otItem.Quantity.ToDouble() != lotQty.ToDouble())
+									if (string.IsNullOrEmpty(otItemLot.LotNo))
 									{
-										throw new Exception(string.Format("Item {0} Lot quantities must be equal to Line quantity", otItem.ItemCode));
+										throw new Exception(string.Format("Item {0} Lot number is required", otItem.ItemCode));
 									}
-									otItem.Lots.ForEach(otItemLot =>
+									if (otItemLot.Quantity <= 0)
 									{
-										if (string.IsNullOrEmpty(otItemLot.LotNo))
-										{
-											throw new Exception(string.Format("Item {0} Lot number is required", otItem.ItemCode));
-										}
-										if (otItemLot.Quantity <= 0)
-										{
-											throw new Exception(string.Format("Item {0} Lot quantity must be greater than zero", otItem.ItemCode));
-										}
-										itemDetail = new OrderTransactionMaterialDetail
-										{
-											// TransactionId = transactionId,
-											MachineId = null,
-											OriginalItemId = null,
-											ItemId = objItem.Id,
-											LineId = otItem.LineID.ToString(),
-											LotNumber = otItemLot.LotNo,
-											Pallet = otItemLot.Pallet,
-											WarehouseCode = otItemLot.WarehouseCode,
-											LocationCode = otItemLot.LocationCode,
-											ExpDate = otItemLot.ExpDate,
-											Quantity = otItem.Quantity
-										};
-									});
-								}
-								else
-								{
-									if (otItem.Quantity == 0)
-									{
-										throw new Exception($"Item quantity is required: {otItem.ItemCode}");
+										throw new Exception(string.Format("Item {0} Lot quantity must be greater than zero", otItem.ItemCode));
 									}
 									itemDetail = new OrderTransactionMaterialDetail
 									{
@@ -364,29 +328,46 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 										MachineId = null,
 										OriginalItemId = null,
 										ItemId = objItem.Id,
-										BatchId = string.Empty,
-										LotNumber = string.Empty,
-										Pallet = string.Empty,
-										LocationCode = string.Empty,
-										InventoryStatus = string.Empty,
 										LineId = otItem.LineID.ToString(),
-										Quantity = otItem.Quantity,
-										WarehouseCode = otItem.WarehouseCode
+										LotNumber = otItemLot.LotNo,
+										Pallet = otItemLot.Pallet,
+										WarehouseCode = otItemLot.WarehouseCode,
+										LocationCode = otItemLot.LocationCode,
+										ExpDate = otItemLot.ExpDate,
+										Quantity = otItem.Quantity
 									};
-								}
-								if (itemDetail is not null && itemDetail.Quantity != 0)
-								{
-									orderTransactionInfo.Details.Add(itemDetail);
 								}
 							}
 							else
 							{
-								throw new Exception($"Item code does not exist: {otItem.ItemCode}");
+								if (otItem.Quantity == 0)
+								{
+									throw new Exception($"Item quantity is required: {otItem.ItemCode}");
+								}
+								itemDetail = new OrderTransactionMaterialDetail
+								{
+									// TransactionId = transactionId,
+									MachineId = null,
+									OriginalItemId = null,
+									ItemId = objItem.Id,
+									BatchId = string.Empty,
+									LotNumber = string.Empty,
+									Pallet = string.Empty,
+									LocationCode = string.Empty,
+									InventoryStatus = string.Empty,
+									LineId = otItem.LineID.ToString(),
+									Quantity = otItem.Quantity,
+									WarehouseCode = otItem.WarehouseCode
+								};
 							}
-						});
+							if (itemDetail is not null && itemDetail.Quantity != 0)
+							{
+								orderTransactionInfo.Details.Add(itemDetail);
+							}
+						}
 					}
 
-					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate);
+					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator);
 					returnValue.Add(response);
 				}
 				catch (Exception ex)
@@ -455,7 +436,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						throw new Exception("Order Doesn't Exists");
 					}
 
-					if (wo.Processes.Find(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.Find(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}

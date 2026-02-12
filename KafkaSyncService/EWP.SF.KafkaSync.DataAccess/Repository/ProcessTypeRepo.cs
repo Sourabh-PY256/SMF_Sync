@@ -250,14 +250,14 @@ public class ProcessTypeRepo : IProcessTypeRepo
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProcessTypeDetail> ListMachineProcessTypeDetails(string machineId)
+	public async Task<List<ProcessTypeDetail>> ListMachineProcessTypeDetails(string machineId)
 	{
 		List<ProcessTypeDetail> returnValue = null;
-		using (EWP_Connection connection = new(ConnectionString))
+		await using (EWP_Connection connection = new(ConnectionString))
 		{
 			try
 			{
-				using EWP_Command command = new("SP_SF_MACHINE_PROCESSDEFAULT_SEL", connection)
+				await using EWP_Command command = new("SP_SF_MACHINE_PROCESSDEFAULT_SEL", connection)
 				{
 					CommandType = CommandType.StoredProcedure
 				};
@@ -267,10 +267,10 @@ public class ProcessTypeRepo : IProcessTypeRepo
 				//Se requiere obtener la lista completa para no estar obteniendo registro por maquina ya que se realizan muchas peticiones a la bd
 				// command.Parameters.AddCondition("_MachineId", machineId, !string.IsNullOrEmpty(machineId), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Machine"));
 
-				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.OpenAsync().ConfigureAwait(false);
+				await using MySqlDataReader rdr = await command.ExecuteReaderAsync().ConfigureAwait(false);
 
-				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				while (await rdr.ReadAsync().ConfigureAwait(false))
 				{
 					ProcessTypeDetail element = new()
 					{
@@ -287,7 +287,7 @@ public class ProcessTypeRepo : IProcessTypeRepo
 			}
 			finally
 			{
-				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.CloseAsync().ConfigureAwait(false);
 			}
 		}
 		return returnValue;

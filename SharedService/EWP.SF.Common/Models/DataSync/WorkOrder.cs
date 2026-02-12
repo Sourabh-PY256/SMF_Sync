@@ -609,7 +609,19 @@ public class WorkOrder : ILoggableEntity
 	/// <summary>
 	///
 	/// </summary>
+	[GridIgnoreProperty]
+	public string WarehouseCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	public int Version { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[GridIgnoreProperty]
+	public int ProductVersion { get; set; }
 
 	/// <summary>
 	///
@@ -662,7 +674,10 @@ public class WorkOrder : ILoggableEntity
 /// </summary>
 public class OrderProcess
 {
-	public string OperationId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string Id { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -677,14 +692,11 @@ public class OrderProcess
 	///
 	/// </summary>
 	public string ProcessSubTypeId { get; set; }
+
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-	/// <summary>
-	///
-	/// </summary>
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -796,7 +808,7 @@ public class OrderProcess
 	/// <summary>
 	///
 	/// </summary>
-	public int LineId { get; set; }
+	public string LineId { get; set; }
 
 	/// <summary>
 	///
@@ -927,12 +939,19 @@ public class OrderComponent
 	/// <summary>
 	///
 	/// </summary>
-	public string OperationNo { get; set; }
-
+	public string ProcessId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string OperationId { get; set; }
 	/// <summary>
 	///
 	/// </summary>
 	public bool IsAuxiliarDevice { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public bool IsInlineIssue { get; set; }
 
 	/// <summary>
 	///
@@ -1282,8 +1301,7 @@ public class ToolValue
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -1538,9 +1556,7 @@ public class WorkOrderLabor
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -1631,8 +1647,7 @@ public class WorkOrderTool
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -1905,22 +1920,29 @@ public class WorkOrderExternal
 ///
 /// </summary>
 public class WorkOrderOperation
-
 {
-	[Required]
-	public string OperationId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string LineUID { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string LineId { get; set; }
 	/// <summary>
 	///
 	/// </summary>
 	[Required]
 	public double Step { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string OperationCode { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	[Required]
-	public string OperationNo { get; set; }
-
+	public string OperationGroup { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -1982,11 +2004,6 @@ public class WorkOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public int LineNo { get; set; }
-
-	/// <summary>
-	///
-	/// </summary>
 	[MaxLength(100)]
 	public string OutputUoM { get; set; }
 
@@ -2036,8 +2053,6 @@ public class WorkOrderOperation
 	///
 	/// </summary>
 	public List<WorkOrderTask> Tasks { get; set; }
-
-
 }
 
 /// <summary>
@@ -3148,6 +3163,13 @@ public class OrderOperationSchedule
 	public string OperationSubtypeCode { get; set; }
 }
 
+public class RangeValidator
+{
+	public string Name { get; set; }
+	public int Min { get; set; }
+	public int Max { get; set; }
+	public bool IsGroup { get; set; }
+}
 /// <summary>
 ///
 /// </summary>
@@ -3207,16 +3229,17 @@ public class ProductionOrder : ILoggableEntity
 		APS = oldOrder.APS;
 		LogDetailId = oldOrder.LogDetailId;
 		LotSize = oldOrder.LotSize;
+		LotNo = oldOrder.LotNo;
 		Operations = [];
 		foreach (OrderProcess oldOp in oldOrder.Processes)
 		{
-			ProductionOrderOperation elemOperation = Operations.FirstOrDefault(x => x.OperationNo == oldOp.OperationNo.ToDouble());
+			ProductionOrderOperation elemOperation = Operations.FirstOrDefault(x => x.OperationNo == oldOp.ProcessId.ToDouble());
 			bool isNewOperation = elemOperation is null;
 			elemOperation ??= new ProductionOrderOperation
 			{
 				OperationTypeCode = oldOp.ProcessTypeId,
 				OperationSubTypeCode = oldOp.ProcessSubTypeId,
-				OperationNo = oldOp.OperationNo.ToDouble(),
+				OperationNo = oldOp.ProcessId.ToInt32(),
 				Name = oldOp.OperationName,
 				PlannedStartDate = oldOp.PlannedStart,
 				PlannedEndDate = oldOp.PlannedEnd,
@@ -3227,7 +3250,7 @@ public class ProductionOrder : ILoggableEntity
 				Status = oldOp.Status,
 				Machines = [],
 				Class = oldOp.Class,
-				Byproducts = oldOrder.Subproducts?.Where(x => x.OperationNo == oldOp.OperationNo).Select(x => new ProductionOrderByProduct
+				Byproducts = oldOrder.Subproducts?.Where(x => x.ProcessId == oldOp.ProcessId).Select(x => new ProductionOrderByProduct
 				{
 					ItemCode = x.ComponentId,
 					Quantity = x.Factor,
@@ -3237,7 +3260,7 @@ public class ProductionOrder : ILoggableEntity
 					ReceivedQty = x.Quantity,
 					Comments = x.Comments
 				}).ToList() ?? [],
-				Items = oldOrder.Components?.Where(x => x.OperationNo == oldOp.OperationNo).Select(x => new ProductionOrderItem
+				Items = oldOrder.Components?.Where(x => x.ProcessId == oldOp.ProcessId).Select(x => new ProductionOrderItem
 				{
 					ItemCode = x.SourceId,
 					OriginalItemCode = x.OriginalSourceId,
@@ -3254,7 +3277,7 @@ public class ProductionOrder : ILoggableEntity
 					Class = x.MaterialType,
 					ManagedBy = x.ManagedBy,
 				}).ToList() ?? [],
-				Labor = oldOrder.Labor?.Where(x => x.OperationNo == oldOp.OperationNo && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
+				Labor = oldOrder.Labor?.Where(x => x.ProcessId == oldOp.ProcessId && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
 				{
 					Code = x.LaborId,
 					LineId = x.LineId,
@@ -3266,7 +3289,7 @@ public class ProductionOrder : ILoggableEntity
 					IssuedTime = x.IssuedTime,
 					Consumption = x.IsBackflush ? 1 : 0
 				}).ToList() ?? [],
-				ToolingType = oldOrder.Tools?.Where(x => x.OperationNo == oldOp.OperationNo && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
+				ToolingType = oldOrder.Tools?.Where(x => x.ProcessId == oldOp.ProcessId && string.IsNullOrEmpty(x.MachineId)).Select(x => new ProductionOrderResource
 				{
 					Code = x.ToolId,
 					LineId = x.LineId,
@@ -3278,7 +3301,7 @@ public class ProductionOrder : ILoggableEntity
 					IssuedTime = x.IssuedTime,
 					Consumption = x.IsBackflush ? 1 : 0
 				}).ToList() ?? [],
-				Tasks = oldOrder.Tasks?.Where(x => x.OperationNo == oldOp.OperationNo).ToList() ?? [],
+				Tasks = oldOrder.Tasks?.Where(x => x.ProcessId == oldOp.ProcessId).ToList() ?? [],
 				ExecTime = oldOp.ExecTime,
 				SetupTime = oldOp.SetupTime,
 				WaitTime = oldOp.WaitTime,
@@ -3306,7 +3329,7 @@ public class ProductionOrder : ILoggableEntity
 				Labor = [],
 				ToolingType = [],
 			};
-			elemMachine.Labor = oldOrder.Labor?.Where(x => x.OperationNo == oldOp.OperationNo && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
+			elemMachine.Labor = oldOrder.Labor?.Where(x => x.ProcessId == oldOp.ProcessId && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
 			{
 				Code = x.LaborId,
 				LineId = x.LineId,
@@ -3319,7 +3342,7 @@ public class ProductionOrder : ILoggableEntity
 				Consumption = x.IsBackflush ? 1 : 0,
 			}).ToList() ?? [];
 
-			elemMachine.ToolingType = oldOrder.Tools?.Where(x => x.OperationNo == oldOp.OperationNo && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
+			elemMachine.ToolingType = oldOrder.Tools?.Where(x => x.ProcessId == oldOp.ProcessId && x.MachineId == oldOp.MachineId).Select(x => new ProductionOrderResource
 			{
 				Code = x.ToolId,
 				LineId = x.LineId,
@@ -3558,17 +3581,34 @@ public class ProductionOrderOperation
 	/// <summary>
 	///
 	/// </summary>
+	public string OperationId { get; set; }
+	/// <summary>
+	///
+	/// </summary>
 	public string OperationTypeCode { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
 	public string OperationSubTypeCode { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public string OperationCode { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public double OperationNo { get; set; }
+	public string OperationGroup { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public int OperationNo { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string LineId { get; set; }
 
 	/// <summary>
 	///
@@ -3626,6 +3666,14 @@ public class ProductionOrderOperation
 	///
 	/// </summary>
 	public double Rejected { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double ReceivedMove {get; set;}
+	/// <summary>
+	///
+	/// </summary>
+	public double RejectedMove {get; set;}
 
 	/// <summary>
 	///
@@ -3714,7 +3762,7 @@ public class ProductionOrderMachine
 	/// <summary>
 	///
 	/// </summary>
-	public int LineId { get; set; }
+	public string LineId { get; set; }
 
 	/// <summary>
 	///
@@ -3801,6 +3849,11 @@ public class ProductionOrderItem
 	///
 	/// </summary>
 	public double IssuedQty { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public double ScrapQty { get; set; }
 
 	/// <summary>
 	///
@@ -3935,7 +3988,19 @@ public class ProductionOrderByProduct
 	///
 	/// </summary>
 	public double ReceivedQty { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double RejectedQty { get; set; }
+	/// <summary>
+	///
+	/// </summary>
+	public double ReceivedMoveQty { get; set; }
 
+	/// <summary>
+	///
+	/// </summary>
+	public double RejectedMoveQty { get; set; }
 	/// <summary>
 	///
 	/// </summary>

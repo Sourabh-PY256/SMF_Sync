@@ -18,8 +18,8 @@ public interface IOEERepo
 
     bool SaveMachineOeeConfiguration(string machineId, MachineOEEConfiguration configuration, User systemOperator);
     Task<OEEModel> GetLiveOee(string machineid, DateTime? startDate, CancellationToken cancel);
-    MachineOEEConfiguration GetMachineOeeConfiguration(string machineId);
-    List<MachineOEEConfiguration> GetMachineOeeConfiguration();
+    Task<MachineOEEConfiguration> GetMachineOeeConfiguration(string machineId);
+    Task<List<MachineOEEConfiguration>> GetMachineOeeConfiguration();
     
 
 

@@ -30,10 +30,10 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 	{
 		#region Permission validation
 
-		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
-		{
-			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-		}
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_PROCESS_ENTRY_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		// }
 
 		#endregion Permission validation
 
@@ -83,7 +83,7 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 					{
 						throw new Exception($"{results[0]}");
 					}
-					string transactionId = Guid.NewGuid().ToString();
+					string transactionId = Guid.CreateVersion7().ToString();
 					// Order
 					string orderId = string.Empty;
 					WorkOrder wo = (await _workOrderOperation.GetWorkOrder(orderTransaction.OrderCode).ConfigureAwait(false)).FirstOrDefault();
@@ -95,10 +95,10 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 					{
 						throw new Exception("Order Doesn't Exists");
 					}
-					// if (wo.Processes.FirstOrDefault(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
-					// {
-					// 	throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
-					// }
+					if (wo.Processes.FirstOrDefault(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					{
+						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
+					}
 					// Data
 					OrderTransactionProduct orderTransactionInfo = new()
 					{
@@ -160,7 +160,6 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 										LineId = otItem.LineID.ToString(),
 										Quantity = otItem.Quantity,
 										Warehouse = otItem.WarehouseCode
-
 									};
 									if (itemDetail is not null && itemDetail.Quantity != 0)
 									{
@@ -242,7 +241,7 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 					{
 						throw new Exception("Order Doesn't Exists");
 					}
-					if (wo.Processes.FirstOrDefault(x => x.OperationNo.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
+					if (wo.Processes.FirstOrDefault(x => x.ProcessId.ToDouble() == orderTransaction.OperationNo.ToDouble()) is null)
 					{
 						throw new Exception($"OperationNo is required for transaction in order {orderTransaction.OrderCode}");
 					}

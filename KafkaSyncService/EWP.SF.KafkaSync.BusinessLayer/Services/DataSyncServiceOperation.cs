@@ -73,7 +73,7 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
     /// <summary>
 	///
 	/// </summary>
-	public List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes) => _dataSyncRepository.ListDataSyncERP(id, getInstances);
+	public Task<List<DataSyncErp>> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes) => _dataSyncRepository.ListDataSyncERP(id, getInstances);
 
 
     /// <summary>

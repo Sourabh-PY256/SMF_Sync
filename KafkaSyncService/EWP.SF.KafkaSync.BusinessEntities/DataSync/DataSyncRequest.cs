@@ -8,5 +8,10 @@ public class DataSyncExecuteRequest
 
 	public string BodyData { get; set; }
 
-	public string MethodType { get; set; }
+	private string? _methodType;
+	public string MethodType
+	{
+		get => _methodType ?? "GET";
+		set => _methodType = value;
+	}
 }

@@ -29,6 +29,9 @@ public class OrderTransactionMaterialRepo : IOrderTransactionMaterialRepo
 		Database = applicationSettings.GetDatabaseFromConnectionString();
 	}
 	#region OrderTransactionMaterial
+	/// <summary>
+	///
+	/// </summary>
 	public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation, IntegrationSource intSrc = IntegrationSource.ERP)
 	{
 		ResponseData returnValue = null;
@@ -46,32 +49,15 @@ public class OrderTransactionMaterialRepo : IOrderTransactionMaterialRepo
 				command.Parameters.AddWithValue("_IsValidation", Validation);
 				command.Parameters.AddNull("_TransactionId");
 				command.Parameters.AddWithValue("_OrderCode", OrderMaterialInfo.OrderId);
-				command.Parameters.AddWithValue("_OperationNo", OrderMaterialInfo.OperationId);
-
-				// Convert Direction from INT to ENUM string (1=Issue, 2=Return, 3=Scrap)
-				string directionStr = OrderMaterialInfo.Direction switch
-				{
-					1 => "Issue",
-					2 => "Return",
-					3 => "Scrap",
-					_ => "Issue" // Default to Issue
-				};
-				command.Parameters.AddWithValue("_Direction", directionStr);
+				command.Parameters.AddWithValue("_OperationId", OrderMaterialInfo.OperationId);
+				command.Parameters.AddWithValue("_Direction", OrderMaterialInfo.Direction);
 				command.Parameters.AddWithValue("_EmployeeId", OrderMaterialInfo.EmployeeId);
 				command.Parameters.AddWithValue("_DocCode", OrderMaterialInfo.DocCode);
 				command.Parameters.AddWithValue("_Comments", OrderMaterialInfo.Comments);
 				command.Parameters.AddWithValue("_DocDate", OrderMaterialInfo.DocDate);
 				command.Parameters.AddCondition("_User", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
 				command.Parameters.AddCondition("_Details", OrderMaterialInfo.DetailToJSON, OrderMaterialInfo.Details?.Count > 0);
-
-				// Convert Origin from IntegrationSource enum to database ENUM string (SF, ERP, APS)
-				string originStr = intSrc switch
-				{
-					IntegrationSource.ERP => "ERP",
-					IntegrationSource.APS => "APS",
-					_ => "SF" // Default to SF
-				};
-				command.Parameters.AddWithValue("_Origin", originStr);
+				command.Parameters.AddWithValue("_Origin", intSrc.ToInt32());
 				// command.Parameters.AddWithValue("_Level", Level);
 
 				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();

@@ -9,6 +9,7 @@ using System.Text;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using NLog;
+using Newtonsoft.Json;
 
 namespace EWP.SF.KafkaSync.DataAccess;
 
@@ -696,7 +697,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryProcess element = new()
                     {
-                        OperationNo = rdr[operationNoOrdinal].ToStr(),
+                        ProcessId = rdr[operationNoOrdinal].ToStr(),
                         ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
                         ProcessSubTypeId = rdr[operationSubtypeCodeOrdinal].ToStr(),
                         OperationClassId = rdr[operationClassIdOrdinal].ToInt32(),
@@ -765,7 +766,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryComponent element = new()
                     {
-                        OperationNo = rdr[operationNoOrdinal].ToStr(),
+                        ProcessId = rdr[operationNoOrdinal].ToStr(),
                         ProcessTypeId = rdr[operationTypeCodeOrdinal].ToStr(),
                         ComponentType = ComponentType.Material,
                         ComponentId = rdr[itemCodeOrdinal].ToStr(),
@@ -860,7 +861,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     string processId = rdr[operationNoOrdinal].ToStr();
                     string componentId = rdr[itemCodeOrdinal].ToStr();
-                    ProcessEntryComponent component = entry.Components?.FirstOrDefault(x => x.OperationNo == processId && x.ComponentId == componentId);
+                    ProcessEntryComponent component = entry.Components?.FirstOrDefault(x => x.ProcessId == processId && x.ComponentId == componentId);
                     if (component is not null)
                     {
                         AlternativeComponent element = new()
@@ -907,7 +908,7 @@ public class ComponentRepo : IComponentRepo
                 if (entry is not null)
                 {
                     string operationNo = rdr[operationNoOrdinal].ToStr();
-                    ProcessEntryProcess process = entry.Processes.Find(x => x.OperationNo == operationNo);
+                    ProcessEntryProcess process = entry.Processes.Find(x => x.ProcessId == operationNo);
                     if (process is not null)
                     {
                         SubProduct element = new()
@@ -959,7 +960,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryLabor element = new()
                     {
-                        OperationNo = rdr[operationNoOrdinal].ToStr(),
+                        ProcessId = rdr[operationNoOrdinal].ToStr(),
                         LaborId = rdr[positionCodeOrdinal].ToStr(),
                         Id = rdr[positionCodeOrdinal].ToStr(),
                         LineId = rdr[lineNoOrdinal].ToInt32().ToStr(),
@@ -1007,7 +1008,7 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryTool element = new()
                     {
-                        OperationNo = rdr[operationNoOrdinal].ToStr(),
+                        ProcessId = rdr[operationNoOrdinal].ToStr(),
                         ToolId = rdr[toolingTypeCodeOrdinal].ToStr(),
                         Id = rdr[toolingTypeCodeOrdinal].ToStr(),
                         LineId = rdr[lineNoOrdinal].ToInt32().ToStr(),
@@ -1044,14 +1045,14 @@ public class ComponentRepo : IComponentRepo
                 {
                     ProcessEntryAttribute element = new()
                     {
-                        OperationNo = rdr[operationNoOrdinal].ToStr(),
+                        ProcessId = rdr[operationNoOrdinal].ToStr(),
                         AttributeId = rdr[attributeCodeOrdinal].ToStr(),
                         Id = rdr[attributeCodeOrdinal].ToStr(),
                         Selected = rdr[isSelectedOrdinal].ToBool(),
                         Value = rdr[valueOrdinal].ToStr()
                     };
 
-                    ProcessEntryProcess process = entry.Processes?.Find(x => x.OperationNo == element.OperationNo);
+                    ProcessEntryProcess process = entry.Processes?.Find(x => x.ProcessId == element.ProcessId);
                     if (process is not null)
                     {
                         (process.Attributes ??= []).Add(element);
@@ -1169,70 +1170,71 @@ public class ComponentRepo : IComponentRepo
         }
         return returnValue;
     }
-    /// <summary>
-    /// Creates a new Product in the database.
-    /// </summary>
-    public ProcessEntry CreateProcessEntry(ProcessEntry entryInfo, User systemOperator, IntegrationSource intSrc = IntegrationSource.SF)
-    {
-        using (EWP_Connection connection = new(ConnectionString))
-        {
-            try
-            {
-                using EWP_Command command = new("SP_SF_Product_INS", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                command.Parameters.Clear();
+   /// <summary>
+	/// Creates a new Product in the database.
+	/// </summary>
+	public ProcessEntry CreateProcessEntry(ProcessEntry entryInfo, User systemOperator, IntegrationSource intSrc = IntegrationSource.SF)
+	{
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Product_INS", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
 
-                command.Parameters.AddCondition("_Id", entryInfo.Id, !string.IsNullOrEmpty(entryInfo.Id));
-                command.Parameters.AddCondition("_Code", entryInfo.Code, !string.IsNullOrEmpty(entryInfo.Code));
-                command.Parameters.AddCondition("_Name", entryInfo.Name, !string.IsNullOrEmpty(entryInfo.Name));
-                command.Parameters.AddWithValue("_Quantity", entryInfo.Quantity);
-                command.Parameters.AddWithValue("_MinQuantity", entryInfo.MinQuantity);
-                command.Parameters.AddWithValue("_MaxQuantity", entryInfo.MaxQuantity);
-                command.Parameters.AddWithValue("_UnitId", entryInfo.UnitId);
-                command.Parameters.AddWithValue("_Factor", entryInfo.Factor);
-                command.Parameters.AddWithValue("_Time", entryInfo.Time);
-                command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
-                command.Parameters.AddWithValue("_Status", entryInfo.Status);
-                command.Parameters.AddWithValue("_ValidFrom", entryInfo.ValidFrom);
-                command.Parameters.AddWithValue("_ValidTo", entryInfo.ValidTo);
-                command.Parameters.AddWithValue("_ProductType", entryInfo.ProductType.ToInt32());
-                command.Parameters.AddWithValue("_InstrucctionByPh", entryInfo.InstrucctionByPh);
-                command.Parameters.AddWithValue("_InstrucctionbyDensity", entryInfo.InstrucctionbyDensity);
-                command.Parameters.AddWithValue("_WarehouseCode", entryInfo.Warehouse);
-                command.Parameters.AddWithValue("_Version", entryInfo.Version > 0 ? entryInfo.Version : 1);
-                command.Parameters.AddWithValue("_EarlierVersion", entryInfo.EarlierVersion > 0 ? entryInfo.EarlierVersion : 1);
-                command.Parameters.AddWithValue("_Sequence", entryInfo.Sequence > 0 ? entryInfo.Sequence : 1);
-                command.Parameters.AddWithValue("_Scrap", entryInfo.Scrap);
-                command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
-                command.Parameters.AddWithValue("_Origin", intSrc.ToInt32());
-                command.Parameters.AddWithValue("_EnableSchedule", entryInfo.Schedule);
-                command.Parameters.AddWithValue("_Comments", entryInfo.Comments);
-                command.Parameters.AddWithValue("_Formula", entryInfo.Formula);
-                command.Parameters.AddWithValue("_BomVersion", entryInfo.BomVersion);
-                command.Parameters.AddWithValue("_BomSequence", entryInfo.BomSequence);
-                command.Parameters.AddWithValue("_RouteVersion", entryInfo.RouteVersion);
-                command.Parameters.AddWithValue("_RouteSequence", entryInfo.RouteSequence);
-                connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-                MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				command.Parameters.AddCondition("_Id", entryInfo.Id, !string.IsNullOrEmpty(entryInfo.Id));
+				command.Parameters.AddCondition("_Code", entryInfo.Code, !string.IsNullOrEmpty(entryInfo.Code));
+				command.Parameters.AddCondition("_Name", entryInfo.Name, !string.IsNullOrEmpty(entryInfo.Name));
+				command.Parameters.AddWithValue("_Quantity", entryInfo.Quantity);
+				command.Parameters.AddWithValue("_MinQuantity", entryInfo.MinQuantity);
+				command.Parameters.AddWithValue("_MaxQuantity", entryInfo.MaxQuantity);
+				command.Parameters.AddWithValue("_UnitId", entryInfo.UnitId);
+				command.Parameters.AddWithValue("_Factor", entryInfo.Factor);
+				command.Parameters.AddWithValue("_Time", entryInfo.Time);
+				command.Parameters.AddCondition("_Operator", () => systemOperator.Id, systemOperator is not null, string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "User"));
+				command.Parameters.AddWithValue("_Status", entryInfo.Status);
+				command.Parameters.AddWithValue("_ValidFrom", entryInfo.ValidFrom);
+				command.Parameters.AddWithValue("_ValidTo", entryInfo.ValidTo);
+				command.Parameters.AddWithValue("_ProductType", entryInfo.ProductType.ToInt32());
+				command.Parameters.AddWithValue("_InstrucctionByPh", entryInfo.InstrucctionByPh);
+				command.Parameters.AddWithValue("_InstrucctionbyDensity", entryInfo.InstrucctionbyDensity);
+				command.Parameters.AddWithValue("_WarehouseCode", entryInfo.Warehouse);
+				command.Parameters.AddWithValue("_Version", entryInfo.Version > 0 ? entryInfo.Version : 1);
+				command.Parameters.AddWithValue("_EarlierVersion", entryInfo.EarlierVersion > 0 ? entryInfo.EarlierVersion : 1);
+				command.Parameters.AddWithValue("_Sequence", entryInfo.Sequence > 0 ? entryInfo.Sequence : 1);
+				command.Parameters.AddWithValue("_Scrap", entryInfo.Scrap);
+				command.Parameters.AddCondition("_OperatorEmployee", systemOperator.EmployeeId, !string.IsNullOrEmpty(systemOperator.EmployeeId));
+				command.Parameters.AddWithValue("_Origin", intSrc.ToInt32());
+				command.Parameters.AddWithValue("_EnableSchedule", entryInfo.Schedule);
+				command.Parameters.AddWithValue("_Comments", entryInfo.Comments);
+				command.Parameters.AddWithValue("_Formula", entryInfo.Formula);
+				command.Parameters.AddWithValue("_BomVersion", entryInfo.BomVersion);
+				command.Parameters.AddWithValue("_BomSequence", entryInfo.BomSequence);
+				command.Parameters.AddWithValue("_RouteVersion", entryInfo.RouteVersion);
+				command.Parameters.AddWithValue("_RouteSequence", entryInfo.RouteSequence);
+				command.Parameters.AddCondition("_UserFields", () => JsonConvert.SerializeObject(entryInfo.UserFields), entryInfo.UserFields is not null);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 
-                while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
-                {
-                    entryInfo.Id = rdr["ProductId"].ToStr();
-                }
-            }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-        }
-        return entryInfo;
-    }
+				while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+				{
+					entryInfo.Id = rdr["ProductId"].ToStr();
+				}
+			}
+			catch
+			{
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return entryInfo;
+	}
     /// <summary>
 	///
 	/// </summary>

@@ -9,7 +9,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 
 public class OEEOperation : IOEEOperation
 {
-	private readonly IOEERepo _oeeRepo;	private readonly IProcessTypeOperation _processTypeOperation;
+	private readonly IOEERepo _oeeRepo;
+		private readonly IProcessTypeOperation _processTypeOperation;
 
 	private readonly IAttachmentOperation _attachmentOperation;
 
@@ -29,14 +30,14 @@ public class OEEOperation : IOEEOperation
 		///
 		/// </summary>
 		/// <exception cref="UnauthorizedAccessException"></exception>
-		public MachineOEEConfiguration GetMachineOEEConfiguration(string machineId, User systemOperator)
+		public Task<MachineOEEConfiguration> GetMachineOEEConfiguration(string machineId, User systemOperator)
 		{
 			#region Permission validation
 
-			if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
-			{
-				throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-			}
+			// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.CP_MACHINE_EDIT))
+			// {
+			// 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+			// }
 
 			#endregion Permission validation
 

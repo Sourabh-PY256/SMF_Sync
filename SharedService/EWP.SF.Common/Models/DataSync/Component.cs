@@ -235,6 +235,15 @@ public class Component : ILoggableEntity
 	/// <summary>
 	///
 	/// </summary>
+	public string SerialExpression { get; set; }
+
+		/// <summary>
+	///
+	/// </summary>
+	public int SerialSeed { get; set; }
+	/// <summary>
+	///
+	/// </summary>
 	public string UnitTypesToJSON()
 	{
 		string returnValue = string.Empty;
@@ -244,6 +253,12 @@ public class Component : ILoggableEntity
 		}
 		return returnValue;
 	}
+
+	/// <summary>
+	/// User-defined fields stored as JSON
+	/// </summary>
+	[GridIgnoreProperty]
+	public object UserFields { get; set; }
 }
 
 /// <summary>
@@ -286,7 +301,6 @@ public class AlternativeComponent
 	///
 	/// </summary>
 	public string ProcessId { get; set; }
-	public string OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -935,20 +949,20 @@ public class ProductExternal
 	/// </summary>
 	[Required]
 	[MinLength(1, ErrorMessage = "Operations must contain at least one element")]
-	public List<ProductOperation> Operations { get; set; }
+	public List<ProductOperationExternal> Operations { get; set; }
 }
 
 /// <summary>
 ///
 /// </summary>
-public class ProductOperation
+public class ProductOperationExternal
 {
 	/// <summary>
 	///
 	/// </summary>
 	[Key]
 	[Required]
-	public string OperationNo { get; set; }
+	public double OperationNo { get; set; }
 
 	/// <summary>
 	///
@@ -956,7 +970,6 @@ public class ProductOperation
 	[Key]
 	[MaxLength(100)]
 	public string OperationSubtype { get; set; }
-	
 
 	/// <summary>
 	///
@@ -1019,43 +1032,37 @@ public class ProductOperation
 	/// <summary>
 	///
 	/// </summary>
-	[MaxLength(100)]
-	public string OperationName { get; set; }
+	public List<ProductMachineExternal> OperationMachines { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductMachine> OperationMachines { get; set; }
+	public List<ProductOperationToolExternal> OperationTools { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationTool> OperationTools { get; set; }
+	public List<ProductOperationLaborExternal> OperationLabor { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationLabor> OperationLabor { get; set; }
+	public List<ProductOperationItemExternal> OperationItems { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationItem> OperationItems { get; set; }
+	public List<ProductOperationAlternativeItemExternal> OperationAlternativeItems { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationAlternativeItem> OperationAlternativeItems { get; set; }
+	public List<ProductOperationByProductExternal> OperationByProducts { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationByProduct> OperationByProducts { get; set; }
-
-	/// <summary>
-	///
-	/// </summary>
-	public List<ProductAttribute> Attributes { get; set; }
+	public List<ProductAttributeExternal> Attributes { get; set; }
 
 	/// <summary>
 	///
@@ -1066,7 +1073,7 @@ public class ProductOperation
 /// <summary>
 ///
 /// </summary>
-public class ProductMachine
+public class ProductMachineExternal
 {
 	/// <summary>
 	///
@@ -1099,12 +1106,12 @@ public class ProductMachine
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationTool> MachineTools { get; set; }
+	public List<ProductOperationToolExternal> MachineTools { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public List<ProductOperationLabor> MachineLabor { get; set; }
+	public List<ProductOperationLaborExternal> MachineLabor { get; set; }
 
 	/// <summary>
 	///
@@ -1144,7 +1151,7 @@ public class ProductMachine
 /// <summary>
 ///
 /// </summary>
-public class ProductMachineTool
+public class ProductMachineToolExternal
 {
 	/// <summary>
 	///
@@ -1189,7 +1196,7 @@ public class ProductMachineTool
 /// <summary>
 ///
 /// </summary>
-public class ProductMachineLabor
+public class ProductMachineLaborExternal
 {
 	/// <summary>
 	///
@@ -1234,7 +1241,7 @@ public class ProductMachineLabor
 /// <summary>
 ///
 /// </summary>
-public class ProductOperationTool
+public class ProductOperationToolExternal
 {
 	/// <summary>
 	///
@@ -1297,7 +1304,7 @@ public class ProductOperationTool
 /// <summary>
 ///
 /// </summary>
-public class ProductOperationLabor
+public class ProductOperationLaborExternal
 {
 	/// <summary>
 	///
@@ -1360,7 +1367,7 @@ public class ProductOperationLabor
 /// <summary>
 ///
 /// </summary>
-public class ProductOperationItem
+public class ProductOperationItemExternal
 {
 	/// <summary>
 	///
@@ -1438,7 +1445,7 @@ public class ProductOperationItem
 /// <summary>
 ///
 /// </summary>
-public class ProductOperationAlternativeItem
+public class ProductOperationAlternativeItemExternal
 {
 	/// <summary>
 	///
@@ -1478,7 +1485,7 @@ public class ProductOperationAlternativeItem
 /// <summary>
 ///
 /// </summary>
-public class ProductOperationByProduct
+public class ProductOperationByProductExternal
 {
 	/// <summary>
 	///
@@ -1536,7 +1543,7 @@ public class ProductOperationByProduct
 /// <summary>
 ///
 /// </summary>
-public class ProductAttribute
+public class ProductAttributeExternal
 {
 	/// <summary>
 	///

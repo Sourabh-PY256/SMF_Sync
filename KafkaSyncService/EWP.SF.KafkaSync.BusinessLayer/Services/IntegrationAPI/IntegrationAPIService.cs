@@ -33,36 +33,42 @@ public class APIWebClient : HttpClient
 		return response;
 	}
 
-	public async Task<string> UploadString(string uri, string httpMethod, string body)
-	{
-		_ = HttpMethod.Post;
-		if (httpMethod.Equals("delete", StringComparison.OrdinalIgnoreCase))
-		{
-			_ = HttpMethod.Delete;
-		}
-		else if (httpMethod.Equals("put", StringComparison.OrdinalIgnoreCase))
-		{
-			_ = HttpMethod.Put;
-		}
-		else if (httpMethod.Equals("patch", StringComparison.OrdinalIgnoreCase))
-		{
-			_ = HttpMethod.Patch;
-		}
-		else if (httpMethod.Equals("head", StringComparison.OrdinalIgnoreCase))
-		{
-			_ = HttpMethod.Head;
-		}
-		else if (httpMethod.Equals("trace", StringComparison.OrdinalIgnoreCase))
-		{
-			_ = HttpMethod.Trace;
-		}
+	// public async Task<string> UploadString(string uri, string httpMethod, string body)
+	// {
+	// 	_ = HttpMethod.Post;
+	// 	if (httpMethod.Equals("delete", StringComparison.OrdinalIgnoreCase))
+	// 	{
+	// 		_ = HttpMethod.Delete;
+	// 	}
+	// 	else if (httpMethod.Equals("put", StringComparison.OrdinalIgnoreCase))
+	// 	{
+	// 		_ = HttpMethod.Put;
+	// 	}
+	// 	else if (httpMethod.Equals("patch", StringComparison.OrdinalIgnoreCase))
+	// 	{
+	// 		_ = HttpMethod.Patch;
+	// 	}
+	// 	else if (httpMethod.Equals("head", StringComparison.OrdinalIgnoreCase))
+	// 	{
+	// 		_ = HttpMethod.Head;
+	// 	}
+	// 	else if (httpMethod.Equals("trace", StringComparison.OrdinalIgnoreCase))
+	// 	{
+	// 		_ = HttpMethod.Trace;
+	// 	}
 
+	// 	using StringContent httpContent = new(body, Encoding.UTF8, "application/json");
+	// 	HttpResponseMessage result = await PostAsync(new Uri(uri), httpContent).ConfigureAwait(false);
+	// 	byte[] byteArray = await result.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+	// 	return Encoding.UTF8.GetString(byteArray, 0, byteArray.Length);
+	// }
+    public async Task<string> UploadString(string uri, string body)
+	{
 		using StringContent httpContent = new(body, Encoding.UTF8, "application/json");
 		HttpResponseMessage result = await PostAsync(new Uri(uri), httpContent).ConfigureAwait(false);
 		byte[] byteArray = await result.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
 		return Encoding.UTF8.GetString(byteArray, 0, byteArray.Length);
 	}
-
 	public async Task<DataSyncResponse> DataSyncDownload(string uri, string body = "")
 	{
 		DataSyncResponse response = new();

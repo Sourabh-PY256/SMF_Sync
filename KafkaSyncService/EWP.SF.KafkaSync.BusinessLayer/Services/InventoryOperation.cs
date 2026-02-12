@@ -105,10 +105,10 @@ public class InventoryOperation : IInventoryOperation
 
         #region Permission validation
 
-        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
-        {
-        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-        }
+        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
+        // {
+        // 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        // }
 
         #endregion Permission validation
 
@@ -137,10 +137,10 @@ public class InventoryOperation : IInventoryOperation
     {
         #region Permission validation
 
-        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
-        {
-        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-        }
+        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_INVENTORY_MANAGE))
+        // {
+        // 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        // }
 
         #endregion Permission validation
 
@@ -165,10 +165,10 @@ public class InventoryOperation : IInventoryOperation
 	{
 		#region Permission validation
 
-		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_SALESORDER_LST))
-		{
-			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-		}
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_SALESORDER_LST))
+		// {
+		// 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		// }
 
 		#endregion Permission validation
 

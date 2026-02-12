@@ -665,7 +665,7 @@ public class DataSyncServiceProcessor
 						var itemOperation = GetOperation<IItemOperation>();
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listItems);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						List<DataSyncServiceLogDetail> returnDetailListItem = [];
 						if (listItems.Count > 0)
 						{
@@ -1146,7 +1146,7 @@ public class DataSyncServiceProcessor
 						var productOperation = GetOperation<IComponentOperation>();
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listProducts);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listProducts.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
@@ -1276,7 +1276,7 @@ public class DataSyncServiceProcessor
 								WorkOrderResponse sfResponse = null;
 								try
 								{
-									sfResponse = (await productOrderOperation.ListUpdateWorkOrder(
+									sfResponse = (await productOrderOperation.ListUpdateProductionOrder  (
 									listElem,
 									SystemOperator,
 									false,
@@ -1420,7 +1420,7 @@ public class DataSyncServiceProcessor
 						var productTransfer = GetOperation<IWorkOrderOperation>();
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listProductTransfers);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listProductTransfers.Count > 0)
 						{
 							List<ResponseData> sfListResponse = [];
@@ -1888,7 +1888,7 @@ public class DataSyncServiceProcessor
 						var processTypeOperation = GetOperation<IProcessTypeOperation>();
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listProcessTypes);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						//await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listProcessTypes.Count > 0)
 						{
 							List<ResponseData> sfListResponse = processTypeOperation.ListUpdateSuboperationTypes_Bulk(listProcessTypes, SystemOperator, false, LevelMessage.Success);
@@ -2004,7 +2004,7 @@ public class DataSyncServiceProcessor
 				LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
                 
 				//Encender Servicio nuevamente
-				 _ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+				// _ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 			}
 			else
 			{
@@ -2512,7 +2512,7 @@ public class DataSyncServiceProcessor
 				try
 				{
 					tries++;
-					string erpResult = await client.UploadString(ServiceData.ErpData.BaseUrl + ServiceData.ErpData.TokenRequestPath, "post", ServiceData.ErpData.TokenRequestJson).ConfigureAwait(false);
+					string erpResult = await client.UploadString(ServiceData.ErpData.BaseUrl + ServiceData.ErpData.TokenRequestPath, ServiceData.ErpData.TokenRequestJson).ConfigureAwait(false);//await client.UploadString(ServiceData.ErpData.BaseUrl + ServiceData.ErpData.TokenRequestPath, "post", ServiceData.ErpData.TokenRequestJson).ConfigureAwait(false);
 					JObject jsResult = JObject.Parse(erpResult);
 					_ = jsResult.TryGetValue(ServiceData.ErpData.TokenRequestResultProp, out JToken objTokenSearch);
 					if (objTokenSearch is null)

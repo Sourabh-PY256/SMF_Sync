@@ -6,7 +6,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 
 public interface IDeviceOperation
 {
-    Machine[] ListDevices(
+    Task<Machine[]> ListDevices(
         bool deleted = false,
         bool listOnly = false,
         bool onlyActive = false,

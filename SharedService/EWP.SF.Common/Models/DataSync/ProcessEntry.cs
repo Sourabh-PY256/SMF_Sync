@@ -285,6 +285,10 @@ public class ProcessEntry : ILoggableEntity
 	///
 	/// </summary>
 	public List<string> AttachmentIds { get; set; }
+	/// <summary>
+	/// User-defined fields stored as JSON
+	/// </summary>
+	public object UserFields { get; set; }
 }
 
 /// <summary>
@@ -302,16 +306,10 @@ public class ProcessEntryProcess
 		logger = LogManager.GetCurrentClassLogger();
 	}
 
-	 /// <summary>
-	 ///
-	 /// </summary>
-	 public string ProcessId { get; set; }
-
 	/// <summary>
 	///
 	/// </summary>
-	public string OperationNo { get; set; }
-
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -523,9 +521,7 @@ public class ProcessEntryLabor
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -606,9 +602,7 @@ public class ProcessEntryTool
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -679,8 +673,7 @@ public class ProcessEntryAttribute
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -706,9 +699,7 @@ public class SubProduct
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///
@@ -739,6 +730,11 @@ public class SubProduct
 	///
 	/// </summary>
 	public string Batch { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public List<string> Serials { get; set; }
 
 	/// <summary>
 	///
@@ -998,8 +994,7 @@ public class ProcessEntryComponent
 	/// <summary>
 	///
 	/// </summary>
-	//public string ProcessId { get; set; }
-	public string OperationNo { get; set; }
+	public string ProcessId { get; set; }
 
 	/// <summary>
 	///

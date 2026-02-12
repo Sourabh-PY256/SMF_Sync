@@ -12,14 +12,15 @@ public interface IWorkOrderRepo
 
     WorkOrderResponse MergeWorkOrderChangeStatus(WorkOrderChangeStatus workorderInfo, User systemOperator, bool Validation, LevelMessage Level);
     WorkOrder GetWorkOrderByCode(string workOrderCode);
-    WorkOrderResponse MergeWorkOrder(WorkOrder workorderInfo, User systemOperator, bool Validation, LevelMessage Level, ActionDB? mode = null, IntegrationSource intSrc = IntegrationSource.SF);
-    bool MergeWorkOrderProcesses(WorkOrder workorderInfo, string processXML, User systemOperator);
-    bool MergeWorkOrderComponents(WorkOrder workorderInfo, string componentJson, User systemOperator);
-    bool MergeWorkOrderTooling(WorkOrder workorderInfo, string toolingJson, User systemOperator);
-    bool MergeWorkOrderByProducts(WorkOrder workorderInfo, string subproductXML, User systemOperator);
+    WorkOrderResponse MergeProductionOrder(ProductionOrder workorderInfo, User systemOperator, bool Validation, LevelMessage Level, ActionDB? mode = null, IntegrationSource intSrc = IntegrationSource.SF);
+    bool MergeProductionOrderOperations(ProductionOrder workorderInfo, string processXML, User systemOperator);
+    bool MergeProductionOrderComponents(ProductionOrder workorderInfo, string componentJson, User systemOperator);
+    bool MergeProductionOrderToolingType(ProductionOrder orderInfo, string toolingJson, User systemOperator);
+    bool MergeProductionOrderByProducts(ProductionOrder orderInfo, string byProductXML, User systemOperator);
     bool MergeWorkOrderToolValues(WorkOrder workorderInfo, string toolValuesXML, User systemOperator);
-    bool MergeWorkOrderLabor(WorkOrder workorderInfo, string JSONData, User systemOperator);
+    bool MergeProductionOrderLabor(ProductionOrder orderInfo, string JSONData, User systemOperator);
     string UpdateMaterialManual(string transactionId, OrderComponent request, string employeeId, string workOrderId, string externalId, User systemOperator);
+    Task<ProductionOrder> GetProductionOrder(string orderCode, CancellationToken cancel = default);
 
 
 

@@ -162,7 +162,7 @@ public class WarehouseRepo : IWarehouseRepo
 	/// <summary>
 	///
 	/// </summary>
-	public List<Warehouse> ListWarehouse(string Code = "", DateTime? DeltaDate = null)
+	public List<Warehouse>ListWarehouse(string Code = "", DateTime? DeltaDate = null)
 	{
 		List<Warehouse> returnValue = null;
 		using (EWP_Connection connection = new(ConnectionString))

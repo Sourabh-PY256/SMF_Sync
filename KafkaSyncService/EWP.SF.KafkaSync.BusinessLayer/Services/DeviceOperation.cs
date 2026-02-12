@@ -43,155 +43,158 @@ public class DeviceOperation : IDeviceOperation
         ;
     }
     /// <summary>
-	///
+	/// Sets the synchronization configuration for a machine.
 	/// </summary>
-	public Machine[] ListDevices(
-      bool deleted = false,
-      bool listOnly = false,
-      bool onlyActive = false,
-      DateTime? DeltaDate = null,
-      bool showDisabled = false)
-    {
-        List<Machine> devices = null;
-        List<Machine> devicesAll = null;
-        if (listOnly && !showDisabled)
-        {
-            onlyActive = true;
-        }
-        devices = _machineRepo.ListMachines(null, onlyActive, DeltaDate);
+	public async Task<Machine[]> ListDevices(
+	  bool deleted = false,
+	  bool listOnly = false,
+	  bool onlyActive = false,
+	  DateTime? DeltaDate = null,
+	  bool showDisabled = false)
+	{
+		List<Machine> devices = null;
+		List<Machine> devicesAll = null;
+		if (listOnly && !showDisabled)
+		{
+			onlyActive = true;
+		}
+		devices = _machineRepo.ListMachines(null, onlyActive, DeltaDate);
 
-        if (devices is null)
-        {
-            return [];
-        }
-        if (listOnly)
-        {
-            List<MachineOEEConfiguration> oeeConfigs = _oeeRepo.GetMachineOeeConfiguration();
-            List<ProcessType> listProcessType = _processTypeRepo.GetProcessType(null);
-            List<ProcessTypeDetail> listProcessDetail = _processTypeRepo.ListMachineProcessTypeDetails(null);
+		if (devices is null)
+		{
+			return [];
+		}
+		if (listOnly)
+		{
+			List<MachineOEEConfiguration> oeeConfigs = await _oeeRepo.GetMachineOeeConfiguration().ConfigureAwait(false);
+			List<ProcessType> listProcessType = _processTypeRepo.GetProcessType(null);
+			List<ProcessTypeDetail> listProcessDetail = await _processTypeRepo.ListMachineProcessTypeDetails(null).ConfigureAwait(false);
 
-            //Ensure code
-            return [.. from d in devices
-                 join cm in SyncService.CurrentMachines
-                 on d.Id equals cm.Id
-                 into tempCM
-                 join ooe in oeeConfigs
-                 on d.Id equals ooe.MachineId
-                 into temp
-                 from ooeExist in temp.DefaultIfEmpty()
-                 from cmExist in tempCM.DefaultIfEmpty()
-                 select new Machine
-                 {
-                   Description = d.Description,
-                   HasTool = d.HasTool,
-                   Id = d.Id,
-                   ParentCode = d.ParentCode,
-                   ManufactureDate = d.ManufactureDate,
-                   TypeId = d.TypeId,
-                   Code = d.Code, //Ensure code
-								   ConfigError = d.ConfigError,
-                   CreationDate = d.CreationDate,
-                   CtrlModel = d.CtrlModel,
-                   CtrlSerial = d.CtrlSerial,
-                   Environment = d.Environment,
-                   FacilityId = d.FacilityId,
-                   FacilityCode = d.FacilityCode,
-                   FloorId = d.FloorId,
-                   LiveIconId = d.LiveIconId,
-                   Image = d.Image,
-                   IsAuxiliar = d.IsAuxiliar,
-                   IsBusy = d.IsBusy,
-                   Location = d.Location,
-                   MaximumCapacity = d.MaximumCapacity,
-                   MinimumCapacity = d.MinimumCapacity,
-                   LotCalculation = d.LotCalculation,
-                   ProductionType = d.ProductionType,
-                   OEEHistory = d.OEEHistory,
-                   Parameters = d.Parameters,
-                   PLCManufacturer = d.PLCManufacturer,
-                   PLCSerial = d.PLCSerial,
-                   ProductionLineId = d.ProductionLineId,
-                   Programming = d.Programming,
-                   PwrSourceModel = d.PwrSourceModel,
-                   RobotArmModel = d.RobotArmModel,
-                   Skills = d.Skills,
-                   Status = d.Status,
-                   Tag = d.Tag,
+			//Ensure code
+			return [.. from d in devices
+				join cm in SyncService.CurrentMachines
+				on d.Id equals cm.Id
+				into tempCM
+				join ooe in oeeConfigs
+				on d.Id equals ooe.MachineId
+				into temp
+				from ooeExist in temp.DefaultIfEmpty()
+				from cmExist in tempCM.DefaultIfEmpty()
+				select new Machine
+				{
+					Description = d.Description,
+					HasTool = d.HasTool,
+					Id = d.Id,
+					ParentCode = d.ParentCode,
+					ManufactureDate = d.ManufactureDate,
+					TypeId = d.TypeId,
+					Code = d.Code, //Ensure code
+					ConfigError = d.ConfigError,
+					CreationDate = d.CreationDate,
+					CtrlModel = d.CtrlModel,
+					CtrlSerial = d.CtrlSerial,
+					Environment = d.Environment,
+					FacilityId = d.FacilityId,
+					FacilityCode = d.FacilityCode,
+					FloorId = d.FloorId,
+					LiveIconId = d.LiveIconId,
+					Image = d.Image,
+					IsAuxiliar = d.IsAuxiliar,
+					IsBusy = d.IsBusy,
+					Location = d.Location,
+					MaximumCapacity = d.MaximumCapacity,
+					MinimumCapacity = d.MinimumCapacity,
+					LotCalculation = d.LotCalculation,
+					ProductionType = d.ProductionType,
+					OEEHistory = d.OEEHistory,
+					Parameters = d.Parameters,
+					PLCManufacturer = d.PLCManufacturer,
+					PLCSerial = d.PLCSerial,
+					ProductionLineId = d.ProductionLineId,
+					Programming = d.Programming,
+					PwrSourceModel = d.PwrSourceModel,
+					RobotArmModel = d.RobotArmModel,
+					Skills = d.Skills,
+					Status = d.Status,
+					Tag = d.Tag,
+					Planning = d.Planning,
+					Online = ooeExist is not null && SyncService.GetMachineValue(ooeExist.MachineId, "IO").ToBool(),
+					DownSince = ooeExist is not null && cmExist is not null ? cmExist.Environment.DowntimeDate : null,
+					OEEConfiguration = ooeExist,
+					Warehouse = d.Warehouse,
+					WarehouseCode = d.WarehouseCode,
+					BinLocations = d.BinLocations,
+					BinLocationName = d.BinLocationName,
+					ProcessType = (from l in listProcessType
+							where l.Id == d.TypeId
+							&& ooeExist is not null
+							select new ProcessType
+							{
+								Id = l.Id,
+								Details = listProcessDetail?.Where(x => x.MachineId == d.Id)?.ToList()
+							}).FirstOrDefault(),
+					LogDetailId = d.LogDetailId
+				}];
+		}
 
-                   Online = ooeExist is not null && SyncService.GetMachineValue(ooeExist.MachineId, "IO").ToBool(),
-                   DownSince = ooeExist is not null && cmExist is not null ? cmExist.Environment.DowntimeDate : null,
-                   OEEConfiguration = ooeExist,
-                   Warehouse = d.Warehouse,
-                   WarehouseCode = d.WarehouseCode,
-                   BinLocations = d.BinLocations,
-                   ProcessType = (from l in listProcessType
-                          where l.Id == d.TypeId
-                          && ooeExist is not null
-                          select new ProcessType
-                          {
-                            Id = l.Id,
-                            Details = listProcessDetail?.Where(x => x.MachineId == d.Id)?.ToList()
-                          }).FirstOrDefault(),
-                   LogDetailId = d.LogDetailId
-                 }];
-        }
+		List<MachineParam> parameters = _machineRepo.ListMachineParams();
+		List<Skill> skills = _skillRepo.ListMachineSkills();
 
-        List<MachineParam> parameters = _machineRepo.ListMachineParams();
-        List<Skill> skills = _skillRepo.ListMachineSkills();
+		skills ??= [];
+		parameters ??= [];
 
-        skills ??= [];
-        parameters ??= [];
+		devicesAll = [.. from d in devices
+			join dp in parameters
+			on d.Id equals dp.MachineId
+			into tempP
+			join dss in skills
+			on d.Id equals dss.ParentId
+			into tempSS
+			select new Machine
+			  {
+				Description = d.Description,
+				Id = d.Id,
+				ManufactureDate = d.ManufactureDate,
+				TypeId = d.TypeId,
+				Code = d.Code,
+				ConfigError = d.ConfigError,
+				CreationDate = d.CreationDate,
+				CtrlModel = d.CtrlModel,
+				CtrlSerial = d.CtrlSerial,
+				Environment = new MachineEnvironment(),
+				FacilityId = d.FacilityId,
+				FloorId = d.FloorId,
+				LiveIconId = d.LiveIconId,
+				Image = d.Image,
+				IsAuxiliar = d.IsAuxiliar,
+				IsBusy = d.IsBusy,
+				Location = d.Location,
+				MaximumCapacity = d.MaximumCapacity,
+				MinimumCapacity = d.MinimumCapacity,
+				LotCalculation = d.LotCalculation,
+				OEEHistory = d.OEEHistory,
+				PLCManufacturer = d.PLCManufacturer,
+				PLCSerial = d.PLCSerial,
+				ProductionLineId = d.ProductionLineId,
+				ParentCode = d.ParentCode,
+				Programming = d.Programming,
+				PwrSourceModel = d.PwrSourceModel,
+				RobotArmModel = d.RobotArmModel,
+				Status = d.Status,
+				Tag = d.Tag,
+				Planning = d.Planning,
+				ProductionType = d.ProductionType,
+				Skills = tempSS?.Select(x => x.Id).ToList(),
+				Parameters = tempP?.ToList(),
+				Warehouse = d.Warehouse,
+				WarehouseCode = d.WarehouseCode,
+				BinLocations = d.BinLocations,
+				BinLocationName = d.BinLocationName,
+				LogDetailId = d.LogDetailId
+			  }];
 
-        devicesAll = [.. from d in devices
-              join dp in parameters
-              on d.Id equals dp.MachineId
-              into tempP
-              join dss in skills
-              on d.Id equals dss.ParentId
-              into tempSS
-              select new Machine
-              {
-                Description = d.Description,
-                Id = d.Id,
-                ManufactureDate = d.ManufactureDate,
-                TypeId = d.TypeId,
-                Code = d.Code,
-                ConfigError = d.ConfigError,
-                CreationDate = d.CreationDate,
-                CtrlModel = d.CtrlModel,
-                CtrlSerial = d.CtrlSerial,
-                Environment = new MachineEnvironment(),
-                FacilityId = d.FacilityId,
-                FloorId = d.FloorId,
-                LiveIconId = d.LiveIconId,
-                Image = d.Image,
-                IsAuxiliar = d.IsAuxiliar,
-                IsBusy = d.IsBusy,
-                Location = d.Location,
-                MaximumCapacity = d.MaximumCapacity,
-                MinimumCapacity = d.MinimumCapacity,
-                LotCalculation = d.LotCalculation,
-                OEEHistory = d.OEEHistory,
-                PLCManufacturer = d.PLCManufacturer,
-                PLCSerial = d.PLCSerial,
-                ProductionLineId = d.ProductionLineId,
-                ParentCode = d.ParentCode,
-                Programming = d.Programming,
-                PwrSourceModel = d.PwrSourceModel,
-                RobotArmModel = d.RobotArmModel,
-                Status = d.Status,
-                Tag = d.Tag,
-                ProductionType = d.ProductionType,
-                Skills = tempSS?.Select(x => x.Id).ToList(),
-                Parameters = tempP?.ToList(),
-                Warehouse = d.Warehouse,
-                WarehouseCode = d.WarehouseCode,
-                BinLocations = d.BinLocations,
-                LogDetailId = d.LogDetailId
-              }];
-
-        return devicesAll?.Where(x => (deleted && x.Status == Status.Deleted) || (!deleted && x.Status != Status.Deleted)).ToArray();
-    }
+		return devicesAll?.Where(x => (deleted && x.Status == Status.Deleted) || (!deleted && x.Status != Status.Deleted)).ToArray();
+	}
     /// <summary>
     ///
     /// </summary>
@@ -233,7 +236,7 @@ public class DeviceOperation : IDeviceOperation
                 });
             }
 
-            List<Machine> listMachine = [.. ListDevices()];
+            List<Machine> listMachine = [.. await ListDevices().ConfigureAwait(false)];
             Machine ObjMachine = listMachine.Where(x => x.Id == returnValue.Id).FirstOrDefault(x => x.Status != Status.Failed);
             await ObjMachine.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             if (notifyOnce)
@@ -316,7 +319,7 @@ public class DeviceOperation : IDeviceOperation
             MachineExternal machine = cycleMachine;
             try
             {
-                Machine originalMachine = GetDevice(machine.MachineCode);
+                Machine originalMachine = await GetDevice(machine.MachineCode).ConfigureAwait(false);
                 bool editMode = originalMachine is not null;
                 if (editMode)
                 {
@@ -554,60 +557,61 @@ public class DeviceOperation : IDeviceOperation
     /// <summary>
     ///
     /// </summary>
-    public Machine GetDevice(string machineId, bool whenThen = false)
-    {
-        Sensor sensorTemp = null;
-        Machine returnValue = _machineRepo.ListMachines(machineId)?.FirstOrDefault();
-        // returnValue.Name = returnValue.Description;
-        if (returnValue is not null && returnValue.Status != Status.Deleted)
-        {
-            returnValue.Name = returnValue.Description;
-            returnValue.Environment = new MachineEnvironment();
-            returnValue.ProcessType = _processTypeRepo.GetProcessType(returnValue.TypeId).FirstOrDefault();
-            returnValue.OEEConfiguration = _oeeRepo.GetMachineOeeConfiguration(returnValue.Id);
-            returnValue.Programming = _oeeRepo.GetMachineProgramming(returnValue.Id);
-            if (returnValue.ProcessType is not null && returnValue.OEEConfiguration is not null)
-            {
-                returnValue.ProcessType.Details = _processTypeRepo.ListMachineProcessTypeDetails(machineId);
-            }
-            List<Sensor> sensors = _machineRepo.ListSensors(null, machineId);
-            List<Sensor> sensorsDetails = _machineRepo.GetSensors(null, machineId);
-            if (whenThen)
-            {
-                try
-                {
-                    sensorTemp = _machineRepo.GetSensorsDetails(null);
-                }
-                catch (Exception ex)
-                {
-                    //logger.Error(ex);
-                }
-            }
-            List<MachineParam> parameters = _machineRepo.ListMachineParams(null, machineId);
+    
+	public async Task<Machine> GetDevice(string machineId, bool whenThen = false)
+	{
+		Sensor sensorTemp = null;
+		Machine returnValue = _machineRepo.ListMachines(machineId)?.FirstOrDefault();
+		if (returnValue is not null)
+		{
+			returnValue.Name = returnValue.Description;
 
-            if (sensors is not null)
-            {
-                if (sensorTemp is not null)
-                {
-                    foreach (Sensor sensor in sensorsDetails)
-                    {
-                        sensor.SensorsWhen = [.. sensorTemp.SensorsWhen.Where(x => x.SensorId == sensor.Code)];
-                        sensor.SensorLiveViewer = [.. sensorTemp.SensorLiveViewer.Where(x => x.SensorId == sensor.Code)];
-                    }
-                }
-            }
-            else
-            {
-                sensors = [];
-            }
-            parameters ??= [];
-            returnValue.Parameters = parameters;
-            returnValue.Sensors = sensors;
-            returnValue.SensorDetails = sensorsDetails;
-        }
+			if (returnValue.Status != Status.Deleted)
+			{
+				returnValue.Environment = new MachineEnvironment();
+				returnValue.ProcessType = _processTypeRepo.GetProcessType(returnValue.TypeId).FirstOrDefault();
+				returnValue.OEEConfiguration = await _oeeRepo.GetMachineOeeConfiguration(returnValue.Id).ConfigureAwait(false);
+				returnValue.Programming = _oeeRepo.GetMachineProgramming(returnValue.Id);
+				if (returnValue.ProcessType is not null && returnValue.OEEConfiguration is not null)
+				{
+					returnValue.ProcessType.Details = await _processTypeRepo.ListMachineProcessTypeDetails(machineId).ConfigureAwait(false);
+				}
+				List<Sensor> sensors = _machineRepo.ListSensors(null, machineId);
+				List<Sensor> sensorsDetails = _machineRepo.GetSensors(null, machineId);
+				if (whenThen)
+				{
+					try
+					{
+						sensorTemp = _machineRepo.GetSensorsDetails(null);
+					}
+					catch (Exception ex)
+					{
+						//logger.Error(ex);
+					}
+				}
+				List<MachineParam> parameters = _machineRepo.ListMachineParams(null, machineId);
 
-        return returnValue;
-    }
+				if (sensors is null)
+				{
+					sensors = [];
+				}
+				else if (sensorTemp is not null)
+				{
+					foreach (Sensor sensor in sensorsDetails)
+					{
+						sensor.SensorsWhen = [.. sensorTemp.SensorsWhen.Where(x => x.SensorId == sensor.Code)];
+						sensor.SensorLiveViewer = [.. sensorTemp.SensorLiveViewer.Where(x => x.SensorId == sensor.Code)];
+					}
+				}
+				parameters ??= [];
+				returnValue.Parameters = parameters;
+				returnValue.Sensors = sensors;
+				returnValue.SensorDetails = sensorsDetails;
+			}
+		}
+
+		return returnValue;
+	}
 
 }
 

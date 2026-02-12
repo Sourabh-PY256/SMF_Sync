@@ -33,10 +33,10 @@ public class WarehouseOperation : IWarehouseOperation
 
         #region Permission validation
 
-        if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
-        {
-        	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-        }
+        // if (!systemOperator.Permissions.Any(x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+        // {
+        // 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+        // }
 
         #endregion Permission validation
 
@@ -175,10 +175,10 @@ public class WarehouseOperation : IWarehouseOperation
 	{
 		#region Permission validation
 
-		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
-		{
-			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-		}
+		// if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.INV_WAREHOUSE_MANAGE))
+		// {
+		// 	throw new UnauthorizedAccessException(ErrorMessage.noPermission);
+		// }
 
 		#endregion Permission validation
 

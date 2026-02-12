@@ -458,7 +458,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					// status
 
 					OrderProcess process = wo.Processes.Find(wop => wop.IsOutput) ?? throw new Exception("Error finding last operation");
-					transaction.OperationNo = process.OperationNo.ToStr();
+					transaction.OperationNo = process.ProcessId.ToStr();
 					List<ReturnMaterialContext> orderContext = GetProductReturnContext(transaction.OrderCode, systemOperator);
 
 					transaction.Items.ForEach(itm =>
@@ -606,13 +606,19 @@ public class WorkOrderOperation : IWorkOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public async Task<List<WorkOrderResponse>> ListUpdateWorkOrder(List<WorkOrderExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, bool isDataSynced = false)
+	public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(
+		List<WorkOrderExternal> workOrderList,
+		User systemOperator,
+		bool Validate,
+		LevelMessage Level,
+		bool isDataSynced = false
+	)
 	{
 		List<WorkOrderResponse> returnValue = [];
 		WorkOrderResponse MessageError;
 		MeasureUnit[] units = null;
 		List<ProcessType> processTypesList = null;
-
+		Dictionary<int, string> ResourceInventory = null;
 		if (workOrderList?.Count > 0)
 		{
 			units = _measureUnitOperation.GetMeasureUnits()?.Where(x => x.IsProductionResult).ToArray();
@@ -632,8 +638,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 					{
 						throw new Exception($"{results[0]}");
 					}
-					WorkOrder originalWorkOrder = (await GetWorkOrder(workOrder.OrderCode).ConfigureAwait(false))?.FirstOrDefault();
-					bool editMode = originalWorkOrder is not null && !string.IsNullOrEmpty(originalWorkOrder.Id);
+					ProductionOrder originalWorkOrder = (await GetProductionOrder(workOrder.OrderCode).ConfigureAwait(false));
+					bool editMode = originalWorkOrder is not null && !string.IsNullOrEmpty(originalWorkOrder.Code);
 					// product
 					ProcessEntry currentProduct = null;
 					string processEntryId = string.Empty;
@@ -651,7 +657,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 							if (originalWorkOrder is not null)
 							{
 								//Obtiene producto por Id de producto sin importar almacen o version
-								ptl = await _componentOperation.GetProcessEntryById(originalWorkOrder.ProcessEntryId, systemOperator).ConfigureAwait(false);
+								ptl = await _componentOperation.GetProcessEntryById(originalWorkOrder.ProductId, systemOperator).ConfigureAwait(false);
 							}
 							else
 							{
@@ -685,8 +691,6 @@ public class WorkOrderOperation : IWorkOrderOperation
 							"CANCELLED" => Status.Cancelled,
 							"ON HOLD" => Status.Hold,
 							"FINISHED" => Status.Finished,
-							// "COMPLETED" => Status.Finished,
-							// "PLANNED" => Status.Active,
 							_ => throw new InvalidOperationException($"Unknown work order status: {workOrder.Status}")
 						};
 					}
@@ -708,29 +712,29 @@ public class WorkOrderOperation : IWorkOrderOperation
 						throw new Exception("Changing the product in a Production order is not allowed");
 					}
 					// workOrder info
-					WorkOrder workOrderInfo = new()
+					ProductionOrder workOrderInfo = new()
 					{
+						Code = workOrder.OrderCode,
 						OrderCode = workOrder.OrderCode,
-						ProcessEntryId = processEntryId, // Depende de ProductCode, WarehouseCode, Version, Sequence
-						PlannedQty = workOrder.Quantity,
+						ProductId = processEntryId, // Depende de ProductCode, WarehouseCode, Version, Sequence
+						Quantity = workOrder.Quantity,
 						Formula = workOrder.FormulaCode,
 						OrderType = workOrder.OrderType,
 						LotNo = workOrder.LotNo,
 						OrderGroup = workOrder.OrderGroup,
 						SalesOrder = salesOrder,
 						Comments = workOrder.Comments,
-						PlannedStart = workOrder.PlannedStartDate,
-						PlannedEnd = workOrder.PlannedEndDate,
+						PlannedStartDate = workOrder.PlannedStartDate,
+						PlannedEndDate = workOrder.PlannedEndDate,
 						Status = orderStatus,
 						Priority = workOrder.OrderPriority.ToStr(),
 						DueDate = workOrder.DueDate,
-						Processes = []
+						Operations = []
 					};
 					if (editMode)
 					{
 						workOrderInfo = originalWorkOrder;
-
-						workOrderInfo.PlannedQty = workOrder.Quantity;
+						workOrderInfo.Quantity = workOrder.Quantity;
 						workOrderInfo.Formula = workOrder.FormulaCode;
 						workOrderInfo.OrderType = workOrder.OrderType;
 						workOrderInfo.LotNo = workOrder.LotNo;
@@ -748,11 +752,11 @@ public class WorkOrderOperation : IWorkOrderOperation
 						}
 						if (workOrder.PlannedStartDate.Year > 1900 && !originalWorkOrder.APS)
 						{
-							workOrderInfo.PlannedStart = workOrder.PlannedStartDate;
+							workOrderInfo.PlannedStartDate = workOrder.PlannedStartDate;
 						}
 						if (workOrder.PlannedEndDate.Year > 1900 && !originalWorkOrder.APS)
 						{
-							workOrderInfo.PlannedEnd = workOrder.PlannedEndDate;
+							workOrderInfo.PlannedEndDate = workOrder.PlannedEndDate;
 						}
 					}
 					if (workOrder.Operations is null || workOrder.Operations.Count == 0)
@@ -761,8 +765,80 @@ public class WorkOrderOperation : IWorkOrderOperation
 					}
 					else
 					{
+						//Validate OperationNo Sequence and Groups
+						ValidateOperationSequenceGroups(workOrder.Operations);
 						foreach (Common.Models.WorkOrderOperation op in workOrder.Operations)
 						{
+							if (op.Step > 0)
+							{
+								ProcessTypeSubtype CurrentOperationSubType = subProcessTypes.FirstOrDefault(pt =>
+									string.Equals(pt.Code, op.OperationSubtype, StringComparison.OrdinalIgnoreCase)) ?? throw new Exception(string.Format(
+										"Operation No. {0} {1} Suboperation Type not found",
+										op.Step,
+										op.OperationSubtype
+									)
+								);
+								ProcessType CurrentOperationType = processTypesList.Find(pt => string.Equals(pt.Code, CurrentOperationSubType.ProcessTypeId, StringComparison.OrdinalIgnoreCase)) ?? throw new Exception(string.Format("Operation No. {0} {1} Suboperation Type parent not found", op.Step, op.OperationSubtype));
+								op.OperationType = CurrentOperationSubType.ProcessTypeId;
+								op.OperationName = CurrentOperationSubType.Name;
+							}
+							else
+							{
+								op.OperationType = "Unassigned";
+								op.OperationSubtype = "Unassigned";
+								op.OperationName = "Unassigned";
+							}
+							ProductionOrderOperation curProcess = new()
+							{
+								OperationId = !String.IsNullOrEmpty(op.LineUID) ? op.LineUID : Guid.CreateVersion7().ToString(),
+								OperationNo = op.Step.ToInt32(),
+								OperationCode = !String.IsNullOrEmpty(op.OperationCode) ? op.OperationCode : op.Step.ToStr(),
+								OperationGroup = op.OperationGroup,
+								OperationTypeCode = op.OperationType,
+								Name = op.OperationName,
+								OperationSubTypeCode = op.OperationSubtype,
+								Quantity = op.Quantity,
+								LineId = op.LineId,
+								PlannedEndDate = op.PlannedEndDate,
+								PlannedStartDate = op.PlannedStartDate,
+								/*
+								Comments = machine.Comments,
+								SetupTime = machine.SetupTimeInSec,
+								ExecTime = machine.OperationTimeInSec,
+								WaitTime = machine.WaitingTimeInSec,
+								IsBackflush = machine.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase)
+								*/
+							};
+
+							bool addOperation = true;
+
+							// Find current operation or create new
+							ProductionOrderOperation foundOp = workOrderInfo.Operations.FirstOrDefault(p =>
+								(!String.IsNullOrEmpty(op.LineUID) && p.OperationId == op.LineUID)
+								|| (p.LineId.ToInt32() == op.LineId.ToInt32())
+							);
+
+							if (foundOp is not null)
+							{
+								addOperation = false;
+								curProcess = foundOp;
+								curProcess.OperationNo = op.Step.ToInt32();
+								curProcess.OperationCode = !String.IsNullOrEmpty(op.OperationCode) ? op.OperationCode : op.Step.ToStr();
+								curProcess.OperationGroup = op.OperationGroup;
+								if (!string.IsNullOrEmpty(op.LineUID))
+								{
+									curProcess.LineId = op.LineId;
+								}
+							}
+
+							// Si no tiene bandera APS se puede modificar la fecha de Planeacion
+							if (originalWorkOrder?.APS == false)
+							{
+								curProcess.PlannedEndDate = op.PlannedEndDate;
+								curProcess.PlannedStartDate = op.PlannedStartDate;
+							}
+
+							// Si Maquinas viene vacio se inicializa con un default
 							if (op.Machines is null || op.Machines.Count == 0)
 							{
 								op.Machines =
@@ -771,55 +847,109 @@ public class WorkOrderOperation : IWorkOrderOperation
 										{
 											MachineCode = "00000000-0000-0000-0000-000000000000",
 											OperationTimeInSec = 1,
+											LineNo = -1,
+											LineUID = Guid.CreateVersion7().ToString(),
 											Primary = "Yes",
 											Eficiency = 100
 										},
 									];
 							}
 
-							ProcessTypeSubtype CurrentOperationSubType = subProcessTypes.FirstOrDefault(pt =>
-								string.Equals(pt.Code, op.OperationSubtype, StringComparison.OrdinalIgnoreCase)) ?? throw new Exception(string.Format(
-									"Operation No. {0} {1} Suboperation Type not found",
-									op.Step,
-									op.OperationSubtype
-								)
-							);
-							ProcessType CurrentOperationType = processTypesList.Find(pt => string.Equals(pt.Code, CurrentOperationSubType.ProcessTypeId, StringComparison.OrdinalIgnoreCase)) ?? throw new Exception(string.Format("Operation No. {0} {1} Suboperation Type parent not found", op.Step, op.OperationSubtype));
-							op.OperationType = CurrentOperationSubType.ProcessTypeId;
-
+							ProcessType processType = null;
+							if (string.IsNullOrEmpty(op.OperationType))
+							{
+								ProcessEntryProcess actualProcess = currentProduct.Processes.FirstOrDefault(prc => prc.ProcessId.ToDouble() == curProcess.OperationNo.ToDouble());
+								if (processType is not null)
+								{
+									curProcess.OperationTypeCode = actualProcess.ProcessTypeId;
+									_ = processTypesList.Where(pt => pt.Id == op.OperationType)?.FirstOrDefault();
+								}
+								else
+								{
+									throw new Exception(string.Format("Order operation No.{0} not found", op.Step));
+								}
+							}
+							else
+							{
+								processType = processTypesList.FirstOrDefault(pt => pt.Id == op.OperationType);
+								if (processType is not null)
+								{
+									curProcess.OperationTypeCode = processType.Id;
+								}
+								else
+								{
+									throw new Exception(string.Format("Order operation Type {0} not found", op.OperationType));
+								}
+							}
+							if (op.ByProducts is not null)
+							{
+								curProcess.Byproducts ??= [];
+								foreach (WorkOrderByProduct bp in op.ByProducts)
+								{
+									if (string.IsNullOrEmpty(bp.WarehouseCode))
+									{
+										throw new Exception(string.Format("Byproduct {1} in Operation No. {0} Warehouse code is required", op.Step, bp.ItemCode));
+									}
+									Component opComp = (await _componentOperation.GetComponents(bp.ItemCode, true).ConfigureAwait(false)).Where(c => c.Status != Status.Failed)?.FirstOrDefault();
+									Warehouse whs = _warehouseOperation.GetWarehouse(bp.WarehouseCode) ?? throw new Exception(string.Format("Byproduct in Operation No. {0} Warehouse code {1} is invalid", op.Step, bp.WarehouseCode));
+									if (opComp is not null)
+									{
+										bool addByProduct = true;
+										ProductionOrderByProduct newComp = new()
+										{
+											ItemCode = bp.ItemCode,
+											Quantity = bp.Quantity,
+											LineId = bp.LineId.ToStr(),
+											LineUID = string.IsNullOrEmpty(bp.LineUID) ? Guid.CreateVersion7().ToString() : bp.LineUID,
+											WarehouseCode = bp.WarehouseCode,
+											Comments = bp.Comments
+										};
+										if (editMode)
+										{
+											ProductionOrderByProduct foundByp = curProcess.Byproducts.Find(x => (!String.IsNullOrEmpty(bp.LineUID) && x.LineUID == bp.LineUID) || (String.IsNullOrEmpty(bp.LineUID) && x.LineId == bp.LineId.ToStr()));
+											if (foundByp is not null)
+											{
+												addByProduct = false;
+												newComp = foundByp;
+												newComp.ItemCode = bp.ItemCode;
+												newComp.Quantity = bp.Quantity;
+												newComp.WarehouseCode = bp.WarehouseCode;
+												if (!String.IsNullOrEmpty(bp.LineUID))
+												{
+													newComp.LineId = bp.LineId.ToStr();
+												}
+											}
+											if (!string.IsNullOrEmpty(bp.Comments))
+											{
+												newComp.Comments = bp.Comments;
+											}
+										}
+										if (addByProduct)
+										{
+											if (!String.IsNullOrEmpty(bp.LineUID))
+											{
+												newComp.LineId = bp.LineId.ToStr();
+											}
+											else
+											{
+												// Revisar inventariado para eliminar LineNo de otra seccion si existiera
+												RemoveProductionOrderResourceByLineId(workOrderInfo, bp.LineId.ToStr());
+											}
+											curProcess.Byproducts.Add(newComp);
+										}
+									}
+									else
+									{
+										throw new Exception(string.Format("Operation No. {0} Item code {1} is invalid", op.Step, bp.ItemCode));
+									}
+								}
+							}
 							foreach (WorkOrderMachine machine in op.Machines)
 							{
 								if (machine.MachineCode != "00000000-0000-0000-0000-000000000000" && _machineRepo.ListMachines(machine.MachineCode)?.FirstOrDefault() is null)
 								{
 									throw new Exception(string.Format("Operation No. {0} Machine: {1} not found", op.Step, machine.MachineCode));
 								}
-
-								OrderProcess curProcess = new()
-								{//Pass Group of parrel operation 
-									OperationId = op.OperationId,
-									Step = op.Step.ToInt32(),
-									//need to add
-									//SortId = 0,
-									//In SF  ProcessId is OperationNo
-									OperationNo = op.OperationNo.ToStr(),//need to map oeration numer 
-									ProcessTypeId = CurrentOperationSubType.ProcessTypeId,
-									//As discussed
-									//OperationName = CurrentOperationSubType.Name,
-									OperationName = op.OperationName ?? CurrentOperationSubType.Name,
-									ProcessSubTypeId = op.OperationSubtype,
-									Total = op.Quantity,
-									MachineId = machine.MachineCode,
-									//LineId = machine.LineNo,
-									LineId = op.LineNo,
-									PlannedEnd = op.PlannedEndDate,
-									PlannedStart = op.PlannedStartDate,
-									Comments = machine.Comments,
-									SetupTime = machine.SetupTimeInSec,
-									ExecTime = machine.OperationTimeInSec,
-									WaitTime = machine.WaitingTimeInSec,
-									IsBackflush = machine.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase)
-								};
-
 								if (op.PlannedStartDate.Year <= 1900 && !(editMode && originalWorkOrder.APS))
 								{
 									throw new Exception(string.Format("Operation No.{0} PlannedStartDate is required", op.Step));
@@ -832,421 +962,368 @@ public class WorkOrderOperation : IWorkOrderOperation
 								{
 									throw new Exception(string.Format("Operation No.{0} PlannedEndDate must be greater than PlannedStartDate", op.Step));
 								}
-								bool addNewProcess = true;
+
+								ProductionOrderMachine currentMachine = new()
+								{
+									MachineCode = machine.MachineCode,
+									LineId = machine.LineNo.ToStr(),
+									LineUID = !String.IsNullOrEmpty(machine.LineUID) ? machine.LineUID : Guid.CreateVersion7().ToString(),
+									Received = 0,
+									Rejected = 0,
+									Consumption = machine.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase) ? 1 : 0,
+									ActualExecTime = 0,
+									WaitTime = machine.WaitingTimeInSec,
+									PlannedSetupTime = machine.SetupTimeInSec,
+								};
+
 								if (editMode)
 								{
-									OrderProcess foundProcess = workOrderInfo.Processes.Find(p =>
-										p.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
-										p.LineId.ToInt32() == machine.LineNo
+									bool addMachine = true;
+									ProductionOrderMachine foundMachine = curProcess.Machines.FirstOrDefault(m =>
+										(!String.IsNullOrEmpty(machine.LineUID) && m.LineUID == machine.LineUID)
+										|| (String.IsNullOrEmpty(machine.LineUID) && m.LineId.ToInt32() == machine.LineNo.ToInt32())
 									);
-									if (foundProcess?.Received == 0)
+									if (foundMachine is not null)
 									{
-										curProcess = foundProcess;
-										addNewProcess = false;
-										curProcess.Total = op.Quantity;
-										curProcess.MachineId = machine.MachineCode;
-										curProcess.OriginalMachineId = curProcess.MachineId;
-										curProcess.PlannedSetupStart = foundProcess.PlannedSetupStart;
-										curProcess.PlannedSetupEnd = foundProcess.PlannedSetupEnd;
-										curProcess.WaitTime = machine.WaitingTimeInSec;
-										curProcess.ExecTime = machine.OperationTimeInSec;
-										curProcess.SetupTime = machine.SetupTimeInSec;
-										curProcess.IsBackflush = foundProcess.IsBackflush;
-										curProcess.IssuedTime = foundProcess.IssuedTime;
+										currentMachine = foundMachine;
+										currentMachine.MachineCode = machine.MachineCode;
+										addMachine = false;
 
-										if (!string.IsNullOrEmpty(machine.IssueMode))
+										if (!String.IsNullOrEmpty(machine.LineUID))
 										{
-											curProcess.IsBackflush = machine.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase);
+											currentMachine.LineId = machine.LineNo.ToStr();
 										}
+									}
+									if (!string.IsNullOrEmpty(machine.IssueMode))
+									{
+										currentMachine.Consumption = machine.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+									}
 
-										if (!string.IsNullOrEmpty(machine.Comments))
-										{
-											curProcess.Comments = machine.Comments;
-										}
+									if (!string.IsNullOrEmpty(machine.Comments))
+									{
+										curProcess.Comments = machine.Comments;
+									}
 
-										if (!originalWorkOrder.APS)
+									if (addMachine)
+									{
+										if (!String.IsNullOrEmpty(machine.LineUID))
 										{
-											curProcess.PlannedEnd = op.PlannedEndDate;
-											curProcess.PlannedStart = op.PlannedStartDate;
+											currentMachine.LineId = machine.LineNo.ToStr();
 										}
 										else
 										{
-											curProcess.PlannedEnd = foundProcess.PlannedEnd;
-											curProcess.PlannedStart = foundProcess.PlannedStart;
+											// Revisar inventariado para eliminar LineNo de otra seccion si existiera
+											RemoveProductionOrderResourceByLineId(workOrderInfo, machine.LineNo.ToStr());
 										}
+										curProcess.Machines.Add(currentMachine);
 									}
-									else if (foundProcess is not null)
+								}
+							}
+							if (op.Items is not null)
+							{
+								curProcess.Items ??= [];
+
+								foreach (WorkOrderItem itm in op.Items)
+								{
+									ProcessEntryComponent productItem = currentProduct.Components?.FirstOrDefault(x =>
+										x.ProcessId.ToDouble() == curProcess.OperationNo.ToDouble() &&
+										x.ComponentId == itm.ItemCode
+									);
+									Component opComp = (await _componentOperation.GetComponents(itm.ItemCode, true).ConfigureAwait(false)).Where(x => x.Status != Status.Failed)?.FirstOrDefault();
+									if (opComp is not null)
 									{
-										foundProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() && x.MachineId == curProcess.MachineId);
-										if (foundProcess is not null)
+										string UnitCode = currentProduct.UnitId;
+										if (!string.IsNullOrEmpty(itm.InventoryUoM))
 										{
-											curProcess = foundProcess;
-											addNewProcess = false;
-											curProcess.Total = op.Quantity;
-											curProcess.PlannedSetupStart = foundProcess.PlannedSetupStart;
-											curProcess.PlannedSetupEnd = foundProcess.PlannedSetupEnd;
-											curProcess.WaitTime = machine.WaitingTimeInSec;
-											curProcess.ExecTime = machine.OperationTimeInSec;
-											curProcess.SetupTime = machine.SetupTimeInSec;
-											curProcess.IsBackflush = foundProcess.IsBackflush;
-											curProcess.IssuedTime = foundProcess.IssuedTime;
-
-											if (!string.IsNullOrEmpty(machine.IssueMode))
+											MeasureUnit itmUnit = units.FirstOrDefault(x => string.Equals(x.Code, itm.InventoryUoM, StringComparison.OrdinalIgnoreCase));
+											if (itmUnit is not null)
 											{
-												curProcess.IsBackflush = machine.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase);
-											}
-
-											if (!originalWorkOrder.APS)
-											{
-												curProcess.PlannedEnd = op.PlannedEndDate;
-												curProcess.PlannedStart = op.PlannedStartDate;
+												UnitCode = itmUnit.Id;
 											}
 											else
 											{
-												curProcess.PlannedEnd = foundProcess.PlannedEnd;
-												curProcess.PlannedStart = foundProcess.PlannedStart;
+												throw new Exception(string.Format("Operation Type {0} on Item {1} Inventory UoM code {2} is invalid", op.OperationType, itm.ItemCode, itm.InventoryUoM));
 											}
 										}
-									}
-								}
+										bool AddItem = true;
+										ProductionOrderItem newComp = new()
+										{
+											Class = 1,
+											ItemCode = itm.ItemCode,
+											Quantity = itm.Quantity,
+											IssuedQty = 0,
+											UnitCode = UnitCode,
+											WarehouseCode = itm.WarehouseCode,
+											LineId = itm.LineId.ToStr(),
+											LineUID = !String.IsNullOrEmpty(itm.LineUID) ? itm.LineUID : Guid.CreateVersion7().ToString(),
+											Consumption = itm.IssueMethod.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase) ? 1 : 0,
+											Source = itm.Source,
+											Comments = itm.Comments
+										};
 
-								ProcessType processType = null;
-								if (string.IsNullOrEmpty(op.OperationType))
-								{
-									ProcessEntryProcess actualProcess = currentProduct.Processes.Where(prc => prc.OperationNo.ToStr() == curProcess.OperationNo.ToStr())?.FirstOrDefault();
-									if (processType is not null)
-									{
-										curProcess.ProcessTypeId = actualProcess.ProcessTypeId;
-										_ = processTypesList.Where(pt => pt.Id == op.OperationType)?.FirstOrDefault();
+										if (!editMode && productItem is not null && string.IsNullOrEmpty(itm.Source))
+										{
+											newComp.ItemCode = productItem.Source;
+										}
+
+										if (editMode)
+										{
+											ProductionOrderItem foundComponent = curProcess.Items.Find(x =>
+												(!String.IsNullOrEmpty(itm.LineUID) && x.LineUID == itm.LineUID) ||
+												(String.IsNullOrEmpty(itm.LineUID) && x.LineId == itm.LineId.ToStr())
+											);
+											if (foundComponent is not null)
+											{
+												AddItem = false;
+												newComp = foundComponent;
+
+												if (!String.IsNullOrEmpty(itm.ItemCode))
+												{
+													newComp.ItemCode = itm.ItemCode;
+												}
+												if (!String.IsNullOrEmpty(itm.LineUID))
+												{
+													newComp.LineId = itm.LineId.ToStr();
+												}
+												newComp.Quantity = itm.Quantity;
+												newComp.UnitCode = UnitCode;
+
+												newComp.WarehouseCode = itm.WarehouseCode;
+												newComp.Consumption = itm.IssueMethod.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+												if (!string.IsNullOrEmpty(itm.Comments))
+												{
+													newComp.Comments = itm.Comments;
+												}
+											}
+										}
+										if (AddItem)
+										{
+											if (!String.IsNullOrEmpty(itm.LineUID))
+											{
+												newComp.LineId = itm.LineId.ToStr();
+											}
+											else
+											{
+												// Revisar inventariado para eliminar LineNo de otra seccion si existiera
+												RemoveProductionOrderResourceByLineId(workOrderInfo, itm.LineId.ToStr());
+											}
+											curProcess.Items.Add(newComp);
+										}
 									}
 									else
 									{
-										throw new Exception(string.Format("Order operation No.{0} not found", op.Step));
+										throw new Exception(string.Format("Operation No. {0} Item code {1} is invalid", op.Step, itm.ItemCode));
 									}
+								}
+							}
+							if (op.Tooling is not null)
+							{
+								curProcess.ToolingType ??= [];
+								foreach (WorkOrderOperationTool tool in op.Tooling)
+								{
+									bool addToolingType = true;
+									ProductionOrderResource newTool = new();
+									ToolType currentToolType = _toolOperation.ListToolTypes(tool.ToolingCode)?.Find(x => x.Status != Status.Failed);
+									ProcessEntryTool productTool = currentProduct.Tools?.FirstOrDefault(x =>
+										x.ProcessId.ToDouble() == curProcess.OperationNo.ToDouble() &&
+										x.ToolId == tool.ToolingCode
+									);
+									if (currentToolType is not null)
+									{
+										newTool.Code = tool.ToolingCode;
+										newTool.LineId = tool.LineId.ToStr();
+										newTool.LineUID = string.IsNullOrEmpty(tool.LineUID) ? Guid.CreateVersion7().ToString() : tool.LineUID;
+										newTool.Quantity = tool.Quantity;
+										newTool.PlannedQty = tool.Quantity;
+										newTool.Source = tool.Source;
+										newTool.Comments = tool.Comments;
+										newTool.Usage = tool.Usage;
+										newTool.Consumption = tool.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+
+										if (!editMode && productTool is not null)
+										{
+											if (string.IsNullOrEmpty(tool.Source))
+											{
+												newTool.Source = productTool.Source;
+											}
+											if (string.IsNullOrEmpty(tool.Usage))
+											{
+												newTool.Usage = productTool.Usage;
+											}
+										}
+
+										ProductionOrderResource existingTool = curProcess.ToolingType.Find(x =>
+												(!String.IsNullOrEmpty(tool.LineUID) && x.LineUID == tool.LineUID) ||
+												(String.IsNullOrEmpty(tool.LineUID) && x.LineId == tool.LineId.ToStr()));
+										if (existingTool is not null)
+										{
+											addToolingType = false;
+											newTool = existingTool;
+											newTool.Quantity = tool.Quantity;
+											newTool.PlannedQty = tool.Quantity;
+											if (!String.IsNullOrEmpty(tool.ToolingCode))
+											{
+												newTool.Code = tool.ToolingCode;
+											}
+											if (!string.IsNullOrEmpty(tool.IssueMode))
+											{
+												newTool.Consumption = tool.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+											}
+
+											if (!string.IsNullOrEmpty(tool.Usage) && tool.Usage != "0")
+											{
+												newTool.Usage = tool.Usage;
+											}
+											if (!string.IsNullOrEmpty(tool.Comments))
+											{
+												newTool.Comments = tool.Comments;
+											}
+											if (!String.IsNullOrEmpty(tool.LineUID))
+											{
+												newTool.LineId = tool.LineId.ToStr();
+											}
+										}
+										if (addToolingType)
+										{
+											if (!String.IsNullOrEmpty(tool.LineUID))
+											{
+												newTool.LineId = tool.LineId.ToStr();
+											}
+											else
+											{
+												// Revisar inventariado para eliminar LineNo de otra seccion si existiera
+												RemoveProductionOrderResourceByLineId(workOrderInfo, tool.LineId.ToStr());
+											}
+											curProcess.ToolingType.Add(newTool);
+										}
+									}
+									else
+									{
+										throw new Exception(string.Format("Tooling Type: {0} not found", tool.ToolingCode));
+									}
+								}
+							}
+
+							if (op.Labor is not null)
+							{
+								curProcess.Labor ??= [];
+								foreach (WorkOrderOperationLabor labor in op.Labor)
+								{
+									bool AddLabor = true;
+									ProductionOrderResource newLabor = new();
+									ProcessEntryLabor productLabor = currentProduct.Labor?.FirstOrDefault(x =>
+										x.ProcessId.ToDouble() == curProcess.OperationNo.ToDouble() &&
+										x.LaborId == labor.ProfileCode
+									);
+									Labor currentLabor = _laborRepo.ListLabors()?.Find(x => string.Equals(x.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
+									if (currentLabor is not null)
+									{
+										newLabor.Code = labor.ProfileCode;
+										newLabor.LineId = labor.LineId.ToStr();
+										newLabor.LineUID = string.IsNullOrEmpty(labor.LineUID) ? Guid.CreateVersion7().ToString() : labor.LineUID;
+										newLabor.Quantity = labor.Quantity;
+										newLabor.PlannedQty = labor.Quantity;
+										newLabor.Source = labor.Source;
+										newLabor.Comments = labor.Comments;
+										newLabor.Usage = labor.Usage;
+										newLabor.Consumption = labor.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+
+										if (!editMode && productLabor is not null)
+										{
+											if (string.IsNullOrEmpty(labor.Source))
+											{
+												newLabor.Source = productLabor.Source;
+											}
+											if (string.IsNullOrEmpty(labor.Usage))
+											{
+												newLabor.Usage = productLabor.Usage;
+											}
+										}
+
+										ProductionOrderResource existingLabor = curProcess.Labor.Find(x =>
+										(!String.IsNullOrEmpty(labor.LineUID) && x.LineUID == labor.LineUID) ||
+										(String.IsNullOrEmpty(labor.LineUID) && x.LineId == labor.LineId.ToStr()));
+										if (existingLabor is not null)
+										{
+											AddLabor = false;
+											newLabor = existingLabor;
+											newLabor.Quantity = newLabor.Quantity;
+											newLabor.PlannedQty = newLabor.Quantity;
+											if (!String.IsNullOrEmpty(labor.ProfileCode))
+											{
+												newLabor.Code = labor.ProfileCode;
+											}
+											if (!string.IsNullOrEmpty(labor.IssueMode))
+											{
+												newLabor.Consumption = labor.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+											}
+											if (!string.IsNullOrEmpty(labor.Usage) && labor.Usage != "0")
+											{
+												newLabor.Usage = labor.Usage;
+											}
+											if (!string.IsNullOrEmpty(labor.Comments))
+											{
+												newLabor.Comments = labor.Comments;
+											}
+											if (!String.IsNullOrEmpty(labor.LineUID))
+											{
+												newLabor.LineId = labor.LineId.ToStr();
+											}
+										}
+
+										if (AddLabor)
+										{
+											if (!String.IsNullOrEmpty(labor.LineUID))
+											{
+												newLabor.LineId = labor.LineId.ToStr();
+											}
+											else
+											{
+												// Revisar inventariado para eliminar LineNo de otra seccion si existiera
+												RemoveProductionOrderResourceByLineId(workOrderInfo, labor.LineId.ToStr());
+											}
+											curProcess.Labor.Add(newLabor);
+										}
+									}
+									else
+									{
+										throw new Exception(string.Format("Labor profile code: {0} not found", labor.ProfileCode));
+									}
+								}
+							}
+							if (op.Tasks is not null)
+							{
+								List<Activity> tasks = _dataImportOperation.GetDataImportProductionOrderTasks(op, curProcess);
+								if (!editMode)
+								{
+									curProcess.Tasks = tasks;
 								}
 								else
 								{
-									processType = processTypesList.Where(pt => pt.Id == op.OperationType)?.FirstOrDefault();
-									if (processType is not null)
+									foreach (Activity tsk in tasks)
 									{
-										curProcess.ProcessTypeId = processType.Id;
-									}
-									else
-									{
-										throw new Exception(string.Format("Order operation Type {0} not found", op.OperationType));
-									}
-								}
-								if (op.ByProducts is not null)
-								{
-									workOrderInfo.Subproducts ??= [];
-									foreach (WorkOrderByProduct bp in op.ByProducts)
-									{
-										if (string.IsNullOrEmpty(bp.WarehouseCode))
+										if (curProcess.Tasks?.Count > 0)
 										{
-											throw new Exception(string.Format("Byproduct {1} in Operation No. {0} Warehouse code is required", op.Step, bp.ItemCode));
-										}
-										Component opComp = (await _componentOperation.GetComponents(bp.ItemCode, true).ConfigureAwait(false)).Where(c => c.Status != Status.Failed)?.FirstOrDefault();
-										Warehouse whs = _warehouseOperation.GetWarehouse(bp.WarehouseCode);
-										if (whs is null)
-										{
-											throw new Exception(string.Format("Byproduct in Operation No. {0} Warehouse code {1} is invalid", op.Step, bp.WarehouseCode));
-										}
-										if (opComp is not null)
-										{
-											SubProduct newComp = new()
-											{
-												ComponentId = bp.ItemCode,
-												OperationNo = curProcess.OperationNo,
-												Factor = bp.Quantity,
-												LineId = bp.LineId.ToStr(),
-												LineUID = string.IsNullOrEmpty(bp.LineUID) ? Guid.NewGuid().ToString() : bp.LineUID,
-												WarehouseCode = bp.WarehouseCode,
-												Comments = bp.Comments
-											};
-											if (editMode)
-											{
-												SubProduct foundComponent = workOrderInfo.Subproducts.Find(x => x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() && x.ComponentId == newComp.ComponentId && x.LineId == newComp.LineId);
-												if (foundComponent is not null)
-												{
-													newComp = foundComponent;
-
-													newComp.Factor = bp.Quantity;
-
-													newComp.WarehouseCode = bp.WarehouseCode;
-
-													if (!string.IsNullOrEmpty(bp.Comments))
+											curProcess.Tasks.Where(x =>
+												x.SortId == tsk.SortId &&
+												x.TriggerId == tsk.TriggerId)?.ToList()?.ForEach(x =>
 													{
-														newComp.Comments = bp.Comments;
-													}
-												}
-											}
-											if (!workOrderInfo.Subproducts.Any(x => x.ComponentId == newComp.ComponentId && x.OperationNo == newComp.OperationNo && x.LineId == newComp.LineId))
-											{
-												workOrderInfo.Subproducts.Add(newComp);
-											}
+														x.ManualDelete = true;
+														tsk.ManualDelete = true;
+													});
 										}
-										else
+										tsk.ProcessId = curProcess.OperationNo.ToStr();
+										if (!tsk.ManualDelete)
 										{
-											throw new Exception(string.Format("Operation No. {0} Item code {1} is invalid", op.Step, bp.ItemCode));
+											curProcess.Tasks ??= [];
+											curProcess.Tasks.Add(tsk);
 										}
 									}
 								}
-								if (op.Items is not null)
-								{
-									workOrderInfo.Components ??= [];
-
-									foreach (WorkOrderItem itm in op.Items)
-									{
-										// ProcessEntryComponent productItem = currentProduct.Components.FirstOrDefault(x =>
-										// 	x.ProcessId.ToDouble() == curProcess.ProcessId.ToDouble() &&
-										// 	x.ComponentId == itm.ItemCode
-										// );
-										Component opComp = (await _componentOperation.GetComponents(itm.ItemCode, true).ConfigureAwait(false)).Where(x => x.Status != Status.Failed)?.FirstOrDefault();
-										if (opComp is not null)
-										{
-											string UnitCode = currentProduct.UnitId;
-											if (!string.IsNullOrEmpty(itm.InventoryUoM))
-											{
-												MeasureUnit itmUnit = units.FirstOrDefault(x => string.Equals(x.Code, itm.InventoryUoM, StringComparison.OrdinalIgnoreCase));
-												if (itmUnit is not null)
-												{
-													UnitCode = itmUnit.Id;
-												}
-												else
-												{
-													throw new Exception(string.Format("Operation Type {0} on Item {1} Inventory UoM code {2} is invalid", op.OperationType, itm.ItemCode, itm.InventoryUoM));
-												}
-											}
-											OrderComponent newComp = new()
-											{
-												OperationNo = curProcess.OperationNo,
-												MaterialType = 1,
-												SourceId = itm.ItemCode,
-												TargetQty = itm.Quantity,
-												InputUnitId = UnitCode,
-												TargetUnitId = UnitCode,
-												WarehouseCode = itm.WarehouseCode,
-												LineId = itm.LineId.ToStr(),
-												IsBackflush = itm.IssueMethod.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase),
-												Source = itm.Source,
-												Comments = itm.Comments
-											};
-
-											// if (!editMode && productItem is not null && string.IsNullOrEmpty(itm.Source))
-											// {
-											// 	newComp.Source = productItem.Source;
-											// }
-
-											if (editMode)
-											{
-												OrderComponent foundComponent = workOrderInfo.Components.Find(x =>
-													x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
-													x.SourceId == newComp.SourceId &&
-													x.LineId == newComp.LineId
-												);
-												if (foundComponent is not null)
-												{
-													newComp = foundComponent;
-													newComp.MaterialType = 1;
-													newComp.TargetQty = itm.Quantity;
-													newComp.InputUnitId = UnitCode;
-													newComp.TargetUnitId = UnitCode;
-													newComp.WarehouseCode = itm.WarehouseCode;
-													newComp.IsBackflush = itm.IssueMethod.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase);
-
-													if (!string.IsNullOrEmpty(itm.Comments))
-													{
-														newComp.Comments = itm.Comments;
-													}
-												}
-											}
-											if (!workOrderInfo.Components.Any(x => x.SourceId == newComp.SourceId && x.OperationNo == newComp.OperationNo && x.LineId == newComp.LineId))
-											{
-												workOrderInfo.Components.Add(newComp);
-											}
-										}
-										else
-										{
-											throw new Exception(string.Format("Operation No. {0} Item code {1} is invalid", op.Step, itm.ItemCode));
-										}
-									}
-								}
-								if (op.Tooling is not null)
-								{
-									workOrderInfo.Tools ??= [];
-									foreach (WorkOrderOperationTool tool in op.Tooling)
-									{
-										WorkOrderTool newTool = new();
-										ToolType currentToolType = _toolOperation.ListToolTypes(tool.ToolingCode)?.Find(x => x.Status != Status.Failed);
-										ProcessEntryTool productTool = currentProduct.Tools.FirstOrDefault(x =>
-											x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
-											x.ToolId == tool.ToolingCode
-										);
-										if (currentToolType is not null)
-										{
-											newTool.ToolId = tool.ToolingCode;
-											newTool.OperationNo = curProcess.OperationNo;
-											newTool.LineId = tool.LineId.ToStr();
-											newTool.Quantity = tool.Quantity;
-											newTool.PlannedQty = tool.Quantity;
-											newTool.Source = tool.Source;
-											newTool.Comments = tool.Comments;
-											newTool.Usage = tool.Usage;
-											newTool.IsBackflush = tool.IssueMode.ToStr().Equals("BACKFLUSH", StringComparison.OrdinalIgnoreCase);
-
-											if (!editMode && productTool is not null)
-											{
-												if (string.IsNullOrEmpty(tool.Source))
-												{
-													newTool.Source = productTool.Source;
-												}
-												if (string.IsNullOrEmpty(tool.Usage))
-												{
-													newTool.Usage = productTool.Usage;
-												}
-											}
-
-											WorkOrderTool existingTool = workOrderInfo.Tools.Find(x => x.OperationNo.ToStr() == newTool.OperationNo.ToStr() && x.LineId == newTool.LineId);
-											if (existingTool is null)
-											{
-												workOrderInfo.Tools.Add(newTool);
-											}
-											else
-											{
-												existingTool.ToolId = tool.ToolingCode;
-												existingTool.Quantity = tool.Quantity;
-												existingTool.PlannedQty = tool.Quantity;
-
-												if (!string.IsNullOrEmpty(tool.IssueMode))
-												{
-													existingTool.IsBackflush = tool.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase);
-												}
-
-												if (!string.IsNullOrEmpty(tool.Usage) && tool.Usage != "0")
-												{
-													existingTool.Usage = tool.Usage;
-												}
-												if (!string.IsNullOrEmpty(tool.Comments))
-												{
-													existingTool.Comments = tool.Comments;
-												}
-											}
-										}
-										else
-										{
-											throw new Exception(string.Format("Tooling Type: {0} not found", tool.ToolingCode));
-										}
-									}
-								}
-
-								if (op.Labor is not null)
-								{
-									workOrderInfo.Labor ??= [];
-									foreach (WorkOrderOperationLabor labor in op.Labor)
-									{
-										WorkOrderLabor newLabor = new();
-										ProcessEntryLabor productLabor = currentProduct.Labor.FirstOrDefault(x =>
-											x.OperationNo.ToStr() == curProcess.OperationNo.ToStr() &&
-											x.LaborId == labor.ProfileCode
-										);
-										Labor currentLabor = _laborRepo.ListLabors()?.Find(x => string.Equals(x.Id, labor.ProfileCode, StringComparison.OrdinalIgnoreCase));
-										if (currentLabor is not null)
-										{
-											newLabor.LaborId = labor.ProfileCode;
-											newLabor.OperationNo = curProcess.OperationNo;
-											newLabor.LineId = labor.LineId.ToStr();
-											newLabor.Quantity = labor.Quantity;
-											newLabor.PlannedQty = labor.Quantity;
-											newLabor.Source = labor.Source;
-											newLabor.Comments = labor.Comments;
-											newLabor.Usage = labor.Usage;
-											newLabor.IsBackflush = labor.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase);
-
-											if (!editMode && productLabor is not null)
-											{
-												if (string.IsNullOrEmpty(labor.Source))
-												{
-													newLabor.Source = productLabor.Source;
-												}
-												if (string.IsNullOrEmpty(labor.Usage))
-												{
-													newLabor.Usage = productLabor.Usage;
-												}
-											}
-
-											WorkOrderLabor existingLabor = workOrderInfo.Labor.Find(x =>
-												x.OperationNo.ToStr() == newLabor.OperationNo.ToStr() &&
-												x.LineId == newLabor.LineId);
-											if (existingLabor is null)
-											{
-												workOrderInfo.Labor.Add(newLabor);
-											}
-											else
-											{
-												existingLabor.LaborId = newLabor.LaborId;
-												existingLabor.Quantity = newLabor.Quantity;
-												existingLabor.PlannedQty = newLabor.Quantity;
-
-												if (!string.IsNullOrEmpty(labor.IssueMode))
-												{
-													existingLabor.IsBackflush = labor.IssueMode.ToStr().ToLowerInvariant().Contains("backflush", StringComparison.OrdinalIgnoreCase);
-												}
-												if (!string.IsNullOrEmpty(labor.Usage) && labor.Usage != "0")
-												{
-													existingLabor.Usage = labor.Usage;
-												}
-												if (!string.IsNullOrEmpty(labor.Comments))
-												{
-													existingLabor.Comments = labor.Comments;
-												}
-											}
-										}
-										else
-										{
-											throw new Exception(string.Format("Labor profile code: {0} not found", labor.ProfileCode));
-										}
-									}
-								}
-								if (op.Tasks is not null)
-								{
-									List<Activity> tasks = _dataImportOperation.GetDataImportOrderTasks(op, curProcess);
-									if (!editMode)
-									{
-										workOrderInfo.Tasks = tasks;
-									}
-									else
-									{
-										foreach (Activity tsk in tasks)
-										{
-											if (workOrderInfo.Tasks?.Count > 0)
-											{
-												workOrderInfo.Tasks.Where(x =>
-													x.SortId == tsk.SortId &&
-													x.TriggerId == tsk.TriggerId)?.ToList()?.ForEach(x =>
-														{
-															x.ManualDelete = true;
-															tsk.ManualDelete = true;
-														});
-											}
-											tsk.OperationNo = curProcess.OperationNo;
-											if (!tsk.ManualDelete)
-											{
-												workOrderInfo.Tasks ??= [];
-												workOrderInfo.Tasks.Add(tsk);
-											}
-										}
-									}
-								}
-
-								if (addNewProcess)
-								{
-									workOrderInfo.Processes.Add(curProcess);
-								}
-								foreach (OrderProcess previousProcess in workOrderInfo.Processes.Where(x => x.OperationNo == curProcess.OperationNo))
-								{
-									previousProcess.Total = curProcess.Total;
-									previousProcess.OriginalMachineId = null;
-								}
+							}
+							if (addOperation)
+							{
+								workOrderInfo.Operations.Add(curProcess);
 							}
 						}
 					}
@@ -1255,52 +1332,52 @@ public class WorkOrderOperation : IWorkOrderOperation
 					{
 						if (workOrder.PlannedStartDate.Year > 1900)
 						{
-							workOrderInfo.PlannedStart = workOrder.PlannedStartDate;
+							workOrderInfo.PlannedStartDate = workOrder.PlannedStartDate;
 						}
 						else
 						{
-							OrderProcess firstProcess = workOrderInfo.Processes.OrderBy(x => x.PlannedStart).FirstOrDefault();
+							ProductionOrderOperation firstProcess = workOrderInfo.Operations.OrderBy(x => x.PlannedStartDate).FirstOrDefault();
 							if (firstProcess is null)
 							{
-								workOrderInfo.PlannedStart = workOrder.PlannedStartDate;
+								workOrderInfo.PlannedStartDate = workOrder.PlannedStartDate;
 							}
 							else
 							{
-								workOrderInfo.PlannedStart = firstProcess.PlannedStart;
+								workOrderInfo.PlannedStartDate = firstProcess.PlannedStartDate;
 							}
 						}
 						if (workOrder.PlannedEndDate.Year > 1900)
 						{
-							workOrderInfo.PlannedEnd = workOrder.PlannedEndDate;
+							workOrderInfo.PlannedEndDate = workOrder.PlannedEndDate;
 						}
 						else
 						{
-							OrderProcess lastProcess = workOrderInfo.Processes.OrderByDescending(x => x.PlannedEnd).FirstOrDefault();
+							ProductionOrderOperation lastProcess = workOrderInfo.Operations.OrderByDescending(x => x.PlannedEndDate).FirstOrDefault();
 							if (lastProcess is null)
 							{
-								workOrderInfo.PlannedEnd = workOrder.PlannedEndDate;
+								workOrderInfo.PlannedEndDate = workOrder.PlannedEndDate;
 							}
 							else
 							{
-								workOrderInfo.PlannedEnd = lastProcess.PlannedEnd;
+								workOrderInfo.PlannedEndDate = lastProcess.PlannedEndDate;
 							}
 						}
 
-						if (Math.Abs((workOrderInfo.PlannedStart - workOrderInfo.PlannedEnd).TotalSeconds) < 1e-6)
+						if (Math.Abs((workOrderInfo.PlannedStartDate - workOrderInfo.PlannedEndDate).TotalSeconds) < 1e-6)
 						{
-							workOrderInfo.PlannedStart = new DateTime(
-								workOrderInfo.PlannedStart.Year,
-								workOrderInfo.PlannedStart.Month,
-								workOrderInfo.PlannedStart.Day,
+							workOrderInfo.PlannedStartDate = new DateTime(
+								workOrderInfo.PlannedStartDate.Year,
+								workOrderInfo.PlannedStartDate.Month,
+								workOrderInfo.PlannedStartDate.Day,
 								0,
 								0,
 								0,
 								DateTimeKind.Utc
 							);
-							workOrderInfo.PlannedEnd = new DateTime(
-								workOrderInfo.PlannedStart.Year,
-								workOrderInfo.PlannedStart.Month,
-								workOrderInfo.PlannedStart.Day,
+							workOrderInfo.PlannedEndDate = new DateTime(
+								workOrderInfo.PlannedStartDate.Year,
+								workOrderInfo.PlannedStartDate.Month,
+								workOrderInfo.PlannedStartDate.Day,
 								23,
 								59,
 								59,
@@ -1309,21 +1386,22 @@ public class WorkOrderOperation : IWorkOrderOperation
 						}
 					}
 
-					// tasks
+					// Missing tasks from product
 					if (currentProduct?.Tasks is not null && !editMode)
 					{
-						workOrderInfo.Tasks ??= [];
 						foreach (Activity t in currentProduct.Tasks)
 						{
-							OrderProcess existingProcess = workOrderInfo.Processes.Find(x => x.OperationNo.ToStr() == t.OperationNo.ToStr());
+							ProductionOrderOperation existingProcess = workOrderInfo.Operations.Find(x => x.OperationNo.ToDouble() == t.ProcessId.ToDouble());
+
 							if (existingProcess is not null)
 							{
-								workOrderInfo.Tasks.Add(t);
+								existingProcess.Tasks ??= [];
+								existingProcess.Tasks.Add(t);
 							}
 						}
 					}
 
-					returnValue.Add(await MergeWorkOrder(editMode ? ActionDB.Update : ActionDB.Create, workOrderInfo, systemOperator, Validate, Level.ToStr(), true, isDataSynced, IntegrationSource.ERP).ConfigureAwait(false));
+					returnValue.Add(await MergeProductionOrder(editMode ? ActionDB.Update : ActionDB.Create, workOrderInfo, systemOperator, Validate, Level.ToStr(), true, isDataSynced, IntegrationSource.ERP).ConfigureAwait(false));
 				}
 				catch (Exception ex)
 				{
@@ -1349,16 +1427,12 @@ public class WorkOrderOperation : IWorkOrderOperation
 		// }
 		return returnValue;
 	}
-
-	/// <summary>
-	///
-	/// </summary>
-	/// <summary>
+	// <summary>
 	/// Merges the specified work order with the current work order.
 	/// </summary>
-	public async Task<WorkOrderResponse> MergeWorkOrder(
+	public async Task<WorkOrderResponse> MergeProductionOrder(
 		ActionDB mode,
-		WorkOrder workOrderInfo,
+		ProductionOrder workOrderInfo,
 		User systemOperator,
 		bool Validate = false,
 		string Level = "Success",
@@ -1368,252 +1442,519 @@ public class WorkOrderOperation : IWorkOrderOperation
 	)
 	{
 		WorkOrderResponse returnValue = null;
-
-		#region Permission validation
-
-		if (!systemOperator.Permissions.Any(static x => x.Code == Permissions.PRD_WORKORDER_MANAGE))
-		{
-			throw new UnauthorizedAccessException(ErrorMessage.noPermission);
-		}
-
-		#endregion Permission validation
-
-		//await ValidateRules(workOrderInfo, systemOperator).ConfigureAwait(false);
+		workOrderInfo.OrderCode = workOrderInfo.Code;
+		await ValidateRules(workOrderInfo, systemOperator).ConfigureAwait(false);
 
 		using (TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled))
 		{
 			if (IsDataSynced || await SendOrderDataToERP(workOrderInfo, systemOperator).ConfigureAwait(false))
 			{
-				if (string.IsNullOrEmpty(workOrderInfo.OrderCode))
+				if (string.IsNullOrEmpty(workOrderInfo.Code))
 				{
 					throw new Exception("Invalid Order Code");
 				}
 
 				if (mode == ActionDB.Create)
 				{
-					if (workOrderInfo.Processes is null)
+					if (workOrderInfo.Operations is null)
 					{
 						throw new Exception(ErrorMessage.BadParams);
 					}
 					LevelMessage objLevel = Enum.Parse<LevelMessage>(Level);
-					returnValue = _workOrderRepo.MergeWorkOrder(workOrderInfo, systemOperator, Validate, objLevel, mode, intSrc);
-					if (!string.IsNullOrEmpty(returnValue.WorkOrder.Id) && workOrderInfo.Processes?.Count > 0)
+					returnValue = _workOrderRepo.MergeProductionOrder(workOrderInfo, systemOperator, Validate, objLevel, mode, intSrc);
+					if (!string.IsNullOrEmpty(returnValue.ProductionOrder.Code) && workOrderInfo.Operations?.Count > 0)
 					{
-						MemoryStream ms;
-						returnValue.WorkOrder.Processes.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
-						string processDetailJSON = JsonConvert.SerializeObject(returnValue.WorkOrder.Processes);
-						_workOrderRepo.MergeWorkOrderProcesses(returnValue.WorkOrder, processDetailJSON, systemOperator);
-
-						if (workOrderInfo.Components?.Count > 0)
+						returnValue.ProductionOrder.Operations.ForEach(static op =>
 						{
-							returnValue.WorkOrder.Components.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
-							string componentDetailsJSON = JsonConvert.SerializeObject(workOrderInfo.Components);
-							_workOrderRepo.MergeWorkOrderComponents(returnValue.WorkOrder, componentDetailsJSON, systemOperator);
-
-							if (workOrderInfo.ToolValues?.Count > 0)
+							op.Machines?.ForEach(machine =>
 							{
-								XmlSerializer toolValueSerializer = new(typeof(List<ToolValue>));
-								ms = new MemoryStream();
-								toolValueSerializer.Serialize(ms, workOrderInfo.ToolValues);
-								string toolDetailsXML = RemoveXMLHeader(Encoding.UTF8.GetString(ms.ToArray()));
-								_workOrderRepo.MergeWorkOrderToolValues(returnValue.WorkOrder, toolDetailsXML, systemOperator);
-							}
-						}
-
-						if (workOrderInfo.Subproducts?.Count > 0 && !string.IsNullOrEmpty(returnValue.WorkOrder.Id))
-						{
-							returnValue.WorkOrder.Subproducts.ForEach(static x =>
-							{
-								if (string.IsNullOrEmpty(x.LineUID))
+								if (string.IsNullOrEmpty(machine.LineUID))
 								{
-									x.LineUID = Guid.NewGuid().ToString();
+									machine.LineUID = Guid.CreateVersion7().ToString();
 								}
 							});
-							string byProductJson = JsonConvert.SerializeObject(workOrderInfo.Subproducts);
-							_workOrderRepo.MergeWorkOrderByProducts(returnValue.WorkOrder, byProductJson, systemOperator);
+						});
+						string processDetailJSON = JsonConvert.SerializeObject(returnValue.ProductionOrder.Operations);
+						_workOrderRepo.MergeProductionOrderOperations(returnValue.ProductionOrder, processDetailJSON, systemOperator);
+
+						if (workOrderInfo.Operations?.Any(op => op.Items?.Count > 0) == true)
+						{
+							returnValue.ProductionOrder.Operations?
+							.ForEach(op =>
+							{
+								op.Items?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+							});
+							string componentDetailsJSON = JsonConvert.SerializeObject(
+							returnValue.ProductionOrder.Operations?
+								.SelectMany(op => (op.Items ?? Enumerable.Empty<ProductionOrderItem>())
+									.Select(item => new
+									{
+										op.OperationId,
+										op.OperationNo, // o op.ProcessId si es lo que identifica la operación
+										Item = item
+									})
+								)
+						);
+
+							_workOrderRepo.MergeProductionOrderComponents(returnValue.ProductionOrder, componentDetailsJSON, systemOperator);
+						}
+						if (workOrderInfo.Operations?.Any(op => op.Byproducts?.Count > 0) == true)
+						{
+							returnValue.ProductionOrder.Operations?
+							.ForEach(op =>
+							{
+								op.Byproducts?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+							});
+
+							string byProductJson = JsonConvert.SerializeObject(
+							returnValue.ProductionOrder.Operations?
+								.SelectMany(op => (op.Byproducts ?? Enumerable.Empty<ProductionOrderByProduct>())
+									.Select(bp => new
+									{
+										op.OperationId,
+										op.OperationNo, // o ProcessId si ese es el identificador
+										ByProduct = bp
+									})
+								)
+							);
+
+							_workOrderRepo.MergeProductionOrderByProducts(returnValue.ProductionOrder, byProductJson, systemOperator);
 						}
 						string ToolingJson = string.Empty;
-						if (workOrderInfo.Tools?.Count > 0 && !string.IsNullOrEmpty(returnValue.WorkOrder.Id))
+						if (workOrderInfo.Operations?.Any(op =>
+							(op.ToolingType?.Count > 0) ||
+							(op.Machines?.Any(m => m.ToolingType?.Count > 0) == true)
+						) == true && !string.IsNullOrEmpty(returnValue.ProductionOrder.Code))
 						{
-							returnValue.WorkOrder.Tools.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
-							ToolingJson = JsonConvert.SerializeObject(workOrderInfo.Tools);
+							returnValue.ProductionOrder.Operations?
+							.ForEach(op =>
+							{
+								op.ToolingType?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+								op.Machines?.ForEach(m =>
+								{
+									m.ToolingType?.ForEach(static x =>
+									{
+										if (string.IsNullOrEmpty(x.LineUID))
+										{
+											x.LineUID = Guid.CreateVersion7().ToString();
+										}
+									});
+								});
+							});
+
+							IEnumerable<object> allToolingTypesWithOp = workOrderInfo.Operations?
+								.SelectMany(op =>
+									// ToolingType a nivel operación
+									(op.ToolingType ?? Enumerable.Empty<ProductionOrderResource>())
+										.Select(t => new
+										{
+											op.OperationId,
+											op.OperationNo,
+											MachineCode = string.Empty,
+											Tooling = t
+										}
+										)
+										// ToolingType dentro de cada máquina (preservando m)
+										.Concat(
+											op.Machines?
+												.SelectMany(m => (m.ToolingType ?? Enumerable.Empty<ProductionOrderResource>())
+													.Select(t => new
+													{
+														op.OperationNo,
+														MachineCode = m.MachineCode ?? string.Empty,
+														MachineId = m.LineUID ?? string.Empty,
+														Tooling = t
+													})
+												) ?? Enumerable.Empty<object>()
+										)
+								);
+
+							ToolingJson = JsonConvert.SerializeObject(allToolingTypesWithOp);
 						}
-						_workOrderRepo.MergeWorkOrderTooling(returnValue.WorkOrder, ToolingJson, systemOperator);
+						_workOrderRepo.MergeProductionOrderToolingType(returnValue.ProductionOrder, ToolingJson, systemOperator);
+
 						string LaborJson = string.Empty;
-						if (workOrderInfo.Labor?.Count > 0 && !string.IsNullOrEmpty(returnValue.WorkOrder.Id))
+						if (workOrderInfo.Operations?.Any(op =>
+							(op.Labor?.Count > 0) ||
+							(op.Machines?.Any(m => m.Labor?.Count > 0) == true)
+						) == true && !string.IsNullOrEmpty(returnValue.ProductionOrder.Code))
 						{
-							returnValue.WorkOrder.Labor.ForEach(static x => { if (string.IsNullOrEmpty(x.LineUID)) { x.LineUID = Guid.NewGuid().ToString(); } });
-							LaborJson = JsonConvert.SerializeObject(workOrderInfo.Labor);
+							returnValue.ProductionOrder.Operations?
+							.ForEach(op =>
+							{
+								op.Labor?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+								op.Machines?.ForEach(m =>
+								{
+									m.Labor?.ForEach(static x =>
+									{
+										if (string.IsNullOrEmpty(x.LineUID))
+										{
+											x.LineUID = Guid.CreateVersion7().ToString();
+										}
+									});
+								});
+							});
+
+							IEnumerable<object> allLabor = workOrderInfo.Operations?
+							.SelectMany(op =>
+								// ToolingType a nivel operación
+								(op.Labor ?? Enumerable.Empty<ProductionOrderResource>())
+									.Select(t => new
+									{
+										op.OperationId,
+										op.OperationNo,
+										MachineCode = string.Empty,
+										Labor = t
+									})
+								// ToolingType dentro de cada máquina (preservando m)
+								.Concat(
+									op.Machines?
+										.SelectMany(m => (m.Labor ?? Enumerable.Empty<ProductionOrderResource>())
+											.Select(t => new
+											{
+												op.OperationId,
+												op.OperationNo,
+												MachineCode = m.MachineCode ?? string.Empty,
+												MachineId = m.LineUID ?? string.Empty,
+												Labor = t
+											})
+										) ?? Enumerable.Empty<object>()
+								)
+							);
+
+							LaborJson = JsonConvert.SerializeObject(allLabor);
 						}
-						_workOrderRepo.MergeWorkOrderLabor(returnValue.WorkOrder, LaborJson, systemOperator);
-						if (!string.IsNullOrEmpty(returnValue.WorkOrder.Id) && returnValue.WorkOrder.Tasks is not null)
+						_workOrderRepo.MergeProductionOrderLabor(returnValue.ProductionOrder, LaborJson, systemOperator);
+
+						//Task Section
+						if (!string.IsNullOrEmpty(returnValue.ProductionOrder.Code) && workOrderInfo.Operations?.Any(op => op.Tasks?.Count > 0) == true)
 						{
 							//Order Creation:
 							Dictionary<string, string> newTaskIds = [];
 							// Get Ids from existing tasks when order is being created (Inherited tasks)
-
 							// For each inheritedTasks clone the activity and fill the newTaskIds dictionary
-							foreach (string id in (string[])[.. returnValue.WorkOrder.Tasks.Where(static task => !string.IsNullOrEmpty(task.Id)).Select(static task => task.Id)])
+							foreach (ProductionOrderOperation op in returnValue.ProductionOrder.Operations)
 							{
-								if (!newTaskIds.ContainsKey(id))
+								foreach (Activity task in op.Tasks)
 								{
-									Activity clonedActivity = await _activityOperation.CloneActivity(new Activity(id), systemOperator, "ORDER").ConfigureAwait(false);
-									if (clonedActivity is not null)
+									if (!string.IsNullOrEmpty(task.Id) && !newTaskIds.ContainsKey(task.Id))
 									{
-										newTaskIds.Add(id, clonedActivity.Id);
-									}
-								}
-							}
-
-							// Save tasks for order
-							foreach (Activity task in returnValue.WorkOrder.Tasks)
-							{
-								// if the task has no id means its new
-								if (string.IsNullOrEmpty(task.Id))
-								{
-									task.Origin = OriginActivity.Order.ToStr();
-									Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
-									if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
-									{
-										task.Id = newActivity.Id;
-										_ = _activityOperation.AssociateActivityWorkOrder(
-											returnValue.WorkOrder.Id,
-											newActivity.OperationNo,
-											newActivity.AssetId,
-											newActivity.Id,
-											newActivity.TriggerId,
-											newActivity.SortId,
-											newActivity.IsMandatory,
-											newActivity.RawMaterials,
+										Activity clonedActivity = await _activityOperation.CloneActivity(new Activity(task.Id), systemOperator, "ORDER").ConfigureAwait(false);
+										newTaskIds.Add(task.Id, clonedActivity.Id);
+										task.Id = clonedActivity.Id;
+										if (task.ActivityClassId > 0)
+										{
+											await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
+										}
+										_activityOperation.AssociateActivityWorkOrder(
+											returnValue.ProductionOrder.Code,
+											op.OperationNo.ToStr(),
+											task.AssetId,
+											task.Id,
+											task.TriggerId,
+											task.SortId,
+											task.IsMandatory,
+											task.RawMaterials,
 											systemOperator
 										);
 									}
-								}
-								else
-								{
-									// if the task has Id check vs the dictionary and replace its id
-									if (newTaskIds.TryGetValue(task.Id, out string value))
+									else
 									{
-										task.Id = value;
+										task.Origin = OriginActivity.Order.ToStr();
+										Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
+										if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
+										{
+											task.Id = newActivity.Id;
+											_activityOperation.AssociateActivityWorkOrder(
+												returnValue.ProductionOrder.Code,
+												op.OperationNo.ToStr(),
+												newActivity.AssetId,
+												newActivity.Id,
+												newActivity.TriggerId,
+												newActivity.SortId,
+												newActivity.IsMandatory,
+												newActivity.RawMaterials,
+												systemOperator
+											);
+										}
 									}
-									if (task.ActivityClassId > 0)
-									{
-										await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
-									}
-									_ = _activityOperation.AssociateActivityWorkOrder(
-										returnValue.WorkOrder.Id,
-										task.OperationNo,
-										task.AssetId,
-										task.Id,
-										task.TriggerId,
-										task.SortId,
-										task.IsMandatory,
-										task.RawMaterials,
-										systemOperator
-									);
 								}
+								;
 							}
+							;
 						}
 					}
-					await returnValue.WorkOrder.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
+					await returnValue.ProductionOrder.Log(EntityLogType.Create, systemOperator).ConfigureAwait(false);
 				}
 				else
 				{
 					List<Activity> rv;
 					LevelMessage objLevel = Enum.Parse<LevelMessage>(Level);
-					returnValue = _workOrderRepo.MergeWorkOrder(workOrderInfo, systemOperator, Validate, objLevel, mode);
+					returnValue = _workOrderRepo.MergeProductionOrder(workOrderInfo, systemOperator, Validate, objLevel, mode);
 					const bool result = true;
-					if (result && !string.IsNullOrEmpty(workOrderInfo.Id) && workOrderInfo.Processes?.Count > 0)
+					if (result && !string.IsNullOrEmpty(workOrderInfo.Code) && workOrderInfo.Operations?.Count > 0)
 					{
-						string processDetailJSON = JsonConvert.SerializeObject(workOrderInfo.Processes);
-						_workOrderRepo.MergeWorkOrderProcesses(workOrderInfo, processDetailJSON, systemOperator);
+						string processDetailJSON = JsonConvert.SerializeObject(workOrderInfo.Operations);
+						_workOrderRepo.MergeProductionOrderOperations(workOrderInfo, processDetailJSON, systemOperator);
 
-						if (workOrderInfo.Components is not null)
+						if (workOrderInfo.Operations?.Any(op => op.Items?.Count > 0) == true)
 						{
-							string componentDetailsJSON = JsonConvert.SerializeObject(workOrderInfo.Components);
-							_workOrderRepo.MergeWorkOrderComponents(workOrderInfo, componentDetailsJSON, systemOperator);
+							workOrderInfo.Operations?
+							.ForEach(op =>
+							{
+								op.Items?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+							});
+							string componentDetailsJSON = JsonConvert.SerializeObject(
+							workOrderInfo.Operations?
+								.SelectMany(op => (op.Items ?? Enumerable.Empty<ProductionOrderItem>())
+									.Select(item => new
+									{
+										op.OperationId,
+										op.OperationNo, // o op.ProcessId si es lo que identifica la operación
+										Item = item
+									})
+								)
+						);
+
+							_workOrderRepo.MergeProductionOrderComponents(workOrderInfo, componentDetailsJSON, systemOperator);
 						}
 
-						string byProductJson = string.Empty;
-						if (workOrderInfo.Subproducts?.Count > 0 && !string.IsNullOrEmpty(workOrderInfo.Id))
+						if (workOrderInfo.Operations?.Any(op => op.Byproducts?.Count > 0) == true && !string.IsNullOrEmpty(workOrderInfo.Code))
 						{
-							byProductJson = JsonConvert.SerializeObject(workOrderInfo.Subproducts);
+							workOrderInfo.Operations?
+							.ForEach(op =>
+							{
+								op.Byproducts?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+							});
+
+							string byProductJson = JsonConvert.SerializeObject(
+							workOrderInfo.Operations?
+								.SelectMany(op => (op.Byproducts ?? Enumerable.Empty<ProductionOrderByProduct>())
+									.Select(bp => new
+									{
+										op.OperationId,
+										op.OperationNo, // o ProcessId si ese es el identificador
+										ByProduct = bp
+									})
+								)
+							);
+
+							_workOrderRepo.MergeProductionOrderByProducts(workOrderInfo, byProductJson, systemOperator);
 						}
-						_workOrderRepo.MergeWorkOrderByProducts(workOrderInfo, byProductJson, systemOperator);
 
 						string ToolingJson = string.Empty;
-						if (workOrderInfo.Tools?.Count > 0 && !string.IsNullOrEmpty(workOrderInfo.Id))
+						if (workOrderInfo.Operations?.Any(op =>
+							(op.ToolingType?.Count > 0) ||
+							(op.Machines?.Any(m => m.ToolingType?.Count > 0) == true)
+						) == true && !string.IsNullOrEmpty(workOrderInfo.Code))
 						{
-							ToolingJson = JsonConvert.SerializeObject(workOrderInfo.Tools);
+							workOrderInfo.Operations?
+							.ForEach(op =>
+							{
+								op.ToolingType?.ForEach(static x =>
+								{
+									if (string.IsNullOrEmpty(x.LineUID))
+									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+								op.Machines?.ForEach(m =>
+								{
+									m.ToolingType?.ForEach(static x =>
+									{
+										if (string.IsNullOrEmpty(x.LineUID))
+										{
+											x.LineUID = Guid.CreateVersion7().ToString();
+										}
+									});
+								});
+							});
+
+							IEnumerable<object> allToolingTypesWithOp = workOrderInfo.Operations?
+							.SelectMany(op =>
+								// ToolingType a nivel operación
+								(op.ToolingType ?? Enumerable.Empty<ProductionOrderResource>())
+									.Select(t => new
+									{
+										op.OperationId,
+										op.OperationNo,
+										MachineCode = string.Empty,
+										Tooling = t
+									})
+								// ToolingType dentro de cada máquina (preservando m)
+								.Concat(
+									op.Machines?
+										.SelectMany(m => (m.ToolingType ?? Enumerable.Empty<ProductionOrderResource>())
+											.Select(t => new
+											{
+												op.OperationId,
+												op.OperationNo,
+												MachineCode = m.MachineCode ?? string.Empty,
+												MachineId = m.LineUID ?? string.Empty,
+												Tooling = t
+											})
+										) ?? Enumerable.Empty<object>()
+								)
+							);
+
+							ToolingJson = JsonConvert.SerializeObject(allToolingTypesWithOp);
 						}
-						_workOrderRepo.MergeWorkOrderTooling(workOrderInfo, ToolingJson, systemOperator);
+						_workOrderRepo.MergeProductionOrderToolingType(workOrderInfo, ToolingJson, systemOperator);
 
 						string LaborJson = string.Empty;
-						if (workOrderInfo.Labor?.Count > 0 && !string.IsNullOrEmpty(workOrderInfo.Id))
+						if (workOrderInfo.Operations?.Any(op =>
+							(op.Labor?.Count > 0) ||
+							(op.Machines?.Any(m => m.Labor?.Count > 0) == true)
+						) == true && !string.IsNullOrEmpty(workOrderInfo.Code))
 						{
-							LaborJson = JsonConvert.SerializeObject(workOrderInfo.Labor);
-						}
-						_workOrderRepo.MergeWorkOrderLabor(workOrderInfo, LaborJson, systemOperator);
-
-						if (result && workOrderInfo.Tasks is not null)
-						{
-							foreach (Activity task in workOrderInfo.Tasks)
+							workOrderInfo.Operations?
+							.ForEach(op =>
 							{
-								if (string.IsNullOrEmpty(task.Id))
+								op.Labor?.ForEach(static x =>
 								{
-									task.Origin = OriginActivity.Order.ToStr();
-									Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
-									if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
+									if (string.IsNullOrEmpty(x.LineUID))
 									{
+										x.LineUID = Guid.CreateVersion7().ToString();
+									}
+								});
+								op.Machines?.ForEach(m =>
+								{
+									m.Labor?.ForEach(static x =>
+									{
+										if (string.IsNullOrEmpty(x.LineUID))
+										{
+											x.LineUID = Guid.CreateVersion7().ToString();
+										}
+									});
+								});
+							});
+
+							IEnumerable<object> allLabor = workOrderInfo.Operations?
+							.SelectMany(op =>
+								// ToolingType a nivel operación
+								(op.Labor ?? Enumerable.Empty<ProductionOrderResource>())
+									.Select(t => new
+									{
+										op.OperationId,
+										op.OperationNo,
+										MachineCode = string.Empty,
+										Labor = t
+									})
+								// ToolingType dentro de cada máquina (preservando m)
+								.Concat(
+									op.Machines?
+										.SelectMany(m => (m.Labor ?? Enumerable.Empty<ProductionOrderResource>())
+											.Select(t => new
+											{
+												op.OperationId,
+												op.OperationNo,
+												MachineCode = m.MachineCode ?? string.Empty,
+												MachineId = m.LineUID ?? string.Empty,
+												Labor = t
+											})
+										) ?? Enumerable.Empty<object>()
+								)
+							);
+
+							LaborJson = JsonConvert.SerializeObject(allLabor);
+						}
+						_workOrderRepo.MergeProductionOrderLabor(workOrderInfo, LaborJson, systemOperator);
+
+						//Task Section
+						if (!string.IsNullOrEmpty(workOrderInfo.Code) && workOrderInfo.Operations?.Any(op => op.Tasks?.Count > 0) == true)
+						{
+							//Order Creation:
+							Dictionary<string, string> newTaskIds = [];
+							// Get Ids from existing tasks when order is being created (Inherited tasks)
+							// For each inheritedTasks clone the activity and fill the newTaskIds dictionary
+							foreach (ProductionOrderOperation op in workOrderInfo.Operations)
+							{
+								foreach (Activity task in op.Tasks)
+								{
+									if (string.IsNullOrEmpty(task.Id))
+									{
+										task.Origin = OriginActivity.Order.ToStr();
+										Activity newActivity = await _activityOperation.CreateActivity(task, systemOperator).ConfigureAwait(false);
+										if (newActivity is not null && !string.IsNullOrEmpty(newActivity.Id))
+										{
+											_activityOperation.AssociateActivityWorkOrder(
+												workOrderInfo.Code,
+												op.OperationNo.ToStr(),
+												newActivity.AssetId,
+												newActivity.Id,
+												newActivity.TriggerId,
+												newActivity.SortId,
+												newActivity.IsMandatory,
+												newActivity.RawMaterials,
+												systemOperator
+											);
+										}
+									}
+									else if (task.ManualDelete)
+									{
+										bool tempResult = _activityOperation.RemoveActivityWorkOrderAssociation(workOrderInfo.Code, op.OperationNo.ToStr(), task.AssetId, task.Id, systemOperator);
+									}
+									else
+									{
+										if (task.ActivityClassId > 0)
+										{
+											await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
+										}
 										_activityOperation.AssociateActivityWorkOrder(
-											workOrderInfo.Id,
-											newActivity.OperationNo,
-											newActivity.AssetId,
-											newActivity.Id,
-											newActivity.TriggerId,
-											newActivity.SortId,
-											newActivity.IsMandatory,
-											newActivity.RawMaterials,
+											workOrderInfo.Code,
+											op.OperationNo.ToStr(),
+											task.AssetId,
+											task.Id,
+											task.TriggerId,
+											task.SortId,
+											task.IsMandatory,
+											task.RawMaterials,
 											systemOperator
 										);
 									}
 								}
-								else if (task.ManualDelete)
-								{
-									bool tempResult = _activityOperation.RemoveActivityWorkOrderAssociation(workOrderInfo.Id, task.OperationNo, task.AssetId, task.Id, systemOperator);
-								}
-								else
-								{
-									if (task.ActivityClassId > 0)
-									{
-										await _activityOperation.UpdateActivity(task, systemOperator).ConfigureAwait(false);
-									}
-									_activityOperation.AssociateActivityWorkOrder(
-										workOrderInfo.Id,
-										task.OperationNo,
-										task.AssetId,
-										task.Id,
-										task.TriggerId,
-										task.SortId,
-										task.IsMandatory,
-										task.RawMaterials,
-										systemOperator
-									);
-								}
 							}
 						}
-						WorkOrder wo = (await GetWorkOrder(workOrderInfo.Id).ConfigureAwait(false)).FirstOrDefault();
-						if (wo is not null)
-						{
-							rv = wo.Tasks;
-							await wo.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
-						}
-						else
-						{
-							rv = [];
-						}
-						returnValue.WorkOrder = wo;
-						returnValue.WorkOrderActivityList = rv;
+						ProductionOrder prodOrd = (await GetProductionOrder(workOrderInfo.Code).ConfigureAwait(false));
+						await prodOrd.Log(EntityLogType.Update, systemOperator).ConfigureAwait(false);
+
+						returnValue.ProductionOrder = prodOrd;
 					}
 				}
 			}
@@ -1623,7 +1964,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		// {
 		// 	Type = MessageBrokerType.WorkOrder,
 		// 	Aux = mode == ActionDB.Create ? "N" : "U",
-		// 	ElementValue = returnValue.WorkOrder.Id,
+		// 	ElementValue = returnValue.ProductionOrder.Code,
 		// });
 		// ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.WorkOrder, Action = ActionDB.IntegrateAll.ToStr() });
 		return returnValue;
@@ -1641,12 +1982,12 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 			int duplicated = orderInfo.Labor
 				.Where(x => !string.IsNullOrEmpty(x.MachineId))
-				.Select(x => new { x.OperationNo, x.MachineId })
+				.Select(x => new { x.ProcessId, x.MachineId })
 				.Concat(orderInfo.Tools
 					.Where(x => !string.IsNullOrEmpty(x.MachineId))
-					.Select(x => new { x.OperationNo, x.MachineId })
+					.Select(x => new { x.ProcessId, x.MachineId })
 				)
-				.GroupBy(x => new { x.MachineId, x.OperationNo })
+				.GroupBy(x => new { x.MachineId, x.ProcessId })
 				.Where(g => g.Count() > 1)
 				.Select(y => y.Key)
 				.Count();
@@ -1657,7 +1998,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 			}
 		}
 
-		Machine[] machines = _deviceOperation.ListDevices(false, true, true);
+		Machine[] machines = await _deviceOperation.ListDevices(false, true, true).ConfigureAwait(false);
 		ProcessEntry orderEntry = (await _componentOperation.GetProcessEntryById(orderInfo.ProcessEntryId, SystemOperator).ConfigureAwait(false)).Find(x => x.Status != Status.Failed);
 		if (orderEntry is not null)
 		{
@@ -1673,6 +2014,73 @@ public class WorkOrderOperation : IWorkOrderOperation
 						.FirstOrDefault(y => y.Id == x.MachineId && y.FacilityCode == warehouse.FacilityCode)
 					})
 					.Count(x => x.Device is null);
+				if (wrongDevices > 0)
+				{
+					throw new Exception("One or more machines don't belong to Warehouse's facility");
+				}
+			}
+		}
+	}
+	/// <summary>
+	/// Validates the rules for a production order.
+	/// </summary>
+	public async Task ValidateRules(ProductionOrder orderInfo, User systemOperator)
+	{
+		string opcLicenseType = Config.Configuration["OPC-LicenseType"].ToStr();
+
+		if (!string.Equals(opcLicenseType, "ULTIMATE", StringComparison.OrdinalIgnoreCase))
+		{
+			// Buscar duplicados en Labor y Tooling
+			var allLaborAndTools = orderInfo.Operations
+				.SelectMany(x => (x.Machines ?? Enumerable.Empty<ProductionOrderMachine>())
+					.SelectMany(machine =>
+						(machine.Labor ?? Enumerable.Empty<ProductionOrderResource>())
+							.Select(_ => new { x.OperationNo, machine.MachineCode })
+							.Concat((machine.ToolingType ?? Enumerable.Empty<ProductionOrderResource>())
+								.Select(_ => new { x.OperationNo, machine.MachineCode })
+							)
+					)
+				)
+				.Where(x => !string.IsNullOrEmpty(x.MachineCode));
+
+			int duplicated = allLaborAndTools
+				.GroupBy(x => new { x.MachineCode, x.OperationNo })
+				.Count(x => x.Count() > 1);
+
+			if (duplicated > 0)
+			{
+				throw new Exception("OPCenter license Type does not allow more than one Labor/Tool per Operation");
+			}
+		}
+
+		// Validar que las máquinas pertenezcan a la instalación del Warehouse
+		Machine[] machines = await  _deviceOperation.ListDevices(false, true, true).ConfigureAwait(false);
+
+		ProcessEntry orderEntry = (await _componentOperation.GetProcessEntryById(orderInfo.ProductId, systemOperator)
+			.ConfigureAwait(false))
+			.Find(x => x.Status != Status.Failed);
+
+		if (orderEntry is not null)
+		{
+			Warehouse warehouse = _warehouseOperation.ListWarehouse(systemOperator)
+				.Where(x => x.WarehouseId == orderEntry.Warehouse)
+				.FirstOrDefault(x => x.Status != Status.Failed);
+
+			if (warehouse is not null)
+			{
+				int wrongDevices = orderInfo.Operations
+					.SelectMany(x => x.Machines ?? Enumerable.Empty<ProductionOrderMachine>())
+					.Where(x => !string.IsNullOrEmpty(x.MachineCode) &&
+								x.MachineCode != "00000000-0000-0000-0000-000000000000")
+					.Select(x => new
+					{
+						x.MachineCode,
+						Device = machines.FirstOrDefault(dev =>
+							dev.Id == x.MachineCode &&   // Si MachineCode es GUID, coincide con dev.Id
+							dev.FacilityCode == warehouse.FacilityCode)
+					})
+					.Count(x => x.Device is null);
+
 				if (wrongDevices > 0)
 				{
 					throw new Exception("One or more machines don't belong to Warehouse's facility");
@@ -1739,15 +2147,13 @@ public class WorkOrderOperation : IWorkOrderOperation
 				LotNo = order.LotNo,
 				OrderPriority = order.Priority.ToInt32().ToStr()
 			};
-			foreach (var itm in order.Processes.GroupBy(g => g.OperationNo, (key, g) => new { OperationNo = key, Process = g.ToArray() }).ToArray())
+			foreach (var itm in order.Processes.GroupBy(g => g.ProcessId, (key, g) => new { OperationNo = key, Process = g.ToArray() }).ToArray())
 			{
 				Common.Models.WorkOrderOperation op = new();
-				OrderProcess prc = itm.Process.First();
+				OrderProcess prc = itm.Process[0];
 				op.OperationName = prc.OperationName;
 				op.OperationSubtype = prc.ProcessSubTypeId;
-				op.Step = prc.Step.ToDouble();
-				//As Discussed add new field 
-				op.OperationNo = prc.OperationNo.ToStr();
+				op.Step = prc.ProcessId.ToDouble();
 				op.Quantity = prc.Total;
 				op.PlannedStartDate = prc.PlannedStart;
 				op.PlannedEndDate = prc.PlannedEnd;
@@ -1765,7 +2171,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 				foreach (OrderProcess machine in itm.Process.Where(x => x.MachineId != "00000000-0000-0000-0000-000000000000"))
 				{
-					ProcessEntryProcess prodProcess = product.Processes.Find(x => x.OperationNo == machine.OperationNo);
+					ProcessEntryProcess prodProcess = product.Processes.Find(x => x.ProcessId == machine.ProcessId);
 					DeviceSpeed ds = null;
 					double orderTimes = 1;
 					double productMachineTime = -1;
@@ -1799,9 +2205,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 						opMachine.OperationTimeInSec = (machine.PlannedEnd - machine.PlannedStart).TotalSeconds;
 					}
 
-					foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => x.MachineId == machine.MachineId && x.OperationNo == machine.OperationNo)])
+					foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => x.MachineId == machine.MachineId && x.ProcessId == machine.ProcessId)])
 					{
-						ProcessEntryLabor pt = product.Labor?.Find(x => x.OperationNo == ml.OperationNo && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
+						ProcessEntryLabor pt = product.Labor?.Find(x => x.ProcessId == ml.ProcessId && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
 						WorkOrderMachineLabor woMl = new()
 						{
 							Quantity = ml.PlannedQty,
@@ -1814,9 +2220,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 						opMachine.Labor.Add(woMl);
 					}
-					foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => x.MachineId == machine.MachineId && x.OperationNo == machine.OperationNo)])
+					foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => x.MachineId == machine.MachineId && x.ProcessId == machine.ProcessId)])
 					{
-						ProcessEntryTool pt = product.Tools?.Find(x => x.OperationNo == mt.OperationNo && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
+						ProcessEntryTool pt = product.Tools?.Find(x => x.ProcessId == mt.ProcessId && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
 						WorkOrderMachineTool woMt = new()
 						{
 							Quantity = mt.PlannedQty,
@@ -1832,9 +2238,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 					op.Machines.Add(opMachine);
 				}
 
-				foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => string.IsNullOrEmpty(x.MachineId) && x.OperationNo == prc.OperationNo)])
+				foreach (WorkOrderLabor ml in (WorkOrderLabor[])[.. order.Labor.Where(x => string.IsNullOrEmpty(x.MachineId) && x.ProcessId == prc.ProcessId)])
 				{
-					ProcessEntryLabor pt = product.Labor?.Find(x => x.OperationNo == ml.OperationNo && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
+					ProcessEntryLabor pt = product.Labor?.Find(x => x.ProcessId == ml.ProcessId && x.MachineId == ml.MachineId && x.LaborId == ml.LaborId);
 					WorkOrderOperationLabor woOl = new()
 					{
 						Quantity = ml.PlannedQty,
@@ -1847,9 +2253,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 
 					op.Labor.Add(woOl);
 				}
-				foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => string.IsNullOrEmpty(x.MachineId) && x.OperationNo == prc.OperationNo)])
+				foreach (WorkOrderTool mt in (WorkOrderTool[])[.. order.Tools.Where(x => string.IsNullOrEmpty(x.MachineId) && x.ProcessId == prc.ProcessId)])
 				{
-					ProcessEntryTool pt = product.Tools?.Find(x => x.OperationNo == mt.OperationNo && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
+					ProcessEntryTool pt = product.Tools?.Find(x => x.ProcessId == mt.ProcessId && x.MachineId == mt.MachineId && x.ToolId == mt.ToolId);
 					WorkOrderOperationTool woOt = new()
 					{
 						Quantity = mt.PlannedQty,
@@ -1863,7 +2269,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					op.Tooling.Add(woOt);
 				}
 
-				foreach (OrderComponent mt in (OrderComponent[])[.. order.Components.Where(x => x.OperationNo == prc.OperationNo)])
+				foreach (OrderComponent mt in (OrderComponent[])[.. order.Components.Where(x => x.ProcessId == prc.ProcessId)])
 				{
 					WorkOrderItem itmOrd = new()
 					{
@@ -1879,7 +2285,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					op.Items.Add(itmOrd);
 				}
 
-				foreach (SubProduct mt in order.Subproducts.Where(x => x.OperationNo == prc.OperationNo).ToArray())
+				foreach (SubProduct mt in order.Subproducts.Where(x => x.ProcessId == prc.ProcessId).ToArray())
 				{
 					WorkOrderByProduct byp = new()
 					{
@@ -1940,7 +2346,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 							if (obj.ContainsKey("operationNo"))
 							{
 								OperationNo = obj["operationNo"].ToStr();
-								currentProcess = order.Processes.Find(pp => pp.OperationNo.ToStr() == OperationNo);
+								currentProcess = order.Processes.Find(pp => pp.ProcessId.ToStr() == OperationNo);
 							}
 							if (currentProcess is not null)
 							{
@@ -1967,8 +2373,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 										OrderProcess spd = order.Processes.Find(dev => dev.LineUID == curUID);
 										if (spd is not null)
 										{
-											//spd.LineId = curID.ToInt32().ToStr();
-											spd.LineId = curID.ToInt32();
+											spd.LineId = curID.ToInt32().ToStr();
+											//spd.LineId = curID.ToInt32();
 										}
 									}
 								}
@@ -1993,7 +2399,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										string curUID = jItm["lineUID"].ToStr();
 										string curID = jItm["lineID"].ToStr();
 										WorkOrderLabor woL = order.Labor?.Find(dev =>
-											dev.OperationNo.ToStr() == OperationNo &&
+											dev.ProcessId.ToStr() == OperationNo &&
 											dev.LineUID == curUID
 										);
 										if (woL is not null)
@@ -2010,7 +2416,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 										string curUID = jItm["lineUID"].ToStr();
 										string curID = jItm["lineID"].ToStr();
 										WorkOrderTool elmt = order.Tools?.Find(dev =>
-											dev.OperationNo.ToStr() == OperationNo &&
+											dev.ProcessId.ToStr() == OperationNo &&
 											dev.LineUID == curUID
 										);
 										if (elmt is not null)
@@ -2026,6 +2432,329 @@ public class WorkOrderOperation : IWorkOrderOperation
 				catch
 				{
 				}
+			}
+		}
+		return returnValue;
+	}
+	private async Task<bool> SendOrderDataToERP(ProductionOrder order, User systemOperator)
+	{
+		bool returnValue = false;
+		if (order is not null)
+		{
+			ProcessEntry product = (await _componentOperation.GetProcessEntryById(order.ProductId, systemOperator).ConfigureAwait(false)).Find(x => x.Status != Status.Failed);
+			string statusName = order.Status switch
+			{
+				Status.Active => "In Progress",
+				Status.Disabled => "New",
+				Status.Pending => "Released",
+				Status.Queued => "Queued",
+				Status.Cancelled => "Cancelled",
+				Status.Hold => "On Hold",
+				Status.Finished => "Finished",
+				Status.Empty or Status.Deleted or Status.Failed or Status.Execute => "New", // or "" if preferred
+				_ => "New"
+			};
+
+			WorkOrderExternal extOrder = new()
+			{
+				OrderCode = order.Code,
+				Comments = order.Comments,
+				DueDate = order.DueDate,
+				FormulaCode = order.Formula,
+				InventoryUoM = product?.UnitId,
+				OrderGroup = order.OrderGroup,
+				OrderType = order.OrderType,
+				SalesOrder = order.SalesOrder,
+				PlannedEndDate = order.PlannedEndDate,
+				PlannedStartDate = order.PlannedStartDate,
+				ProductCode = product?.Code,
+				Quantity = order.Quantity,
+				WarehouseCode = product.Warehouse,
+				Version = product.Version,
+				Sequence = product.Sequence,
+				Status = statusName,
+				Operations = [],
+				LotNo = order.LotNo,
+				OrderPriority = order.Priority.ToInt32().ToStr()
+			};
+			foreach (var itm in order.Operations.GroupBy(x => x.OperationNo, (key, x) => new { OperationNo = key, Process = x.ToArray() }).ToArray())
+			{
+				ProductionOrderOperation prc = itm.Process[0];
+				EWP.SF.Common.Models.WorkOrderOperation op = new()
+				{
+					OperationName = prc.Name,
+					LineId = prc.LineId,
+					LineUID = prc.OperationId,
+					OperationSubtype = prc.OperationSubTypeCode,
+					Step = prc.OperationNo.ToDouble(),
+					Quantity = prc.Quantity,
+					PlannedStartDate = prc.PlannedStartDate,
+					PlannedEndDate = prc.PlannedEndDate,
+					OutputUoM = extOrder.InventoryUoM,
+					Machines = [],
+					Labor = [],
+					Tooling = [],
+					Items = [],
+					ByProducts = []
+				};
+				op.Labor ??= [];
+				op.Items ??= [];
+				op.Tooling ??= [];
+				op.ByProducts ??= [];
+
+				foreach (ProductionOrderMachine machine in prc.Machines.Where(x => x.MachineCode != "00000000-0000-0000-0000-000000000000"))
+				{
+					double orderTimes = 1;
+					double productMachineTime = -1;
+					try
+					{
+						orderTimes = order.Quantity / product.Quantity;
+						productMachineTime = machine.PlannedExecTime * orderTimes;
+					}
+					catch { }
+
+					WorkOrderMachine opMachine = new()
+					{
+						MachineCode = machine.MachineCode,
+						Primary = machine.Status == Status.Active ? "Yes" : "No",
+						LineNo = machine.LineId.ToInt32(),
+						LineUID = machine.LineUID,
+						Labor = [],
+						Tooling = [],
+						Quantity = (machine.Status == Status.Active).ToInt32(),
+						Comments = ""
+					};
+					if (productMachineTime >= 0)
+					{
+						opMachine.OperationTimeInSec = productMachineTime;
+					}
+					else
+					{
+						opMachine.OperationTimeInSec = machine.PlannedExecTime;
+					}
+
+					foreach (ProductionOrderResource ml in machine.Labor ?? [])
+					{
+						WorkOrderMachineLabor woMl = new()
+						{
+							Quantity = ml.PlannedQty,
+							LineId = ml.LineId.ToInt32(),
+							LineUID = ml.LineUID,
+							ProfileCode = ml.Code,
+							Comments = ml.Comments,
+							Usage = ml.Usage
+						};
+
+						opMachine.Labor.Add(woMl);
+					}
+					foreach (ProductionOrderResource mt in machine.ToolingType ?? [])
+					{
+						WorkOrderMachineTool woMt = new()
+						{
+							Quantity = mt.PlannedQty,
+							LineId = mt.LineId.ToInt32(),
+							LineUID = mt.LineUID,
+							ToolingCode = mt.Code,
+							Comments = mt.Comments,
+							Usage = mt.Usage
+						};
+
+						opMachine.Tooling.Add(woMt);
+					}
+					op.Machines.Add(opMachine);
+				}
+
+				foreach (ProductionOrderResource ml in prc.Labor ?? [])
+				{
+					WorkOrderOperationLabor woOl = new()
+					{
+						Quantity = ml.PlannedQty,
+						LineId = ml.LineId.ToInt32(),
+						LineUID = ml.LineUID,
+						ProfileCode = ml.Code,
+						Comments = ml.Comments,
+						Usage = ml.Usage
+					};
+
+					op.Labor.Add(woOl);
+				}
+
+				foreach (ProductionOrderResource mt in prc.ToolingType ?? [])
+				{
+					WorkOrderOperationTool woOt = new()
+					{
+						Quantity = mt.PlannedQty,
+						LineId = mt.LineId.ToInt32(),
+						LineUID = mt.LineUID,
+						ToolingCode = mt.Code,
+						Comments = mt.Comments,
+						Usage = mt.Usage
+					};
+
+					op.Tooling.Add(woOt);
+				}
+
+				foreach (ProductionOrderItem mt in prc.Items ?? [])
+				{
+					WorkOrderItem itmOrd = new()
+					{
+						ItemCode = mt.ItemCode,
+						LineId = mt.LineId.ToInt32(),
+						LineUID = mt.LineUID,
+						WarehouseCode = mt.WarehouseCode,
+						IssueMethod = mt.Consumption == 1 ? "Backflush" : "Manual",
+						InventoryUoM = mt.UnitCode,
+						Quantity = mt.Quantity,
+						Comments = mt.Comments
+					};
+					op.Items.Add(itmOrd);
+				}
+
+				foreach (ProductionOrderByProduct mt in prc.Byproducts ?? [])
+				{
+					WorkOrderByProduct byp = new()
+					{
+						ItemCode = mt.ItemCode,
+						LineId = mt.LineId.ToInt32(),
+						LineUID = mt.LineUID,
+						WarehouseCode = mt.WarehouseCode,
+						Quantity = mt.Quantity,
+						InventoryUoM = mt.UnitCode,
+						Comments = mt.Comments
+					};
+					op.ByProducts.Add(byp);
+				}
+
+				extOrder.Operations.Add(op);
+			}
+
+			double offset = await GetTimezoneOffset("ERP").ConfigureAwait(false);
+			AddWorkOrderDatesOffset(extOrder, offset);
+			DataSyncHttpResponse resp = null;
+			//Need to discuss
+			// ProductionOrderService scopedService = (ProductionOrderService)StaticServiceProvider.Provider.GetService(typeof(ProductionOrderService));
+			// DataSyncService serviceInfo = await GetBackgroundService(BackgroundServices.PRODUCTION_ORDER_SERVICE, "POST").ConfigureAwait(false);
+			// DataSyncHttpResponse resp = await scopedService.ManualExecution(
+			// 	serviceInfo,
+			// 	TriggerType.SmartFactory,
+			// 	ServiceExecOrigin.Event,
+			// 	systemOperator,
+			// 	string.Empty,
+			// 	JsonConvert.SerializeObject(extOrder)
+			// ).ConfigureAwait(false);
+			//returnValue = resp.StatusCode == HttpStatusCode.OK;
+			if (!returnValue)
+			{
+				//throw new Exception("ERP|" + resp.Message);need to discuss
+				throw new Exception("ERP|");
+			}
+			else
+			{
+				try
+				{
+					if (!string.IsNullOrEmpty(resp.Message))
+				{
+					JObject o = JObject.Parse(resp.Message);
+					JObject msg = JObject.Parse(o["Message"].ToString());
+					if (msg.ContainsKey("docEntry"))
+					{
+						string entry = msg["docEntry"].ToStr();
+						if (order.Code != entry && !string.IsNullOrEmpty(entry))
+						{
+							order.Code = entry;
+							order.OrderCode = entry;
+						}
+					}
+					foreach (JObject obj in msg["operations"].Cast<JObject>())
+					{
+						double OperationNo = 0;
+						ProductionOrderOperation currentProcess = null;
+						if (obj.ContainsKey("operationNo"))
+						{
+							OperationNo = obj["operationNo"].ToDouble();
+							currentProcess = order.Operations.Find(pp => pp.OperationNo == OperationNo);
+						}
+						if (currentProcess is not null)
+						{
+							if (obj.ContainsKey("items"))
+							{
+								foreach (JObject jItm in obj["items"].Cast<JObject>())
+								{
+									string itmUid = jItm["lineUID"].ToStr();
+									string itmLid = jItm["lineID"].ToStr();
+									ProductionOrderItem cmp = currentProcess.Items?.Find(i => i.LineUID == itmUid);
+									if (cmp is not null)
+									{
+										cmp.LineId = itmLid.ToInt32().ToStr();
+									}
+								}
+							}
+
+							if (obj.ContainsKey("machines"))
+							{
+								foreach (JObject jItm in obj["machines"].Cast<JObject>())
+								{
+									string curUID = jItm["lineUID"].ToStr();
+									string curID = jItm["lineID"].ToStr();
+									ProductionOrderMachine spd = currentProcess.Machines.Find(dev => dev.LineUID == curUID);
+									if (spd is not null)
+									{
+										spd.LineId = curID.ToInt32().ToStr();
+									}
+								}
+							}
+							if (obj.ContainsKey("byProducts"))
+							{
+								foreach (JObject jItm in obj["byProducts"].Cast<JObject>())
+								{
+									string curUID = jItm["lineUID"].ToStr();
+									string curID = jItm["lineID"].ToStr();
+									ProductionOrderByProduct spd = currentProcess.Byproducts?.Find(dev => dev.LineUID == curUID);
+									if (spd is not null)
+									{
+										spd.LineId = curID.ToInt32().ToStr();
+									}
+								}
+							}
+
+							if (obj.ContainsKey("labors"))
+							{
+								foreach (JObject jItm in obj["labors"].Cast<JObject>())
+								{
+									string curUID = jItm["lineUID"].ToStr();
+									string curID = jItm["lineID"].ToStr();
+									ProductionOrderResource woL = currentProcess.Labor?.Find(dev =>
+										dev.LineUID == curUID
+									);
+									if (woL is not null)
+									{
+										woL.LineId = curID.ToInt32().ToStr();
+									}
+								}
+							}
+
+							if (obj.ContainsKey("tooling"))
+							{
+								foreach (JObject jItm in obj["tooling"].Cast<JObject>())
+								{
+									string curUID = jItm["lineUID"].ToStr();
+									string curID = jItm["lineID"].ToStr();
+									ProductionOrderResource tool = currentProcess.ToolingType?.Find(dev =>
+										dev.LineUID == curUID
+									);
+									if (tool is not null)
+									{
+										tool.LineId = curID.ToInt32().ToStr();
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			catch
+			{
+			}
 			}
 		}
 		return returnValue;
@@ -2082,7 +2811,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 		{
 			foreach (OrderComponent order in tempOrder.Components)
 			{
-				OrderComponent[] tempValue = [.. componentValues.Where(x => x.OperationNo.ToStr() == order.OperationNo.ToStr() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
+				OrderComponent[] tempValue = [.. componentValues.Where(x => x.ProcessId.ToStr() == order.ProcessId.ToStr() && x.ComponentType == order.ComponentType && x.SourceId == order.SourceId && x.LineId == order.LineId)];
 				if (tempValue.Length > 0)
 				{
 					try
@@ -2126,7 +2855,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 				sf_order_transactions_material = valuesToInsert.Select(x =>
 					new
 					{
-						OperationNo = x.OperationNo,
+						OperationNo = x.ProcessId,
 						OrderCode = workOrderId,
 						LineNo = x.LineId,
 						Quantity = x.InputQty,
@@ -2201,7 +2930,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						tempOrder.OrderCode,
 						Date = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
 						Type = movType,
-						comps[0].OperationNo,
+						comps[0].ProcessId,
 						Components = comps,
 						Comments = "",
 						Employee = systemOperator.EmployeeId
@@ -2264,7 +2993,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 								{
 									Type = MessageBrokerType.ManualMaterialIssue,
 									ElementId = workOrderId,
-									ElementValue = tempValue.OperationNo,
+									ElementValue = tempValue.ProcessId,
 									MachineId = tempValue.MachineId,
 									Aux = string.Format("{0}|{1}", tempValue.SourceId, tempValue.InputQty.ToStr())
 								});
@@ -2281,7 +3010,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						if (tempOrder.Components?.Count > 0)
 						{
 							string componentDetailsJSON = JsonConvert.SerializeObject(tempOrder.Components);
-							bool success = _workOrderRepo.MergeWorkOrderComponents(tempOrder, componentDetailsJSON, systemOperator);
+							//bool success = _workOrderRepo.MergeWorkOrderComponents(tempOrder, componentDetailsJSON, systemOperator);
 						}
 
 						scope.Complete();
@@ -2771,6 +3500,98 @@ CanProceed = response.IsSuccessStatusCode;
 			Transactions = allTransactionParams
 		};
 	}
+private static void RemoveProductionOrderResourceByLineId(ProductionOrder workOrder, string lineId)
+	{
+		try
+		{
+			foreach (ProductionOrderOperation process in workOrder.Operations)
+			{
+				process.Byproducts?.RemoveAll(bp => bp.LineId.ToInt32() == lineId.ToInt32());
+				process.Items?.RemoveAll(i => i.LineId.ToInt32() == lineId.ToInt32());
+				process.Machines?.RemoveAll(m => m.LineId.ToInt32() == lineId.ToInt32());
+				process.Byproducts?.RemoveAll(b => b.LineId.ToInt32() == lineId.ToInt32());
+				process.Labor?.RemoveAll(l => l.LineId.ToInt32() == lineId.ToInt32());
+				process.ToolingType?.RemoveAll(t => t.LineId.ToInt32() == lineId.ToInt32());
+			}
+		}
+		catch
+		{
+		}
+	}
+	private static void ValidateOperationSequenceGroups(List<Common.Models.WorkOrderOperation> operations)
+	{
 
+		if (operations == null || operations.Count == 0)
+			return;
 
+		var groups = new Dictionary<string, RangeValidator>();
+		var ranges = new List<RangeValidator>();
+
+		foreach (var op in operations)
+		{
+			var groupName = op.OperationGroup?.Trim();
+
+			// If there is no group
+			if (string.IsNullOrWhiteSpace(groupName))
+			{
+				ranges.Add(new RangeValidator
+				{
+					Name = op.OperationCode,
+					Min = op.Step.ToInt32(),
+					Max = op.Step.ToInt32(),
+					IsGroup = false
+				});
+				continue;
+			}
+
+			// when it belongs to a group
+			if (!groups.ContainsKey(groupName))
+			{
+				groups[groupName] = new RangeValidator
+				{
+					Name = groupName,
+					Min = op.Step.ToInt32(),
+					Max = op.Step.ToInt32(),
+					IsGroup = true
+				};
+			}
+			else
+			{
+				var g = groups[groupName];
+				g.Min = Math.Min(g.Min, op.Step.ToInt32());
+				g.Max = Math.Max(g.Max, op.Step.ToInt32());
+			}
+		}
+
+		// Add groups to range list
+		ranges.AddRange(groups.Values);
+
+		//Group overlap validation
+		for (int i = 0; i < ranges.Count; i++)
+		{
+			for (int j = 0; j < ranges.Count; j++)
+			{
+				if (i == j) continue;
+
+				var r1 = ranges[i];
+				var r2 = ranges[j];
+
+				bool overlaps =
+					(r2.Min > r1.Min && r2.Min < r1.Max) ||
+					(r2.Max > r1.Min && r2.Max < r1.Max) ||
+					(r2.Min <= r1.Min && r2.Max >= r1.Max);
+
+				if (overlaps)
+				{
+					throw new InvalidOperationException(
+						$"Theres a group overlap with operations \"{r1.Name}\" ({r1.Min}-{r1.Max}) y \"{r2.Name}\" ({r2.Min}-{r2.Max}).");
+				}
+			}
+		}
+
+	}
+public async Task<ProductionOrder> GetProductionOrder(string OrderCode)
+	{
+		return await _workOrderRepo.GetProductionOrder(OrderCode).ConfigureAwait(false);
+	}
 		}

@@ -15,6 +15,6 @@ public interface IDataSyncServiceOperation
     Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false);
     string GetDatasyncDynamicBody(string entityCode);
 
-    List<DataSyncErp> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);
+    Task<List<DataSyncErp>> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);
     Task<User> GetUserWithoutValidations(User user);
 }

@@ -31,7 +31,7 @@ public class DataSyncRepository : IDataSyncRepository
 		Database = applicationSettings.GetDatabaseFromConnectionString();
 	}
 
-	public async Task<List<DataSyncService>> GetBackgroundService(string backgroundService, string httpMethod, CancellationToken cancellationToken = default)
+	public async Task<List<DataSyncService>>   GetBackgroundService(string backgroundService, string httpMethod, CancellationToken cancellationToken = default)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(backgroundService, nameof(backgroundService));
 		ArgumentException.ThrowIfNullOrEmpty(httpMethod, nameof(httpMethod));
@@ -678,25 +678,25 @@ public class DataSyncRepository : IDataSyncRepository
 	/// <summary>
 	/// List the data synchronization ERP information.
 	/// </summary>
-	public List<DataSyncErp> ListDataSyncERP(string Id = "", EnableType GetInstances = EnableType.Yes)
+	public async Task<List<DataSyncErp>> ListDataSyncERP(string Id = "", EnableType GetInstances = EnableType.Yes)
 	{
 		List<DataSyncErp> returnValue = null;
-		using (EWP_Connection connection = new(ConnectionString))
+		await using (EWP_Connection connection = new(ConnectionString))
 		{
 			try
 			{
-				using EWP_Command command = new("SP_SF_DataSync_Erp_SEL", connection)
+				await using EWP_Command command = new("SP_SF_DataSync_Erp_SEL", connection)
 				{
 					CommandType = CommandType.StoredProcedure
 				};
 				command.Parameters.Clear();
 				command.Parameters.AddCondition("_Id", Id, !string.IsNullOrEmpty(Id));
 				command.Parameters.AddWithValue("_GetInstances", GetInstances);
-				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
-				MySqlDataReader rdr = command.ExecuteReaderAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.OpenAsync().ConfigureAwait(false);
+				await using MySqlDataReader rdr = await command.ExecuteReaderAsync().ConfigureAwait(false);
 				if (rdr.HasRows)
 				{
-					while (rdr.ReadAsync().ConfigureAwait(false).GetAwaiter().GetResult())
+					while (await rdr.ReadAsync().ConfigureAwait(false))
 					{
 						DataSyncErp element = new()
 						{
@@ -749,11 +749,12 @@ public class DataSyncRepository : IDataSyncRepository
 			}
 			finally
 			{
-				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				await connection.CloseAsync().ConfigureAwait(false);
 			}
 		}
 		return returnValue;
 	}
+
 	/// <summary>
 	///
 	/// </summary>
