@@ -354,6 +354,8 @@ public class DataSyncServiceProcessor
 									ErpReceivedJson = DataSyncServiceUtil.FindObjectByPropertyAndValue(ServiceData.ErpMapping, erpResult.Response, "locationCode", elem.LocationCode),
 									SfMappedJson = JsonConvert.SerializeObject(elem)
 								};
+
+								
 								ResponseData sfResponse = null;
 								try
 								{
@@ -431,7 +433,7 @@ public class DataSyncServiceProcessor
 										failedRecords++;
 										LogSingleInfo.LogType = DataSyncLogType.Error;
 										LogSingleInfo.MessageException = ex.Message;
-										returnDetailList.Add(LogSingleInfo);
+										returnDetailList.Add(LogSingleInfo); 
 									}
 								}
 								//_ = _dataSyncServiceOperation.InsertDataSyncServiceLogDetailBulk(returnDetailList);

@@ -64,6 +64,22 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 		return returnValue;
 	}
 
+	public async Task<string> InsertDataSyncServiceLogDetail(DataSyncServiceLogDetail logDetail)
+	{
+		string returnValue = string.Empty;
+		TransactionOptions transactionOptions = new()
+		{
+			IsolationLevel = IsolationLevel.ReadCommitted
+		};
+
+		using (TransactionScope childScope = new(TransactionScopeOption.RequiresNew, transactionOptions, TransactionScopeAsyncFlowOption.Enabled))
+		{
+			returnValue = await _dataSyncRepository.InsertDataSyncServiceLogDetail(logDetail).ConfigureAwait(false);
+			childScope.Complete();
+		}
+		return returnValue;
+	}
+
     public Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false)
     {
         return _dataSyncRepository.GetTimezones(currentValues);

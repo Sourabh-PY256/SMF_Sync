@@ -868,5 +868,62 @@ public class DataSyncRepository : IDataSyncRepository
 		}
 	}
 
+	public async Task<string> InsertDataSyncServiceLogDetail(DataSyncServiceLogDetail logDetail, CancellationToken cancel = default)
+	{
+		string returnValue = string.Empty;
 
+		await using EWP_Connection connection = new(ConnectionStringLogs);
+		{
+			await connection.OpenAsync(cancel).ConfigureAwait(false);
+
+			await using EWP_Command command = new("SP_SF_DataSync_Execution_Log_Detail_INS", connection)
+			{
+				CommandType = CommandType.StoredProcedure
+			};
+
+			await using (command.ConfigureAwait(false))
+			{
+				command.Parameters.Clear();
+
+				if (string.IsNullOrEmpty(logDetail.Id))
+				{
+					command.Parameters.AddNull("_Id");
+				}
+				else
+				{
+					command.Parameters.AddWithValue("_Id", logDetail.Id);
+				}
+
+				command.Parameters.AddWithValue("_Database", Database);
+				command.Parameters.AddWithValue("_LogId", logDetail.LogId);
+				command.Parameters.AddWithValue("_RowKey", logDetail.RowKey);
+				command.Parameters.AddWithValue("_ProcessDate", logDetail.ProcessDate);
+				command.Parameters.AddWithValue("_ErpReceivedJson", logDetail.ErpReceivedJson);
+				command.Parameters.AddWithValue("_SfMappedJson", logDetail.SfMappedJson);
+				command.Parameters.AddWithValue("_ResponseJson", logDetail.ResponseJson);
+				command.Parameters.AddWithValue("_MessageException", logDetail.MessageException);
+				command.Parameters.AddWithValue("_AttemptNo", logDetail.AttemptNo);
+				command.Parameters.AddWithValue("_LastAttemptDate", logDetail.LastAttemptDate);
+				command.Parameters.AddWithValue("_LogType", (int)logDetail.LogType);
+
+				try
+				{
+					MySqlDataReader rdr = await command.ExecuteReaderAsync(cancel).ConfigureAwait(false);
+					await using (rdr.ConfigureAwait(false))
+					{
+						if (await rdr.ReadAsync(cancel).ConfigureAwait(false))
+						{
+							returnValue = rdr["Id"].ToStr();
+						}
+					}
+				}
+				catch
+				{
+					throw;
+				}
+
+				return returnValue;
+			}
+		}
+	}
 }

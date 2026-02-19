@@ -10,6 +10,7 @@ public interface IDataSyncServiceOperation
     bool UpdateDataSyncServiceExecution(string id, DateTime executionDate);
     Task<DataSyncService> GetBackgroundService(string backgroundService, string HttpMethod = "GET");
     Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo);
+    Task<string> InsertDataSyncServiceLogDetail(DataSyncServiceLogDetail logDetail);
     bool InsertDataSyncServiceErpToken(DataSyncErpAuth tokenInfo);
     DataSyncErpAuth GetDataSyncServiceErpToken(string erpCode);
     Task<List<TimeZoneCatalog>> GetTimezones(bool currentValues = false);

@@ -5,6 +5,7 @@ using System.Reflection;
 using Microsoft.OpenApi.Models;
 using EWP.SF.KafkaSync.API.Extensions;
 using EWP.SF.KafkaSync.BusinessEntities;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,8 +78,22 @@ builder.Services.AddScoped<IWorkOrderOperation, WorkOrderOperation>();
 builder.Services.AddScoped<IOrderTransactionProductOperation, OrderTransactionProductOperation>();
 builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionMaterialOperation>();
 builder.Services.AddScoped<IWarehouseOperation, WarehouseOperation>();
-builder.Services.AddScoped<IBinLocationOperation, BinLocationOperation>();
-builder.Services.AddScoped<IDemandOperation, DemandOperation>();
+        // Always register the HTTP Proxy as itself for Consumer use
+        builder.Services.AddHttpClient<BinLocationOperationProxy>();
+
+        if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
+        {
+            builder.Services.AddScoped<IBinLocationOperation, BinLocationKafkaProxy>();
+        }
+        else if (configuration.GetValue<bool>("AppSettings:UseExternalSyncApi"))
+        {
+            builder.Services.AddScoped<IBinLocationOperation>(sp => sp.GetRequiredService<BinLocationOperationProxy>());
+        }
+        else
+        {
+            builder.Services.AddScoped<IBinLocationOperation, BinLocationOperation>();
+        }
+        builder.Services.AddScoped<IDemandOperation, DemandOperation>();
 builder.Services.AddScoped<IAttachmentOperation, AttachmentOperation>();
 builder.Services.AddScoped<IDataImportOperation, DataImportOperation>();
 builder.Services.AddScoped<IItemOperation, ItemOperation>();
