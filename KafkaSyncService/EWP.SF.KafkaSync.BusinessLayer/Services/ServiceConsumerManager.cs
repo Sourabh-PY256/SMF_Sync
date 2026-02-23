@@ -3,6 +3,7 @@ using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessEntities.Kafka;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 

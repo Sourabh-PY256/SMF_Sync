@@ -2,6 +2,7 @@ using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using Microsoft.Extensions.Configuration;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
