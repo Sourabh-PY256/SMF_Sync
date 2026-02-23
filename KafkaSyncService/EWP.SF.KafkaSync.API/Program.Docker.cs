@@ -94,21 +94,24 @@ builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
 builder.Services.AddScoped<IWorkOrderOperation, WorkOrderOperation>();
 builder.Services.AddScoped<IOrderTransactionProductOperation, OrderTransactionProductOperation>();
 builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionMaterialOperation>();
-builder.Services.AddScoped<IWarehouseOperation, WarehouseOperation>();
-        // Always register the HTTP Proxy as itself for Consumer use
+        // Always register HTTP Proxies as themselves for Consumer use
         builder.Services.AddHttpClient<BinLocationOperationProxy>();
+        builder.Services.AddHttpClient<WarehouseOperationProxy>();
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
             builder.Services.AddScoped<IBinLocationOperation, BinLocationKafkaProxy>();
+            builder.Services.AddScoped<IWarehouseOperation, WarehouseKafkaProxy>();
         }
         else if (configuration.GetValue<bool>("AppSettings:UseExternalSyncApi"))
         {
             builder.Services.AddScoped<IBinLocationOperation>(sp => sp.GetRequiredService<BinLocationOperationProxy>());
+            builder.Services.AddScoped<IWarehouseOperation>(sp => sp.GetRequiredService<WarehouseOperationProxy>());
         }
         else
         {
             builder.Services.AddScoped<IBinLocationOperation, BinLocationOperation>();
+            builder.Services.AddScoped<IWarehouseOperation, WarehouseOperation>();
         }
 builder.Services.AddScoped<IDemandOperation, DemandOperation>();
 builder.Services.AddScoped<IAttachmentOperation, AttachmentOperation>();

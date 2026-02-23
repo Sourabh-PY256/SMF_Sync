@@ -8,6 +8,7 @@ public interface IDataSyncServiceOperation
 {
 
     bool UpdateDataSyncServiceExecution(string id, DateTime executionDate);
+    bool UpdateDataSyncServiceStatus(string id, ServiceStatus status);
     Task<DataSyncService> GetBackgroundService(string backgroundService, string HttpMethod = "GET");
     Task<string> InsertDataSyncServiceLog(DataSyncServiceLog logInfo);
     Task<string> InsertDataSyncServiceLogDetail(DataSyncServiceLogDetail logDetail);

@@ -435,6 +435,37 @@ public class DataSyncRepository : IDataSyncRepository
 		return returnValue;
 	}
 
+	public bool UpdateDataSyncServiceStatus(string Id, ServiceStatus Status)
+	{
+		bool returnValue = false;
+		using (EWP_Connection connection = new(ConnectionString))
+		{
+			try
+			{
+				using EWP_Command command = new("SP_SF_Entities_Instance_Status_UPD", connection)
+				{
+					CommandType = CommandType.StoredProcedure
+				};
+				command.Parameters.Clear();
+				command.Parameters.AddCondition("_Id", Id, !string.IsNullOrEmpty(Id), string.Format(CultureInfo.InvariantCulture, MISSING_PARAM, "Service Instance Id"));
+				_ = command.Parameters.AddWithValue("_Status", (int)Status);
+				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				_ = command.ExecuteNonQueryAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				returnValue = true;
+			}
+			catch (Exception ex)
+			{
+				// Log exception
+				throw;
+			}
+			finally
+			{
+				connection.CloseAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+			}
+		}
+		return returnValue;
+	}
+
 	public bool UpdateDataSyncServiceExecution(string Id, DateTime ExecutionDate)
 	{
 		bool returnValue = false;

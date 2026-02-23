@@ -24,6 +24,11 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
         return _dataSyncRepository.UpdateDataSyncServiceExecution(id, executionDate);
     }
 
+    public bool UpdateDataSyncServiceStatus(string id, ServiceStatus status)
+    {
+        return _dataSyncRepository.UpdateDataSyncServiceStatus(id, status);
+    }
+
     public async Task<DataSyncService> GetBackgroundService(string backgroundService, string HttpMethod = "GET")
     {
         return (await _dataSyncRepository.GetBackgroundService(backgroundService, HttpMethod.ToUpperInvariant()).ConfigureAwait(false)).FirstOrDefault();

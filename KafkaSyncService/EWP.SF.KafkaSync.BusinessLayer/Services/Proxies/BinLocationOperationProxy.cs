@@ -7,8 +7,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
 public class BinLocationOperationProxy : BaseHttpProxy, IBinLocationOperation
 {
-    public BinLocationOperationProxy(HttpClient httpClient, IConfiguration configuration) 
-        : base(httpClient, configuration, "InventoryServiceUrl")
+    public BinLocationOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService) 
+        : base(httpClient, configuration, authService, "InventoryServiceUrl")
     {
     }
 

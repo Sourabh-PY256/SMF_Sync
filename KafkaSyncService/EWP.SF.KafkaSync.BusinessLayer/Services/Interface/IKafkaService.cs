@@ -22,7 +22,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         /// <param name="messageHandler">Action to handle received messages</param>
         //void StartConsumer(string topic, Action<string, string> messageHandler);
 
-        void StartConsumer(string topic, Func<string, string, Task> messageHandler, int? maxRetries = null, int? retryDelayMs = null);
+        void StartConsumer(string topic, Func<string, string, Task> messageHandler, int? maxRetries = null, int? retryDelayMs = null, string groupId = null);
        
        Task<T> ConsumeMessageAsync<T>(string topic, string groupId, TimeSpan timeout, Func<ConsumeResult<string, string>, bool> predicate = null);
     }

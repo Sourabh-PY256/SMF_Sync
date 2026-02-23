@@ -12,7 +12,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
     //     Task<T> ConsumeMessageAsync<T>(string topic, string groupId, TimeSpan timeout, Func<ConsumeResult<string, string>, bool> predicate = null);
     // }
 
-    public class KafkaService : IKafkaService
+    public class KafkaService : IKafkaService, IDisposable
     {
         private readonly ProducerConfig _producerConfig;
         private readonly ConsumerConfig _consumerConfig;
@@ -21,6 +21,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         private readonly int _defaultMaxRetries;
         private readonly int _defaultRetryDelayMs;
         private readonly bool _autoCreateTopics;
+        private readonly CancellationTokenSource _cts = new();
+        private bool _disposed = false;
 
         public KafkaService(IConfiguration configuration, ILogger<KafkaService> logger)
         {
@@ -69,7 +71,42 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 AllowAutoCreateTopics = _autoCreateTopics
             };
             
-            _logger.LogInformation("KafkaService initialized with bootstrap servers: {Servers}", bootstrapServers);
+            _logger.LogInformation("KafkaService initialized with bootstrap servers: {Servers}, GroupId: {GroupId}, AutoOffsetReset: {OffsetReset}", 
+                bootstrapServers, groupId, _consumerConfig.AutoOffsetReset);
+
+            // Start heartbeat monitoring
+            StartHeartbeat();
+        }
+
+        private void StartHeartbeat()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    while (!_cts.Token.IsCancellationRequested)
+                    {
+                        // Log heartbeat every 5 minutes
+                        await Task.Delay(TimeSpan.FromMinutes(5), _cts.Token);
+                        
+                        int activeCount = 0;
+                        lock (_activeConsumers)
+                        {
+                            activeCount = _activeConsumers.Count;
+                        }
+                        
+                        _logger.LogInformation("[Kafka Heartbeat] Active consumers: {Count}. Service is healthy.", activeCount);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Kafka heartbeat monitor shutting down.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in Kafka heartbeat monitor");
+                }
+            }, _cts.Token);
         }
 
         public async Task ProduceMessageAsync<T>(string topic, string key, T message)
@@ -97,40 +134,49 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             }
         }
 
-        public void StartConsumer(string topic, Func<string, string, Task> messageHandler, int? maxRetries = null, int? retryDelayMs = null)
+        public void StartConsumer(string topic, Func<string, string, Task> messageHandler, int? maxRetries = null, int? retryDelayMs = null, string groupId = null)
         {
             // Use provided values or fall back to defaults from configuration
             int retries = maxRetries ?? _defaultMaxRetries;
             int delay = retryDelayMs ?? _defaultRetryDelayMs;
             
-            _logger.LogInformation("Starting consumer for topic {Topic} with {Retries} retries and {Delay}ms initial delay", 
-                topic, retries, delay);
+            _logger.LogInformation("Starting consumer for topic {Topic} with {Retries} retries, {Delay}ms delay, and GroupId: {GroupId}", 
+                topic, retries, delay, groupId ?? _consumerConfig.GroupId);
             
-            var cts = new CancellationTokenSource();
-            var consumer = new ConsumerBuilder<string, string>(_consumerConfig)
-                .SetErrorHandler((_, e) => _logger.LogError("Kafka consumer error: {Error}", e.Reason))
-                .Build();
-            
-            _activeConsumers.Add(consumer);
-            
+            // Create a specific config for this consumer if a GroupId is provided
+            var config = _consumerConfig;
+            if (!string.IsNullOrEmpty(groupId))
+            {
+                config = new ConsumerConfig(_consumerConfig) { GroupId = groupId };
+            }
+
             try
             {
+                var consumer = new ConsumerBuilder<string, string>(config)
+                    .SetErrorHandler((_, e) => _logger.LogError("Kafka consumer error: {Error}", e.Reason))
+                    .Build();
+
                 consumer.Subscribe(topic);
+                lock (_activeConsumers)
+                {
+                    _activeConsumers.Add(consumer);
+                }
                 _logger.LogInformation("Consumer subscribed to topic {Topic}", topic);
 
                 Task.Run(async () =>
                 {
                     try
                     {
-                        while (!cts.Token.IsCancellationRequested)
+                        while (!_cts.Token.IsCancellationRequested)
                         {
                             try
                             {
-                                var consumeResult = consumer.Consume(cts.Token);
+                                _logger.LogDebug("[{Topic}] Waiting for messages...", topic);
+                                var consumeResult = consumer.Consume(_cts.Token);
                                 if (consumeResult != null)
                                 {
-                                    _logger.LogInformation("Consumed message from {Topic} with key {Key}", 
-                                        consumeResult.Topic, consumeResult.Message.Key);
+                                    _logger.LogInformation("[{Topic}] Received Kafka message with key {Key} and GroupId: {GroupId}", 
+                                        topic, consumeResult.Message.Key, config.GroupId);
                                     
                                     bool processedSuccessfully = false;
                                     try
@@ -173,6 +219,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                             }
                             catch (ConsumeException ex)
                             {
+                                if (ex.Error.IsFatal)
+                                {
+                                    _logger.LogCritical("Fatal Kafka consumer error: {Error}", ex.Error.Reason);
+                                    break;
+                                }
                                 _logger.LogError(ex, "Error consuming message");
                             }
                         }
@@ -188,13 +239,17 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     finally
                     {
                         consumer.Close();
-                        _activeConsumers.Remove(consumer);
+                        lock (_activeConsumers)
+                        {
+                            _activeConsumers.Remove(consumer);
+                        }
+                        consumer.Dispose();
                     }
-                }, cts.Token);
+                }, _cts.Token);
             }
             catch (KafkaException ex)
             {
-                _logger.LogError(ex, "Failed to subscribe to topic {Topic}. Please ensure the topic exists.", topic);
+                _logger.LogError(ex, "Failed to build or subscribe for topic {Topic}.", topic);
             }
         }
 
@@ -203,7 +258,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             int retryCount = 0;
             bool processed = false;
 
-            while (!processed && retryCount <= maxRetries)
+            while (!processed && retryCount <= maxRetries && !_cts.Token.IsCancellationRequested)
             {
                 try
                 {
@@ -227,8 +282,15 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                         _logger.LogWarning(ex, "Error processing message with key {Key}. Retry {RetryCount}/{MaxRetries} in {Delay}ms", 
                             key, retryCount, maxRetries, delay);
                         
-                        // Wait before retrying
-                        await Task.Delay(delay);
+                        // Wait before retrying, respecting global cancellation
+                        try
+                        {
+                            await Task.Delay(delay, _cts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
                     }
                     else
                     {
@@ -261,13 +323,13 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
             try
             {
-                using var cts = new CancellationTokenSource(timeout);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, new CancellationTokenSource(timeout).Token);
                 
-                while (!cts.Token.IsCancellationRequested)
+                while (!linkedCts.Token.IsCancellationRequested)
                 {
                     try
                     {
-                        var consumeResult = consumer.Consume(cts.Token);
+                        var consumeResult = consumer.Consume(linkedCts.Token);
                         if (consumeResult != null)
                         {
                             _logger.LogInformation("Temporary consumer received message with key {Key}", consumeResult.Message.Key);
@@ -288,7 +350,10 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Temporary consumer timed out waiting for message on topic {Topic}", topic);
+                if (_cts.Token.IsCancellationRequested)
+                    _logger.LogInformation("Temporary consumer cancelled due to application shutdown.");
+                else
+                    _logger.LogInformation("Temporary consumer timed out waiting for message on topic {Topic}", topic);
             }
             finally
             {
@@ -296,6 +361,21 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             }
 
             return default;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            _logger.LogInformation("KafkaService is disposing. Cancelling all active consumers...");
+            _cts.Cancel();
+            
+            // Wait a moment for consumers to close gracefully
+            Thread.Sleep(500);
+
+            _cts.Dispose();
+            _disposed = true;
+            GC.SuppressFinalize(this);
         }
     }
 }

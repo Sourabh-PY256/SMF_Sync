@@ -38,5 +38,11 @@ namespace EWP.SF.KafkaSync.BusinessEntities.Kafka
         public string BodyData { get; set; }
         
         public DataSyncService ServiceData { get; set; }
+
+        /// <summary>
+        /// Correlation ID linking this Kafka message to its ERP sync log entry.
+        /// Used by the consumer to update the log with the microservice's response.
+        /// </summary>
+        public string LogId { get; set; }
     }
 }
