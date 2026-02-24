@@ -38,14 +38,21 @@ public class AuthenticationService : IAuthenticationService
         _logger.LogInformation("Token expired or missing. Attempting login to Smart Factory API...");
 
         // Perform login
-        var oauthSettings = _configuration.GetSection("AppSettings:SmartFactoryAuth");
-        var loginUrl = oauthSettings["LoginUrl"] ?? "https://localhost:7307/API/V1/User/Login/Angular";
-        var clientId = oauthSettings["ClientId"];
-        var clientSecret = oauthSettings["ClientSecret"];
+        var authSettings = _configuration.GetSection("AppSettings:SmartFactoryAuth");
+        if (!authSettings.Exists())
+        {
+            _logger.LogWarning("SmartFactoryAuth settings not found. Falling back to OAuth2Settings.");
+            authSettings = _configuration.GetSection("AppSettings:OAuth2Settings");
+        }
+
+        var loginUrl = authSettings["LoginUrl"] ?? authSettings["TokenUrl"] ?? "https://localhost:7307/API/V1/User/Login/Angular";
+        _logger.LogInformation("Resolved Login URL: {Url}", loginUrl);
+        var clientId = authSettings["ClientId"];
+        var clientSecret = authSettings["ClientSecret"];
 
         if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {
-            _logger.LogError("Authentication failed: ClientId or ClientSecret is not configured.");
+            _logger.LogError("Authentication failed: ClientId or ClientSecret is not configured in SmartFactoryAuth or OAuth2Settings.");
             return null;
         }
 
@@ -68,7 +75,11 @@ public class AuthenticationService : IAuthenticationService
                 
                 // Adjust property names based on the actual response structure of your Login API
                 // Usually it returns 'token', 'access_token', or a nested object
-                string accessToken = json["Token"]?.ToString() ?? json["access_token"]?.ToString();
+                // Extract token from 'Authorization' or 'Data["Authorization"]' based on the provided response structure
+                string accessToken = json["Authorization"]?.ToString() ?? 
+                                     json["Data"]?["Authorization"]?.ToString() ??
+                                     json["Token"]?.ToString() ?? 
+                                     json["access_token"]?.ToString();
                 
                 if (string.IsNullOrEmpty(accessToken))
                 {

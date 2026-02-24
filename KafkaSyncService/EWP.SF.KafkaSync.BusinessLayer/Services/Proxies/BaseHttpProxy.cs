@@ -27,7 +27,7 @@ public abstract class BaseHttpProxy
         return await _authService.GetAccessTokenAsync();
     }
 
-    protected async Task<T> PostAsync<T>(string endpoint, object data, bool authorize = false)
+    protected async Task<T> PostAsync<T>(string endpoint, object data, bool authorize = true)
     {
         var url = $"{_baseUrl.TrimEnd('/')}/{endpoint.TrimStart('/')}";
         var request = new HttpRequestMessage(HttpMethod.Post, url);

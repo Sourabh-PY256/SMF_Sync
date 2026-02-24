@@ -6,24 +6,28 @@ using Microsoft.OpenApi.Models;
 using EWP.SF.KafkaSync.API.Extensions;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
+using EWP.SF.KafkaSync.BusinessLayer.Services;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load AppSettings manually for use within the builder
-IConfiguration configuration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.json")), optional: false, reloadOnChange: false)
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-    .AddJsonFile("appsettings.Kestrel.json", optional: true, reloadOnChange: false)
-    .AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.Logging.json")), optional: false, reloadOnChange: false)
-    .AddJsonFile("appsettings.Logging.json", optional: true, reloadOnChange: false)
-    .AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.NLog.json")), optional: false, reloadOnChange: false)
-    .AddJsonFile("appsettings.NLog.json", optional: true, reloadOnChange: false)
-    .AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.ConnectionStrings.json")), optional: false, reloadOnChange: false)
-    .AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false)
-    .AddJsonFile("appsettings.ReverseProxy.json", optional: true, reloadOnChange: false)
-    .AddEnvironmentVariables()
-    .Build();
+// Load AppSettings into the builder's configuration so it's available for DI
+builder.Configuration.SetBasePath(Directory.GetCurrentDirectory());
+builder.Configuration.AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.json")), optional: false, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.Kestrel.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.Logging.json")), optional: false, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.Logging.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.NLog.json")), optional: false, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.NLog.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile(Path.GetFullPath(Path.Combine("..", "Settings", "appsettings.ConnectionStrings.json")), optional: false, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.ConnectionStrings.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.ReverseProxy.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddEnvironmentVariables();
+
+IConfiguration configuration = builder.Configuration;
 
 // Register AppSettings for DI to use later in the app
 ApplicationSettings appSettings = new(configuration);
@@ -77,9 +81,25 @@ builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
 builder.Services.AddScoped<IWorkOrderOperation, WorkOrderOperation>();
 builder.Services.AddScoped<IOrderTransactionProductOperation, OrderTransactionProductOperation>();
 builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionMaterialOperation>();
+
+        // Register Authentication Service first
+        builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+
         // Always register HTTP Proxies as themselves for Consumer use
-        builder.Services.AddHttpClient<BinLocationOperationProxy>();
-        builder.Services.AddHttpClient<WarehouseOperationProxy>();
+        builder.Services.AddHttpClient<BinLocationOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<WarehouseOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
@@ -119,7 +139,6 @@ builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>(
 
 
 // Register Kafka services
-builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>();
 builder.Services.AddSingleton<IKafkaService, KafkaService>();
 
 // Register service consumer manager as a singleton

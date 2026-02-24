@@ -6,6 +6,8 @@ using Microsoft.OpenApi.Models;
 using EWP.SF.KafkaSync.API.Extensions;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
+using EWP.SF.KafkaSync.BusinessLayer.Services;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 
 if (Environment.GetEnvironmentVariable("ENABLE_REMOTE_DEBUG") == "true")
 {
@@ -36,12 +38,14 @@ foreach (var file in Directory.GetFiles(Directory.GetCurrentDirectory()))
     Console.WriteLine($"  {file}");
 }
 
-// Load AppSettings manually for use within the builder
-IConfiguration configuration = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-    .AddEnvironmentVariables()
-    .Build();
+// Load AppSettings into the builder's configuration so it's available for DI
+builder.Configuration.SetBasePath(Directory.GetCurrentDirectory());
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddEnvironmentVariables();
+
+IConfiguration configuration = builder.Configuration;
 
 // Register AppSettings for DI to use later in the app
 ApplicationSettings appSettings = new(configuration);
@@ -94,9 +98,24 @@ builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
 builder.Services.AddScoped<IWorkOrderOperation, WorkOrderOperation>();
 builder.Services.AddScoped<IOrderTransactionProductOperation, OrderTransactionProductOperation>();
 builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionMaterialOperation>();
+        // Register Authentication Service first
+        builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+
         // Always register HTTP Proxies as themselves for Consumer use
-        builder.Services.AddHttpClient<BinLocationOperationProxy>();
-        builder.Services.AddHttpClient<WarehouseOperationProxy>();
+        builder.Services.AddHttpClient<BinLocationOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<WarehouseOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
