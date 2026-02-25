@@ -73,8 +73,9 @@ public class DataSyncServiceProcessor
 		{
 			LogInfo.Id = loggerId;
 		}
-		
-		
+		string logId = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+		LogInfo.Id = logId;
+		response.LogId = logId;
 		
 		try
 		{
@@ -149,7 +150,7 @@ public class DataSyncServiceProcessor
 			}
 			LogInfo.ServiceException = serviceErrors;
 			LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-			//_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+			_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 			_logger.LogInformation(serviceErrors);
 			throw;
 		}
