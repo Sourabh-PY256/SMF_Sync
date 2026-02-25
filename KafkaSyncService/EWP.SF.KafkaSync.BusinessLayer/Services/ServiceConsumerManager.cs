@@ -110,6 +110,66 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             StartInvWarehouse();
             StartInvItemGroup();
             StartEmpEmployee();
+            // Start Product service consumer to forward product-related Kafka messages
+            StartProductConsumer();
+        }
+
+        /// <summary>
+        /// Consumer: Product Microservice ← Product
+        /// Forwards ListUpdateProduct and MergeProduct actions to the external Product HTTP proxy.
+        /// </summary>
+        private void StartProductConsumer()
+        {
+            string topic = "shopfloor-product-sync";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-product-group";
+            _logger.LogInformation("Starting Product consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            // Small delay to let other consumers stabilize
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[Product] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[Product] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<ProductOperationProxy>();
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+
+                if (action == "ListUpdateProduct")
+                {
+                    var list = body.Data.ToObject<List<ProductExternal>>();
+                    var original = body.OriginalData?.ToObject<List<ProductExternal>>() ?? new List<ProductExternal>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    await httpProxy.ListUpdateProduct(list, original, message.User, validate, level).ConfigureAwait(false);
+                }
+                else if (action == "MergeProduct")
+                {
+                    ActionDB mode = body.Mode != null ? (ActionDB)Convert.ToInt32((object)body.Mode) : ActionDB.NA;
+                    var comp = body.Component.ToObject<Component>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
+                    bool isNewVersion = body.isNewVersion != null && (bool)body.isNewVersion;
+                    bool isExternalEndpoint = body.isExternalEndpoint != null && (bool)body.isExternalEndpoint;
+                    IntegrationSource intSource = body.intSource != null ? (IntegrationSource)Convert.ToInt32((object)body.intSource) : IntegrationSource.SF;
+
+                    await httpProxy.MergeProduct(mode, comp, message.User, validate, level, notifyOnce, isNewVersion, isExternalEndpoint, intSource).ConfigureAwait(false);
+                }
+
+                _logger.LogInformation("[Product] {Action} forwarded to Product Microservice", action);
+            }, null, null, groupId);
         }
 
         /// <summary>
