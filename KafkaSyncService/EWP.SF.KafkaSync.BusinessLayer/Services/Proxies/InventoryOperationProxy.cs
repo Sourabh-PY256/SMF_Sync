@@ -23,7 +23,8 @@ public class InventoryOperationProxy : BaseHttpProxy, IInventoryOperation
         List<InventoryExternal> inventoryGroupListOriginal, 
         User systemOperator, 
         bool Validate, 
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         // Endpoint: API/V1/ItemGroup/{validate}/{level}
         string endpoint = $"Inventory/{Validate.ToString().ToLower()}/{Level}";
@@ -36,7 +37,8 @@ public class InventoryOperationProxy : BaseHttpProxy, IInventoryOperation
         InventoryItemGroup InventoryInfo, 
         User systemOperator, 
         bool Validate = false, 
-        bool NotifyOnce = true)
+        bool NotifyOnce = true,
+        string logId = null)
     {
         // Endpoint: Inventory/Merge
         return await PostAsync<ResponseData>("Inventory/Merge", new

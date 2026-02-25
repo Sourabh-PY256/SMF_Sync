@@ -30,7 +30,8 @@ public class InventoryKafkaProxy : BaseKafkaProxy, IInventoryOperation
         List<InventoryExternal> inventoryGroupListOriginal,
         User systemOperator,
         bool Validate,
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         var result = await PublishAsync(
             SyncERPEntity.INVENTORY_SERVICE,
@@ -42,7 +43,8 @@ public class InventoryKafkaProxy : BaseKafkaProxy, IInventoryOperation
                 OriginalData = inventoryGroupListOriginal,
                 Validate,
                 Level
-            }).ConfigureAwait(false);
+            },
+            logId).ConfigureAwait(false);
 
         return [result];
     }
@@ -51,13 +53,15 @@ public class InventoryKafkaProxy : BaseKafkaProxy, IInventoryOperation
         InventoryItemGroup InventoryInfo,
         User systemOperator,
         bool Validate   = false,
-        bool NotifyOnce = true)
+        bool NotifyOnce = true,
+        string logId = null)
     {
         return await PublishAsync(
             SyncERPEntity.INVENTORY_SERVICE,
             "MergeInventory",
             systemOperator,
-            new { Data = InventoryInfo, Validate, NotifyOnce }
+            new { Data = InventoryInfo, Validate, NotifyOnce },
+            logId
         ).ConfigureAwait(false);
     }
 
