@@ -125,6 +125,11 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             {
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
             });
+        builder.Services.AddHttpClient<ProductOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
@@ -132,6 +137,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IWarehouseOperation, WarehouseKafkaProxy>();
             builder.Services.AddScoped<IInventoryOperation, InventoryKafkaProxy>();
             builder.Services.AddScoped<IEmployeeOperation, EmployeeKafkaProxy>();
+            builder.Services.AddScoped<IComponentOperation, ProductKafkaProxy>();
         }
         else if (configuration.GetValue<bool>("AppSettings:UseExternalSyncApi"))
         {
@@ -139,6 +145,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IWarehouseOperation>(sp => sp.GetRequiredService<WarehouseOperationProxy>());
             builder.Services.AddScoped<IInventoryOperation>(sp => sp.GetRequiredService<InventoryOperationProxy>());
             builder.Services.AddScoped<IEmployeeOperation>(sp => sp.GetRequiredService<EmployeeOperationProxy>());
+            builder.Services.AddScoped<IComponentOperation>(sp => sp.GetRequiredService<ProductOperationProxy>());
         }
         else
         {
@@ -146,6 +153,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IWarehouseOperation, WarehouseOperation>();
             builder.Services.AddScoped<IInventoryOperation, InventoryOperation>();
             builder.Services.AddScoped<IEmployeeOperation, EmployeeOperation>();
+            builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
         }
 builder.Services.AddScoped<IDemandOperation, DemandOperation>();
 builder.Services.AddScoped<IAttachmentOperation, AttachmentOperation>();
