@@ -70,7 +70,8 @@ builder.Services.AddScoped<IStockAllocationRepo, StockAllocationRepo>();
 builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
 builder.Services.AddScoped<DataSyncServiceProcessor>();
 builder.Services.AddScoped<DataSyncServiceManager>();
-builder.Services.AddScoped<IInventoryOperation, InventoryOperation>();
+// builder.Services.AddScoped<IInventoryOperation, InventoryOperation>(); // Moved to proxy selection section below
+// builder.Services.AddScoped<IEmployeeOperation, EmployeeOperation>(); // Moved to proxy selection section below
 builder.Services.AddScoped<IInventoryStatusOperation, InventoryStatusOperation>();
 builder.Services.AddScoped<ILotSerialStatusOperation, LotSerialStatusOperation>();
 builder.Services.AddScoped<IProcessTypeOperation, ProcessTypeOperation>();
@@ -100,21 +101,37 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             {
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
             });
+        builder.Services.AddHttpClient<InventoryOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<EmployeeOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
             builder.Services.AddScoped<IBinLocationOperation, BinLocationKafkaProxy>();
             builder.Services.AddScoped<IWarehouseOperation, WarehouseKafkaProxy>();
+            builder.Services.AddScoped<IInventoryOperation, InventoryKafkaProxy>();
+            builder.Services.AddScoped<IEmployeeOperation, EmployeeKafkaProxy>();
         }
         else if (configuration.GetValue<bool>("AppSettings:UseExternalSyncApi"))
         {
             builder.Services.AddScoped<IBinLocationOperation>(sp => sp.GetRequiredService<BinLocationOperationProxy>());
             builder.Services.AddScoped<IWarehouseOperation>(sp => sp.GetRequiredService<WarehouseOperationProxy>());
+            builder.Services.AddScoped<IInventoryOperation>(sp => sp.GetRequiredService<InventoryOperationProxy>());
+            builder.Services.AddScoped<IEmployeeOperation>(sp => sp.GetRequiredService<EmployeeOperationProxy>());
         }
         else
         {
             builder.Services.AddScoped<IBinLocationOperation, BinLocationOperation>();
             builder.Services.AddScoped<IWarehouseOperation, WarehouseOperation>();
+            builder.Services.AddScoped<IInventoryOperation, InventoryOperation>();
+            builder.Services.AddScoped<IEmployeeOperation, EmployeeOperation>();
         }
         builder.Services.AddScoped<IDemandOperation, DemandOperation>();
 builder.Services.AddScoped<IAttachmentOperation, AttachmentOperation>();
@@ -123,7 +140,6 @@ builder.Services.AddScoped<IItemOperation, ItemOperation>();
 builder.Services.AddScoped<ISchedulingShiftStatusOperation, SchedulingShiftStatusOperation>();
 builder.Services.AddScoped<ISchedulingCalendarShiftsOperation, SchedulingCalendarShiftsOperation>();
 builder.Services.AddScoped<IOEEOperation, OEEOperation>();
-builder.Services.AddScoped<IEmployeeOperation, EmployeeOperation>();
 builder.Services.AddScoped<ISupplyOperation, SupplyOperation>();
 builder.Services.AddScoped<IToolOperation, ToolOperation>();
 builder.Services.AddScoped<IDeviceOperation, DeviceOperation>();
@@ -202,6 +218,20 @@ using (var scope = app.Services.CreateScope())
     var topicNames = entityList
         .Select(e => $"producer-sync-{e.ToLower()}")
         .ToList();
+
+    // Also ensure dedicated service topics used by Kafka proxies exist
+    var dedicatedTopics = new List<string>
+    {
+        "inventory-sync-binlocation",
+        "inventory-sync-warehouse",
+        "inventory-sync-itemgroup",
+        "shopfloor-employee-sync"
+    };
+
+    foreach (var t in dedicatedTopics)
+    {
+        if (!topicNames.Contains(t)) topicNames.Add(t);
+    }
 
     var kafkaBootstrapServers = configuration["KafkaSettings:BootstrapServers"];
 
