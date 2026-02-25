@@ -27,7 +27,7 @@ public class BinLocationOperation : IBinLocationOperation
 
 
     #region BinLocation
-    public async Task<List<ResponseData>> ListUpdateBinLocation(List<BinLocationExternal> binLocationList, List<BinLocationExternal> binLocationListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+    public async Task<List<ResponseData>> ListUpdateBinLocation(List<BinLocationExternal> binLocationList, List<BinLocationExternal> binLocationListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
         List<ResponseData> returnValue = [];
         ResponseData MessageError;
@@ -134,7 +134,7 @@ public class BinLocationOperation : IBinLocationOperation
         return _binLocationRepo.ListBinLocation(binLocationCode, DeltaDate);
     }
 
-    public async Task<ResponseData> MergeBinLocation(BinLocation BinLocationInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+    public async Task<ResponseData> MergeBinLocation(BinLocation BinLocationInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
     {
         ResponseData returnValue = null;
 

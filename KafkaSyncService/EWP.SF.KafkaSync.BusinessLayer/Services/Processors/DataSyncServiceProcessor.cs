@@ -283,7 +283,8 @@ public class DataSyncServiceProcessor
 									listBinLocationsOriginal,
 									SystemOperator,
 									false,
-									LevelMessage.Success
+									LevelMessage.Success,
+									LogInfo.Id
 								).ConfigureAwait(false)).FirstOrDefault();
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
 								}
@@ -503,7 +504,8 @@ public class DataSyncServiceProcessor
 									listInventoryOriginal,
 									SystemOperator,
 									false,
-									LevelMessage.Success
+									LevelMessage.Success,
+									LogInfo.Id
 								).ConfigureAwait(false)).FirstOrDefault();
 
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
@@ -557,7 +559,8 @@ public class DataSyncServiceProcessor
 										listInventoryStatusOriginal,
 										SystemOperator,
 										false,
-										LevelMessage.Success
+										LevelMessage.Success,
+										LogInfo.Id
 									).ConfigureAwait(false)).FirstOrDefault();
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
 								}
@@ -1525,7 +1528,8 @@ public class DataSyncServiceProcessor
 										listWarehousesOriginal,
 										SystemOperator,
 										false,
-										LevelMessage.Success
+										LevelMessage.Success,
+										LogInfo.Id
 									).ConfigureAwait(false)).FirstOrDefault();
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
 								}
@@ -2284,7 +2288,7 @@ public class DataSyncServiceProcessor
 			}
 		}
 	}
-	private static async Task<(int successRecords, int failedRecords)> ProcessResponse(ResponseData sfResponse, int successRecords, int failedRecords, DataSyncServiceLogDetail LogSingleInfo)
+	public async Task<(int successRecords, int failedRecords)> ProcessResponse(ResponseData sfResponse, int successRecords, int failedRecords, DataSyncServiceLogDetail LogSingleInfo)
 	{
 		try
 		{
@@ -2313,7 +2317,7 @@ public class DataSyncServiceProcessor
 		}
 		return (successRecords, failedRecords);
 	}
-	private static async Task<(int successRecords, int failedRecords)> ProcessResponse(WorkOrderResponse sfResponse, int successRecords, int failedRecords, DataSyncServiceLogDetail LogSingleInfo)
+	public async Task<(int successRecords, int failedRecords)> ProcessResponse(WorkOrderResponse sfResponse, int successRecords, int failedRecords, DataSyncServiceLogDetail LogSingleInfo)
 	{
 		try
 		{
@@ -2686,6 +2690,50 @@ public class DataSyncServiceProcessor
 			_logger.LogError(ex, "Post-success processing failed: {Message}", ex.Message);
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
+	}
+
+	/// <summary>
+	/// Updates or inserts a log detail entry for an asynchronous microservice response.
+	/// </summary>
+	public async Task<DataSyncServiceLogDetail> UpdateLogDetailAsync(string logId, string rowKey, ResponseData sfResponse)
+	{
+		if (string.IsNullOrEmpty(logId)) return null;
+
+		DataSyncServiceLogDetail logDetail = new()
+		{
+			Id = Guid.NewGuid().ToString(),
+			LogId = logId,
+			RowKey = rowKey,
+			ProcessDate = DateTime.Now,
+			ResponseJson = JsonConvert.SerializeObject(sfResponse),
+			LogType = sfResponse.IsSuccess ? DataSyncLogType.Success : DataSyncLogType.Error,
+			MessageException = sfResponse.IsSuccess ? string.Empty : sfResponse.Message
+		};
+
+		await _dataSyncServiceOperation.InsertDataSyncServiceLogDetail(logDetail).ConfigureAwait(false);
+		return logDetail;
+	}
+
+	/// <summary>
+	/// Updates or inserts a log detail entry for an asynchronous work order response.
+	/// </summary>
+	public async Task<DataSyncServiceLogDetail> UpdateLogDetailAsync(string logId, string rowKey, WorkOrderResponse sfResponse)
+	{
+		if (string.IsNullOrEmpty(logId)) return null;
+
+		DataSyncServiceLogDetail logDetail = new()
+		{
+			Id = Guid.NewGuid().ToString(),
+			LogId = logId,
+			RowKey = rowKey,
+			ProcessDate = DateTime.Now,
+			ResponseJson = JsonConvert.SerializeObject(sfResponse),
+			LogType = sfResponse.IsSuccess ? DataSyncLogType.Success : DataSyncLogType.Error,
+			MessageException = sfResponse.IsSuccess ? string.Empty : sfResponse.Message
+		};
+
+		await _dataSyncServiceOperation.InsertDataSyncServiceLogDetail(logDetail).ConfigureAwait(false);
+		return logDetail;
 	}
 
 }

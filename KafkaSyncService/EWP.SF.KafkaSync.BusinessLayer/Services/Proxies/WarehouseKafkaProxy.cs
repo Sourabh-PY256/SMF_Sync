@@ -30,7 +30,8 @@ public class WarehouseKafkaProxy : BaseKafkaProxy, IWarehouseOperation
         List<WarehouseExternal> warehouseGroupListOriginal,
         User systemOperator,
         bool Validate,
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         var result = await PublishAsync(
             SyncERPEntity.WAREHOUSE_SERVICE,
@@ -42,7 +43,8 @@ public class WarehouseKafkaProxy : BaseKafkaProxy, IWarehouseOperation
                 OriginalData = warehouseGroupListOriginal,
                 Validate,
                 Level
-            }).ConfigureAwait(false);
+            },
+            logId).ConfigureAwait(false);
 
         return [result];
     }
@@ -51,13 +53,15 @@ public class WarehouseKafkaProxy : BaseKafkaProxy, IWarehouseOperation
         Warehouse WarehouseInfo,
         User systemOperator,
         bool Validate   = false,
-        bool NotifyOnce = true)
+        bool NotifyOnce = true,
+        string logId = null)
     {
         return await PublishAsync(
             SyncERPEntity.WAREHOUSE_SERVICE,
             "MergeWarehouse",
             systemOperator,
-            new { Data = WarehouseInfo, Validate, NotifyOnce }
+            new { Data = WarehouseInfo, Validate, NotifyOnce },
+            logId
         ).ConfigureAwait(false);
     }
 

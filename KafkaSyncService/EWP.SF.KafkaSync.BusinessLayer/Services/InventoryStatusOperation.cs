@@ -43,7 +43,7 @@ public class InventoryStatusOperation : IInventoryStatusOperation
 	///
 	/// </summary>
 	/// <exception cref="UnauthorizedAccessException"></exception>
-	public async Task<ResponseData> MergeInventoryStatus(InventoryStatus InventoryStatusInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+	public async Task<ResponseData> MergeInventoryStatus(InventoryStatus InventoryStatusInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
 	{
 		ResponseData returnValue = null;
 
@@ -82,7 +82,7 @@ public class InventoryStatusOperation : IInventoryStatusOperation
 	/// <summary>
 	///
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateInventoryStatus(List<InventoryStatusExternal> inventoryStatusList, List<InventoryStatusExternal> inventoryStatusListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateInventoryStatus(List<InventoryStatusExternal> inventoryStatusList, List<InventoryStatusExternal> inventoryStatusListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
 	{
 		List<ResponseData> returnValue = [];
 		ResponseData MessageError;

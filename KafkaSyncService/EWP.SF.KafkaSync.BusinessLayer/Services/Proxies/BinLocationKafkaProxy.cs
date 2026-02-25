@@ -27,7 +27,8 @@ public class BinLocationKafkaProxy : BaseKafkaProxy, IBinLocationOperation
         List<BinLocationExternal> binLocationListOriginal,
         User systemOperator,
         bool Validate,
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         var result = await PublishAsync(
             SyncERPEntity.BIN_LOCATION_SERVICE,
@@ -39,7 +40,8 @@ public class BinLocationKafkaProxy : BaseKafkaProxy, IBinLocationOperation
                 OriginalData = binLocationListOriginal,
                 Validate,
                 Level
-            }).ConfigureAwait(false);
+            },
+            logId).ConfigureAwait(false);
 
         return [result];
     }
@@ -48,13 +50,15 @@ public class BinLocationKafkaProxy : BaseKafkaProxy, IBinLocationOperation
         BinLocation BinLocationInfo,
         User systemOperator,
         bool Validate   = false,
-        bool NotifyOnce = true)
+        bool NotifyOnce = true,
+        string logId = null)
     {
         return await PublishAsync(
             SyncERPEntity.BIN_LOCATION_SERVICE,
             "MergeBinLocation",
             systemOperator,
-            new { Data = BinLocationInfo, Validate, NotifyOnce }
+            new { Data = BinLocationInfo, Validate, NotifyOnce },
+            logId
         ).ConfigureAwait(false);
     }
 }
