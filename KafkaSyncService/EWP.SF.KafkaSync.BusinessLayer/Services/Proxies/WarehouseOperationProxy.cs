@@ -24,7 +24,8 @@ public class WarehouseOperationProxy : BaseHttpProxy, IWarehouseOperation
         List<WarehouseExternal> warehouseGroupListOriginal,
         User systemOperator,
         bool Validate,
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         // Endpoint: API/V1/Warehouse/{validate}/{level}
         string endpoint = $"Warehouse/{Validate.ToString().ToLower()}/{Level}";
@@ -36,7 +37,8 @@ public class WarehouseOperationProxy : BaseHttpProxy, IWarehouseOperation
         Warehouse WarehouseInfo,
         User systemOperator,
         bool Validate   = false,
-        bool NotifyOnce = true)
+        bool NotifyOnce = true,
+        string logId = null)
     {
         return await PostAsync<ResponseData>("Warehouse/Merge", new
         {

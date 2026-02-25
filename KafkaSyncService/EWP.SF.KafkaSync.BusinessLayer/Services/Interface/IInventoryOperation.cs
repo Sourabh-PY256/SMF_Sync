@@ -7,8 +7,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 public interface IInventoryOperation
 {
 
-    Task<List<ResponseData>> ListUpdateInventoryGroup(List<InventoryExternal> inventoryGroupList, List<InventoryExternal> inventoryGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level);
-    Task<ResponseData> MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true);
+    Task<List<ResponseData>> ListUpdateInventoryGroup(List<InventoryExternal> inventoryGroupList, List<InventoryExternal> inventoryGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null);
+    Task<ResponseData> MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null);
 
     List<InventoryItemGroup> ListInventory(User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null);
 

@@ -18,7 +18,8 @@ public class BinLocationOperationProxy : BaseHttpProxy, IBinLocationOperation
         List<BinLocationExternal> binLocationListOriginal, 
         User systemOperator, 
         bool Validate, 
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         // Redirecting to external microservice endpoint with path parameters
         // Example URL: API/V1/BinLocation/true/Record
@@ -33,7 +34,8 @@ public class BinLocationOperationProxy : BaseHttpProxy, IBinLocationOperation
         BinLocation BinLocationInfo, 
         User systemOperator, 
         bool Validate = false, 
-        bool NotifyOnce = true)
+        bool NotifyOnce = true,
+        string logId = null)
     {
         // Redirecting to external microservice endpoint
         return await PostAsync<ResponseData>("api/BinLocation/Merge", new

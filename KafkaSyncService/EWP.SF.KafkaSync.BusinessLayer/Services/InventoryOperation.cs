@@ -22,7 +22,7 @@ public class InventoryOperation : IInventoryOperation
 
 
     #region Inventory
-    public async Task<List<ResponseData>> ListUpdateInventoryGroup(List<InventoryExternal> inventoryGroupList, List<InventoryExternal> inventoryGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+    public async Task<List<ResponseData>> ListUpdateInventoryGroup(List<InventoryExternal> inventoryGroupList, List<InventoryExternal> inventoryGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
         List<ResponseData> returntValue = [];
         ResponseData MessageError;
@@ -99,7 +99,7 @@ public class InventoryOperation : IInventoryOperation
         return _inventoryRepo.GetInventory(Code);
     }
 
-    public async Task<ResponseData> MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+    public async Task<ResponseData> MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
     {
         ResponseData returnValue = new();
 

@@ -27,7 +27,7 @@ public class WarehouseOperation : IWarehouseOperation
         return _warehouseRepo.GetWarehouse(Code);
     }
 
-    public async Task<ResponseData> MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+    public async Task<ResponseData> MergeWarehouse(Warehouse WarehouseInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
     {
         ResponseData returnValue = null;
 
@@ -66,7 +66,7 @@ public class WarehouseOperation : IWarehouseOperation
 
 
 
-    public async Task<List<ResponseData>> ListUpdateWarehouseGroup(List<WarehouseExternal> warehouseGroupList, List<WarehouseExternal> warehouseGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+    public async Task<List<ResponseData>> ListUpdateWarehouseGroup(List<WarehouseExternal> warehouseGroupList, List<WarehouseExternal> warehouseGroupListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
         List<ResponseData> returntValue = [];
         ResponseData MessageError;
