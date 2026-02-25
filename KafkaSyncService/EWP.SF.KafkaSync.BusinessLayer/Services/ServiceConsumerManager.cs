@@ -108,6 +108,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             // Start dedicated consumers for Inventory Microservice (one per entity)
             StartInvBinLocation();
             StartInvWarehouse();
+            StartInvItemGroup();
+            StartEmpEmployee();
         }
 
         /// <summary>
@@ -246,6 +248,113 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
 
                 _logger.LogInformation("[Warehouse] {Action} forwarded to Inventory Microservice", action);
+            }, null, null, groupId);
+        }
+
+        /// <summary>
+        /// Consumer: Inventory Microservice ← Inventory (ItemGroup)
+        /// </summary>
+        private void StartInvItemGroup()
+        {
+            string topic = "inventory-sync-itemgroup";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-inventory-item-group";
+            _logger.LogInformation("Starting Inventory consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            // Small delay to let other consumers stabilize
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[Inventory] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[Inventory] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                //var inventoryOp = scope.ServiceProvider.GetRequiredService<IInventoryOperation>();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<InventoryOperationProxy>();
+                var body      = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+
+                if (action == "ListUpdateInventoryGroup")
+                {
+                    var list     = body.Data.ToObject<List<InventoryExternal>>();
+                    var original = body.OriginalData?.ToObject<List<InventoryExternal>>() ?? new List<InventoryExternal>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    await httpProxy.ListUpdateInventoryGroup(list, original, message.User, validate, level).ConfigureAwait(false);
+                }
+                else if (action == "MergeInventory")
+                {
+                    var info      = body.Data.ToObject<InventoryItemGroup>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    bool once     = body.NotifyOnce != null && (bool)body.NotifyOnce;
+                    await httpProxy.MergeInventory(info, message.User, validate, once).ConfigureAwait(false);
+                }
+
+                _logger.LogInformation("[Inventory] {Action} forwarded to Inventory Microservice", action);
+            }, null, null, groupId);
+        }
+
+        /// <summary>
+        /// Consumer: Employee Microservice ← Employee
+        /// </summary>
+        private void StartEmpEmployee()
+        {
+            string topic = "shopfloor-employee-sync";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-employee-group";
+            _logger.LogInformation("Starting Employee consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            // Small delay to let other consumers stabilize
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[Employee] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[Employee] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<EmployeeOperationProxy>();
+                var body      = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+
+                if (action == "ImportEmployeesAsync")
+                {
+                    var list       = body.Data.ToObject<List<EmployeeExternal>>();
+                    var original   = body.OriginalData?.ToObject<List<EmployeeExternal>>() ?? new List<EmployeeExternal>();
+                    bool validate  = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
+                    bool isDataSync = body.IsDataSync != null && (bool)body.IsDataSync;
+                    await httpProxy.ImportEmployeesAsync(list, original, message.User, validate, level, notifyOnce, isDataSync).ConfigureAwait(false);
+                }
+                else if (action == "MRGEmployee")
+                {
+                    var list       = body.Data.ToObject<List<Employee>>();
+                    bool validate  = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
+                    bool isDataSync = body.IsDataSync != null && (bool)body.IsDataSync;
+                    await httpProxy.MRGEmployee(list, message.User, validate, level, notifyOnce, isDataSync).ConfigureAwait(false);
+                }
+
+                _logger.LogInformation("[Employee] {Action} forwarded to Employee Microservice", action);
             }, null, null, groupId);
         }
 
