@@ -173,7 +173,7 @@ public class DataSyncServiceProcessor
 		//Status code es importante no quitarlo.
 		HttpResponse.StatusCode = erpResult.StatusCode;
 		LogInfo.ErpReceivedJson = erpResult.Response;
-		// await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+		await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 
 		if (erpResult.StatusCode == HttpStatusCode.NoContent)
 		{
@@ -214,7 +214,7 @@ public class DataSyncServiceProcessor
 				switch (ServiceData.Entity.Name)
 				{
 					
-// Not Applicable for any ERP
+                    // Not Applicable for any ERP
 					case SyncERPEntity.ALLOCATION_SERVICE:
 					case SyncERPEntity.FULL_ALLOCATION_SERVICE:
 						StockAllocationExternal[] listAllocStock = JsonConvert.DeserializeObject<StockAllocationExternal[]>(dataJson);
@@ -449,7 +449,8 @@ public class DataSyncServiceProcessor
 										false,
 										LevelMessage.Success,
 										true,
-										true
+										true,
+										LogInfo.Id
 									).ConfigureAwait(false))[0];
 									// Se escribe la respuesta del procesamiento
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);

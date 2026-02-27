@@ -75,7 +75,7 @@ public class InventoryOperation : IInventoryOperation
                         Status = status
                     };
                     // returntValue.Add(_inventoryRepo.MergeInventory(inventoryGroupInfo, systemOperator, Validate, Level));
-                    ResponseData response = await MergeInventory(inventoryGroupInfo, systemOperator, Validate).ConfigureAwait(false);
+                    ResponseData response = await MergeInventory(inventoryGroupInfo, systemOperator, Validate, true, logId).ConfigureAwait(false);
                     returntValue.Add(response);
                 }
                 catch (Exception ex)

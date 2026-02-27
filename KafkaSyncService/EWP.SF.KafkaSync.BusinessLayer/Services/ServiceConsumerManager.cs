@@ -349,14 +349,32 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     var original = body.OriginalData?.ToObject<List<InventoryExternal>>() ?? new List<InventoryExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    await httpProxy.ListUpdateInventoryGroup(list, original, message.User, validate, level).ConfigureAwait(false);
+                    
+                    var responses = await httpProxy.ListUpdateInventoryGroup(list, original, message.User, validate, level, message.LogId).ConfigureAwait(false);
+                    
+                    if (responses != null && !string.IsNullOrEmpty(message.LogId))
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = responses.Count > i ? responses[i] : new EWP.SF.Common.ResponseModels.ResponseData { IsSuccess = false, Message = "No response for this item" };
+                            await processor.UpdateLogDetailAsync(message.LogId, list[i].ItemGroupCode, resp).ConfigureAwait(false);
+                        }
+                    }
                 }
                 else if (action == "MergeInventory")
                 {
                     var info      = body.Data.ToObject<InventoryItemGroup>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     bool once     = body.NotifyOnce != null && (bool)body.NotifyOnce;
-                    await httpProxy.MergeInventory(info, message.User, validate, once).ConfigureAwait(false);
+                    
+                    var response = await httpProxy.MergeInventory(info, message.User, validate, once, message.LogId).ConfigureAwait(false);
+                    
+                    if (response != null && !string.IsNullOrEmpty(message.LogId))
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        await processor.UpdateLogDetailAsync(message.LogId, info.Code, response).ConfigureAwait(false);
+                    }
                 }
 
                 _logger.LogInformation("[Inventory] {Action} forwarded to Inventory Microservice", action);
@@ -402,7 +420,18 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
                     bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
                     bool isDataSync = body.IsDataSync != null && (bool)body.IsDataSync;
-                    await httpProxy.ImportEmployeesAsync(list, original, message.User, validate, level, notifyOnce, isDataSync).ConfigureAwait(false);
+                    
+                    var responses = await httpProxy.ImportEmployeesAsync(list, original, message.User, validate, level, notifyOnce, isDataSync, message.LogId).ConfigureAwait(false);
+                    
+                    if (responses != null && !string.IsNullOrEmpty(message.LogId))
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = responses.Count > i ? responses[i] : new EWP.SF.Common.ResponseModels.ResponseData { IsSuccess = false, Message = "No response for this item" };
+                            await processor.UpdateLogDetailAsync(message.LogId, list[i].EmployeeCode, resp).ConfigureAwait(false);
+                        }
+                    }
                 }
                 else if (action == "MRGEmployee")
                 {
@@ -411,7 +440,18 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
                     bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
                     bool isDataSync = body.IsDataSync != null && (bool)body.IsDataSync;
-                    await httpProxy.MRGEmployee(list, message.User, validate, level, notifyOnce, isDataSync).ConfigureAwait(false);
+                    
+                    var responses = await httpProxy.MRGEmployee(list, message.User, validate, level, notifyOnce, isDataSync, message.LogId).ConfigureAwait(false);
+                    
+                    if (responses != null && !string.IsNullOrEmpty(message.LogId))
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = responses.Count > i ? responses[i] : new EWP.SF.Common.ResponseModels.ResponseData { IsSuccess = false, Message = "No response for this item" };
+                            await processor.UpdateLogDetailAsync(message.LogId, list[i].Code, resp).ConfigureAwait(false);
+                        }
+                    }
                 }
 
                 _logger.LogInformation("[Employee] {Action} forwarded to Employee Microservice", action);
