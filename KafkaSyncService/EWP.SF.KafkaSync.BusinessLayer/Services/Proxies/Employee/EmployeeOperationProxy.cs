@@ -23,7 +23,8 @@ public class EmployeeOperationProxy : BaseHttpProxy, IEmployeeOperation
         bool Validate = false, 
         LevelMessage Level = 0, 
         bool NotifyOnce = true, 
-        bool isDataSync = false)
+        bool isDataSync = false,
+        string logId = null)
     {
         // Endpoint: Employee/{validate}/{level}
         string endpoint = $"employee/{Validate.ToString().ToLower()}/{Level}";
@@ -36,7 +37,8 @@ public class EmployeeOperationProxy : BaseHttpProxy, IEmployeeOperation
         bool Validate = false, 
         LevelMessage Level = 0, 
         bool NotifyOnce = true, 
-        bool isDataSync = false)
+        bool isDataSync = false,
+        string logId = null)
     {
         // Endpoint: Employee/Merge
         // Note: BaseHttpProxy.PostAsync handles the list serialization

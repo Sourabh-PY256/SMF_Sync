@@ -35,7 +35,7 @@ public class EmployeeOperation : IEmployeeOperation
 
     }
     #region Employee
-    public async Task<List<ResponseData>> ImportEmployeesAsync(List<EmployeeExternal> requestValue, List<EmployeeExternal> originalValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true, bool isDataSync = false)
+    public async Task<List<ResponseData>> ImportEmployeesAsync(List<EmployeeExternal> requestValue, List<EmployeeExternal> originalValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true, bool isDataSync = false, string logId = null)
     {
         List<ResponseData> returnValue = [];
         Employee employee = null;
@@ -176,10 +176,10 @@ public class EmployeeOperation : IEmployeeOperation
             }
             employeeList.Add(employee);
         }
-        returnValue.AddRange(await MRGEmployee(employeeList, systemOperator, Validate, Level, NotifyOnce, isDataSync).ConfigureAwait(false));
+        returnValue.AddRange(await MRGEmployee(employeeList, systemOperator, Validate, Level, NotifyOnce, isDataSync, logId).ConfigureAwait(false));
         return returnValue;
     }
-    public async Task<List<ResponseData>> MRGEmployee(List<Employee> requestValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true, bool isDataSync = false)
+    public async Task<List<ResponseData>> MRGEmployee(List<Employee> requestValue, User systemOperator, bool Validate = false, LevelMessage Level = 0, bool NotifyOnce = true, bool isDataSync = false, string logId = null)
     {
         List<ResponseData> returnValue = [];
         ResponseData responseMessage;

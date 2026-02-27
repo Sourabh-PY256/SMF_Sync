@@ -28,7 +28,8 @@ public class EmployeeKafkaProxy : BaseKafkaProxy, IEmployeeOperation
         bool Validate = false,
         LevelMessage Level = 0,
         bool NotifyOnce = true,
-        bool isDataSync = false)
+        bool isDataSync = false,
+        string logId = null)
     {
         var result = await PublishAsync(
             SyncERPEntity.EMPLOYEE_SERVICE,
@@ -42,7 +43,8 @@ public class EmployeeKafkaProxy : BaseKafkaProxy, IEmployeeOperation
                 Level,
                 NotifyOnce,
                 IsDataSync   = isDataSync
-            }).ConfigureAwait(false);
+            },
+            logId).ConfigureAwait(false);
 
         return [result];
     }
@@ -53,7 +55,8 @@ public class EmployeeKafkaProxy : BaseKafkaProxy, IEmployeeOperation
         bool Validate = false,
         LevelMessage Level = 0,
         bool NotifyOnce = true,
-        bool isDataSync = false)
+        bool isDataSync = false,
+        string logId = null)
     {
         var result = await PublishAsync(
             SyncERPEntity.EMPLOYEE_SERVICE,
@@ -66,7 +69,8 @@ public class EmployeeKafkaProxy : BaseKafkaProxy, IEmployeeOperation
                 Level,
                 NotifyOnce,
                 IsDataSync = isDataSync
-            }).ConfigureAwait(false);
+            },
+            logId).ConfigureAwait(false);
 
         return [result];
     }
