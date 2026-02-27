@@ -976,7 +976,7 @@ public class DataSyncServiceProcessor
 
 					case SyncERPEntity.PRODUCTION_ORDER_CHANGE_STATUS_SERVICE:
 						List<ProductionOrderChangeStatusExternal> listWorkOrderChangeStatus = JsonConvert.DeserializeObject<List<ProductionOrderChangeStatusExternal>>(dataJson);
-						var orderchangeOperation = GetOperation<IWorkOrderOperation>();
+						var orderchangeOperation = GetOperation<IWorkOrderChangeStatusOperation>();
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWorkOrderChangeStatus);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
 						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
