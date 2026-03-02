@@ -61,7 +61,7 @@ public class OrderTransactionProductOperation : IOrderTransactionProductOperatio
 	/// <summary>
 	/// Update Product Receipt
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateProductReceipt(List<ProductReceiptExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateProductReceipt(List<ProductReceiptExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
 	{
 		List<ResponseData> returnValue = [];
 		ResponseData MessageError;

@@ -32,7 +32,7 @@ public class OrderTransactionMaterialRepo : IOrderTransactionMaterialRepo
 	/// <summary>
 	///
 	/// </summary>
-	public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation, IntegrationSource intSrc = IntegrationSource.ERP)
+	public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial OrderMaterialInfo, User systemOperator, bool Validation, IntegrationSource intSrc = IntegrationSource.ERP, string logId = null)
 	{
 		ResponseData returnValue = null;
 		using (EWP_Connection connection = new(ConnectionString))

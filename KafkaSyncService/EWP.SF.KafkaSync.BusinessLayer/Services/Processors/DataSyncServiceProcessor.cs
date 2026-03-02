@@ -772,7 +772,8 @@ public class DataSyncServiceProcessor
 									listElem,
 									SystemOperator,
 									false,
-									LevelMessage.Success
+									LevelMessage.Success,
+									LogInfo.Id
 									).ConfigureAwait(false)).FirstOrDefault();
 
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
@@ -823,7 +824,8 @@ public class DataSyncServiceProcessor
 											listElem,
 											SystemOperator,
 											false,
-											LevelMessage.Success
+											LevelMessage.Success,
+											LogInfo.Id
 										).ConfigureAwait(false)).FirstOrDefault();
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);
 								}

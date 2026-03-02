@@ -8,36 +8,35 @@ using EWP.SF.KafkaSync.BusinessLayer;
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
 /// <summary>
-/// HTTP proxy for Material Transaction operations targeting the Material Microservice.
+/// Dedicated HTTP proxy for Material Return operations targeting the Material Microservice.
 /// </summary>
-public class OrderTransactionMaterialOperationProxy : BaseHttpProxy, IOrderTransactionMaterialOperation
+public class MaterialReturnOperationProxy : BaseHttpProxy, IOrderTransactionMaterialOperation
 {
-    public OrderTransactionMaterialOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
+    public MaterialReturnOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
     }
 
     public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial orderTransactionInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
     {
-        // Directional logic usually handled within the microservice or via specific endpoints
-        return PostAsync<ResponseData>("Material/Merge", orderTransactionInfo).GetAwaiter().GetResult();
+        return PostAsync<ResponseData>("Material/Merge", new { Data = orderTransactionInfo, Validate, NotifyOnce, LogId = logId }).GetAwaiter().GetResult();
     }
 
     public async Task<List<ResponseData>> ListUpdateMaterialIssue(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"Material/Issue/Bulk/{Validate.ToString().ToLower()}/{Level}";
-        return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
+        // Not implemented in dedicated Return proxy
+        throw new NotImplementedException();
     }
 
     public async Task<List<ResponseData>> ListUpdateMaterialReturn(List<MaterialReturnExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
         string endpoint = $"Material/Return/Bulk/{Validate.ToString().ToLower()}/{Level}";
-        return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
+        return await PostAsync<List<ResponseData>>(endpoint, new { Data = OrderTransactionList, Validate, Level, LogId = logId }).ConfigureAwait(false);
     }
 
     public async Task<List<ResponseData>> ListUpdateMaterialScrap(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"Material/Scrap/Bulk/{Validate.ToString().ToLower()}/{Level}";
-        return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
+        // Not implemented in dedicated Return proxy
+        throw new NotImplementedException();
     }
 }

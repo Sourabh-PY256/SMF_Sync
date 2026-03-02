@@ -50,7 +50,8 @@ public class DeviceOperation : IDeviceOperation
 	  bool listOnly = false,
 	  bool onlyActive = false,
 	  DateTime? DeltaDate = null,
-	  bool showDisabled = false)
+	  bool showDisabled = false,
+	  string logId = null)
 	{
 		List<Machine> devices = null;
 		List<Machine> devicesAll = null;
@@ -204,7 +205,8 @@ public class DeviceOperation : IDeviceOperation
       User systemOperator,
       bool validate = false,
       string level = "Success",
-      bool notifyOnce = true)
+      bool notifyOnce = true,
+      string logId = null)
     {
         ResponseData returnValue = null;
 
@@ -305,7 +307,8 @@ public class DeviceOperation : IDeviceOperation
       List<MachineExternal> listMachinesOriginal,
       User systemOperator,
       bool validate,
-      string level
+      string level,
+      string logId = null
     )
     {
         List<ResponseData> returnValue = [];

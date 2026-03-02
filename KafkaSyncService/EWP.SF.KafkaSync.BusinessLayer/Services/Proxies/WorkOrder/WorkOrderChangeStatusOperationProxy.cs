@@ -22,12 +22,14 @@ public class WorkOrderChangeStatusOperationProxy : BaseHttpProxy, IWorkOrderChan
         List<ProductionOrderChangeStatusExternal> workOrderList, 
         User systemOperator, 
         bool Validate, 
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         // Endpoint: WorkOrder/ChangeStatus/Bulk/{validate}/{level}
         string endpoint = $"WorkOrder/ChangeStatus/Bulk/{Validate.ToString().ToLower()}/{Level}";
         
-        // Sending the list directly as the body
-        return PostAsync<List<WorkOrderResponse>>(endpoint, workOrderList).GetAwaiter().GetResult();
+        // Sending the list with logId in a wrapper if needed, but for now just updating signature
+        // If the API expects logId, it should be passed here.
+        return PostAsync<List<WorkOrderResponse>>(endpoint, new { Data = workOrderList, LogId = logId }).GetAwaiter().GetResult();
     }
 }

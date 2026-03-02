@@ -129,6 +129,208 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             // Start Material transaction consumer
             StartMaterialConsumer();
             StartEmpEmployee();
+            StartDeviceConsumer();
+            StartToolingTypeConsumer();
+            StartProductionOrderConsumer();
+            StartProductReceiptConsumer();
+            StartMaterialReturnConsumer();
+        }
+
+        /// <summary>
+        /// Consumer: Tooling Type Microservice ← Tooling Type
+        /// </summary>
+        private void StartToolingTypeConsumer()
+        {
+            string topic = "shopfloor-toolingtype-sync";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-toolingtype-group";
+            _logger.LogInformation("Starting Tooling Type consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[ToolingType] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[ToolingType] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<ToolingTypeOperationProxy>();
+                
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+                string logId = message.LogId ?? body.LogId?.ToString();
+
+                if (action == "ListUpdateToolType")
+                {
+                    var list = body.Data.ToObject<List<ToolTypeExternal>>();
+                    var original = body.OriginalData?.ToObject<List<ToolTypeExternal>>() ?? new List<ToolTypeExternal>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    
+                    var listResponse = await httpProxy.ListUpdateToolType(list, original, message.User, validate, level, logId).ConfigureAwait(false);
+                    
+                    if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = i < listResponse.Count ? listResponse[i] : new ResponseData { IsSuccess = false, Message = "No response for this record" };
+                            if (resp != null)
+                            {
+                                await processor.UpdateLogDetailAsync(logId, list[i].ToolingTypeCode, resp).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("[ToolingType] {Action} forwarded to Tooling Type Microservice", action);
+            }, null, null, groupId);
+        }
+
+        /// <summary>
+        /// Consumer: Production Order Microservice ← Production Order
+        /// </summary>
+        private void StartProductionOrderConsumer()
+        {
+            string topic = "shopfloor-productionorder-sync";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-productionorder-group";
+            _logger.LogInformation("Starting Production Order consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[ProductionOrder] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[ProductionOrder] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
+                
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+                string logId = message.LogId ?? body.LogId?.ToString();
+
+                if (action == "ListUpdateProductionOrder")
+                {
+                    var list = body.Data.ToObject<List<WorkOrderExternal>>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    bool isDataSynced = body.IsDataSynced != null && (bool)body.IsDataSynced;
+                    
+                    var listResponse = await httpProxy.ListUpdateProductionOrder(list, message.User, validate, level, isDataSynced, logId).ConfigureAwait(false);
+                    
+                    if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = i < listResponse.Count ? listResponse[i] : new WorkOrderResponse { IsSuccess = false, Message = "No response for this record" };
+                            if (resp != null)
+                            {
+                                await processor.UpdateLogDetailAsync(logId, list[i].OrderCode, new ResponseData { IsSuccess = resp.IsSuccess, Message = resp.Message }).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+                else if (action == "ListUpdateWorkOrderChangeStatus")
+                {
+                    var list = body.Data.ToObject<List<ProductionOrderChangeStatusExternal>>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    
+                    var listResponse = httpProxy.ListUpdateWorkOrderChangeStatus(list, message.User, validate, level, logId);
+                    
+                    if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = i < listResponse.Count ? listResponse[i] : new WorkOrderResponse { IsSuccess = false, Message = "No response for this record" };
+                            if (resp != null)
+                            {
+                                await processor.UpdateLogDetailAsync(logId, list[i].OrderCode, new ResponseData { IsSuccess = resp.IsSuccess, Message = resp.Message }).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("[ProductionOrder] {Action} forwarded to Production Order Microservice", action);
+            }, null, null, groupId);
+        }
+
+        /// <summary>
+        /// Consumer: Product Receipt Microservice ← Product Receipt
+        /// </summary>
+        private void StartProductReceiptConsumer()
+        {
+            string topic = "shopfloor-productreceipt-sync";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-productreceipt-group";
+            _logger.LogInformation("Starting Product Receipt consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[ProductReceipt] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[ProductReceipt] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<ProductReceiptOperationProxy>();
+                
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+                string logId = message.LogId ?? body.LogId?.ToString();
+
+                if (action == "ListUpdateProductReceipt")
+                {
+                    var list = body.Data.ToObject<List<ProductReceiptExternal>>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    
+                    var listResponse = await httpProxy.ListUpdateProductReceipt(list, message.User, validate, level, logId).ConfigureAwait(false);
+                    
+                    if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = i < listResponse.Count ? listResponse[i] : new ResponseData { IsSuccess = false, Message = "No response for this record" };
+                            if (resp != null)
+                            {
+                                await processor.UpdateLogDetailAsync(logId, list[i].DocCode, resp).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("[ProductReceipt] {Action} forwarded to Product Receipt Microservice", action);
+            }, null, null, groupId);
         }
 
         /// <summary>
@@ -186,6 +388,81 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
 
                 _logger.LogInformation("[Product] {Action} forwarded to Product Microservice", action);
+            }, null, null, groupId);
+        }
+
+        /// <summary>
+        /// Consumer: Device Microservice ← Machine
+        /// Forwards Machine actions to the external Device HTTP proxy.
+        /// </summary>
+        private void StartDeviceConsumer()
+        {
+            string topic = "shopfloor-machine-sync";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-machine-group";
+            _logger.LogInformation("Starting Machine consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[Machine] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[Machine] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<DeviceOperationProxy>();
+                
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                string action = body.Action;
+                string logId = message.LogId ?? body.LogId?.ToString();
+
+                if (action == "CreateMachine")
+                {
+                    var machineInfo = body.Data.ToObject<Machine>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
+                    
+                    var response = await httpProxy.CreateMachine(machineInfo, message.User, validate, "", notifyOnce, logId).ConfigureAwait(false);
+                    
+                    if (!string.IsNullOrEmpty(logId) && machineInfo != null && response != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        await processor.UpdateLogDetailAsync(logId, machineInfo.Code, response).ConfigureAwait(false);
+                    }
+                }
+                else if (action == "ListUpdateMachine")
+                {
+                    var list = body.Data.ToObject<List<MachineExternal>>();
+                    var original = body.OriginalData?.ToObject<List<MachineExternal>>() ?? new List<MachineExternal>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
+                    LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+                    
+                    var listResponse = await httpProxy.ListUpdateMachine(list, original, message.User, validate, "", logId).ConfigureAwait(false);
+                    
+                    if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = i < listResponse.Count ? listResponse[i] : new ResponseData { IsSuccess = false, Message = "No response for this record" };
+                            if (resp != null)
+                            {
+                                await processor.UpdateLogDetailAsync(logId, list[i].MachineCode, resp).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("[Machine] {Action} forwarded to Machine Microservice", action);
             }, null, null, groupId);
         }
 
@@ -959,7 +1236,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
 
-                    var responses = await httpProxy.ListUpdateMaterialReturn(list, message.User, validate, level).ConfigureAwait(false);
+                    var responses = await httpProxy.ListUpdateMaterialReturn(list, message.User, validate, level, message.LogId).ConfigureAwait(false);
 
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
                     {

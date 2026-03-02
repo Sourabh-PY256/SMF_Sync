@@ -6,5 +6,5 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 
 public interface IWorkOrderChangeStatusOperation
 {
-    List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level);
+    List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, string logId = null);
 }

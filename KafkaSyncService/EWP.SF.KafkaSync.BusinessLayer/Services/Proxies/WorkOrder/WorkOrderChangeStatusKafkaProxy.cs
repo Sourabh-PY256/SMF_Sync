@@ -27,7 +27,8 @@ public class WorkOrderChangeStatusKafkaProxy : BaseKafkaProxy, IWorkOrderChangeS
         List<ProductionOrderChangeStatusExternal> workOrderList, 
         User systemOperator, 
         bool Validate, 
-        LevelMessage Level)
+        LevelMessage Level,
+        string logId = null)
     {
         var result = PublishAsync(
             SyncERPEntity.PRODUCTION_ORDER_CHANGE_STATUS_SERVICE,
@@ -39,7 +40,7 @@ public class WorkOrderChangeStatusKafkaProxy : BaseKafkaProxy, IWorkOrderChangeS
                 Validate,
                 Level
             },
-            null).GetAwaiter().GetResult();
+            logId).GetAwaiter().GetResult();
 
         return [new WorkOrderResponse { IsSuccess = result.IsSuccess, Message = result.Message, Code = workOrderList.FirstOrDefault()?.OrderCode }];
     }

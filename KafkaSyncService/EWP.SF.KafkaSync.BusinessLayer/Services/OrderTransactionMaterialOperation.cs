@@ -30,7 +30,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	///
 	/// </summary>
 	/// <exception cref="UnauthorizedAccessException"></exception>
-	public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial orderTransactionInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
+	public ResponseData MergeOrderTransactionMaterial(OrderTransactionMaterial orderTransactionInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
 	{
 		#region Permission validation
 
@@ -41,13 +41,13 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 
 		#endregion Permission validation
 
-		return _orderTransactionMaterialRepo.MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate);
+		return _orderTransactionMaterialRepo.MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate, IntegrationSource.ERP, logId);
 	}
 
 	/// <summary>
 	/// Updates a list of material return transactions.
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateMaterialReturn(List<MaterialReturnExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateMaterialReturn(List<MaterialReturnExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
 	{
 		List<ResponseData> returnValue = [];
 		ResponseData MessageError;
@@ -192,7 +192,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 							}
 						}
 					}
-					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator);
+					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate, true, logId);
 					returnValue.Add(response);
 				}
 				catch (Exception ex)
@@ -226,7 +226,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	/// <summary>
 	/// Updates a list of material issue transactions.
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateMaterialIssue(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateMaterialIssue(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
 	{
 		List<ResponseData> returnValue = [];
 		ResponseData MessageError;
@@ -367,7 +367,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						}
 					}
 
-					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator);
+					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate, true, logId);
 					returnValue.Add(response);
 				}
 				catch (Exception ex)
@@ -401,7 +401,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 	/// <summary>
 	///
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateMaterialScrap(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateMaterialScrap(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
 	{
 		List<ResponseData> returnValue = [];
 		ResponseData MessageError;
@@ -555,7 +555,7 @@ public class OrderTransactionMaterialOperation : IOrderTransactionMaterialOperat
 						});
 					}
 
-					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate);
+					ResponseData response = MergeOrderTransactionMaterial(orderTransactionInfo, systemOperator, Validate, true, logId);
 					returnValue.Add(response);
 				}
 				catch (Exception ex)

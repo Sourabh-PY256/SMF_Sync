@@ -79,7 +79,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level)
+	public List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
 	{
 		List<WorkOrderResponse> returnValue = [];
 		List<ProcedureExternal> proceduresExternal = [];
@@ -611,7 +611,8 @@ public class WorkOrderOperation : IWorkOrderOperation
 		User systemOperator,
 		bool Validate,
 		LevelMessage Level,
-		bool isDataSynced = false
+		bool isDataSynced = false,
+		string logId = null
 	)
 	{
 		List<WorkOrderResponse> returnValue = [];

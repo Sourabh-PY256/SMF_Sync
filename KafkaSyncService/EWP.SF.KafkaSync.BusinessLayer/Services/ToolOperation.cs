@@ -32,7 +32,7 @@ public class ToolOperation : IToolOperation
     /// <summary>
 	///
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateToolType(List<ToolTypeExternal> toolTypeList, List<ToolTypeExternal> toolTypeListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateToolType(List<ToolTypeExternal> toolTypeList, List<ToolTypeExternal> toolTypeListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
         List<ResponseData> returnValue = [];
         List<ProcedureExternal> proceduresExternal = [];
@@ -162,7 +162,7 @@ public class ToolOperation : IToolOperation
                         }
                     }
                     // ProcessTypeResponse resp = _toolRepo.MergeProcessType(operationTypeInfo, systemOperator, Validate, Level); // Broker
-                    ResponseData resp = await CreateToolType(toolTypeInfo, systemOperator, Validate, true).ConfigureAwait(false);
+                    ResponseData resp = await CreateToolType(toolTypeInfo, systemOperator, Validate, true, logId).ConfigureAwait(false);
                     returnValue.Add(resp);
                 }
                 catch (Exception ex)
@@ -193,7 +193,7 @@ public class ToolOperation : IToolOperation
 	/// </summary>
 	/// <exception cref="UnauthorizedAccessException"></exception>
 	public async Task<ResponseData> CreateToolType(ToolType toolTypeInfo, User systemOperator
-        , bool Validate = false, bool NotifyOnce = true)
+        , bool Validate = false, bool NotifyOnce = true, string logId = null)
     {
         ResponseData returnValue;
         ToolType tooltype = null;
