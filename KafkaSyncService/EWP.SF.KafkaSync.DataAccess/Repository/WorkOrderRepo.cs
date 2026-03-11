@@ -293,7 +293,7 @@ public class WorkOrderRepo : IWorkOrderRepo
                     await connection.CloseAsync().ConfigureAwait(false);
                 }
 
-                return returnValue;
+                return returnValue; 
             }
         }
     }
