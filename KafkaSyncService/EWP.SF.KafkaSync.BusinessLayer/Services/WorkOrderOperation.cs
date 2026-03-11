@@ -2813,7 +2813,7 @@ public class WorkOrderOperation : IWorkOrderOperation
                     Quantity = d.Quantity,
                     Location = d.BinLocationCode,
                     WarehouseCode = d.WarehouseCode,
-                    BatchDate = d.ExpDate ?? DateTime.MinValue,
+                    //BatchDate = d.ExpDate ?? DateTime.MinValue,
                     InventoryStatus = d.InventoryStatusCode,
                     Pallet = d.Pallet,
                     Type = d.Type
