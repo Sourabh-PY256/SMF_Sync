@@ -102,6 +102,57 @@ public class DataSyncServiceOperation : IDataSyncServiceOperation
 	/// </summary>
 	public Task<User> GetUserWithoutValidations(User user) => _dataSyncRepository.GetUser(user.Id, null, new User(0));
 
-
+public async Task<double> GetTimezoneOffset(string offSetName = "")
+	{
+		double offset = 0;
+		if (offSetName == "ERP")
+		{
+			if (!ContextCache.ERPOffset.HasValue)
+			{
+				try
+				{
+					List<TimeZoneCatalog> tz = await GetTimezones(true).ConfigureAwait(false);
+					TimeZoneCatalog erpOffset = tz.Find(x => x.Key == "ERP");
+					offset = erpOffset.Offset;
+					ContextCache.ERPOffset = offset;
+				}
+				catch { }
+			}
+			else
+			{
+				offset = ContextCache.ERPOffset.Value;
+			}
+		}
+		else
+		{
+			List<TimeZoneCatalog> tz = await GetTimezones(true).ConfigureAwait(false);
+			if (string.IsNullOrEmpty(offSetName))
+			{
+				TimeZoneCatalog SfOffset = tz.Find(x => x.Key == "SmartFactory");
+				TimeZoneCatalog erpOffset = tz.Find(x => x.Key == "ERP");
+				double baseOffset = 0;
+				double integrationOffset = 0;
+				if (SfOffset is not null)
+				{
+					baseOffset = SfOffset.Offset;
+				}
+				if (erpOffset is not null)
+				{
+					integrationOffset = erpOffset.Offset;
+				}
+				offset = baseOffset - integrationOffset;
+			}
+			else
+			{
+				TimeZoneCatalog namedOffset = tz.Find(x => x.Key == offSetName);
+				if (namedOffset is not null)
+				{
+					offset = namedOffset.Offset;
+				}
+			}
+		}
+		return offset;
+	}
+	/// 
     #endregion DataSync
 }

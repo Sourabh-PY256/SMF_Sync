@@ -204,7 +204,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IInventoryOperation, InventoryKafkaProxy>();
             builder.Services.AddScoped<IEmployeeOperation, EmployeeKafkaProxy>();
             builder.Services.AddScoped<IComponentOperation, ProductKafkaProxy>();
-            builder.Services.AddScoped<IItemOperation, ItemKafkaProxy>();
+             builder.Services.AddScoped<IItemOperation, ItemKafkaProxy>();
             builder.Services.AddScoped<ISupplyOperation, SupplyKafkaProxy>();
             builder.Services.AddScoped<IDemandOperation, DemandKafkaProxy>();
             builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitKafkaProxy>();

@@ -7,7 +7,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer;
 public interface IWorkOrderOperation : IWorkOrderChangeStatusOperation
 {
     List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level);
-    Task<double> GetTimezoneOffset(string offSetName = "");
+    
     Task<List<WorkOrder>> GetWorkOrder(string workOrderId);
     // ListUpdateWorkOrderChangeStatus moved to IWorkOrderChangeStatusOperation
     Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level);

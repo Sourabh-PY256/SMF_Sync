@@ -60,9 +60,37 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
     public Task<double> GetTimezoneOffset(string offSetName = "") => throw new NotSupportedException();
     public Task<List<WorkOrder>> GetWorkOrder(string workOrderId) => throw new NotSupportedException();
     public Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
-    public void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset) => throw new NotSupportedException();
-    public Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator) => throw new NotSupportedException();
-    public Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator) => throw new NotSupportedException();
+    public void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset)
+    {
+        if (order is not null)
+		{
+			if (order.PlannedStartDate.Year > 1900)
+			{
+				order.PlannedStartDate = order.PlannedStartDate.AddHours(offset);
+			}
+			if (order.PlannedEndDate.Year > 1900)
+			{
+				order.PlannedEndDate = order.PlannedEndDate.AddHours(offset);
+			}
+			if (order.DueDate.Year > 1900)
+			{
+				order.DueDate = order.DueDate.AddHours(offset);
+			}
+
+			order.Operations?.ForEach(op =>
+				{
+					if (op.PlannedStartDate.Year > 1900)
+					{
+						op.PlannedStartDate = op.PlannedStartDate.AddHours(offset);
+					}
+					if (op.PlannedEndDate.Year > 1900)
+					{
+						op.PlannedEndDate = op.PlannedEndDate.AddHours(offset);
+					}
+				});
+		}
+    }
+    public Task<string> UpdateWorkOrderComponent(string workOrderId, List<OrderComponent> componentValues, string employeeId, User systemOperator) => throw new NotSupportedException();
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
     public Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
