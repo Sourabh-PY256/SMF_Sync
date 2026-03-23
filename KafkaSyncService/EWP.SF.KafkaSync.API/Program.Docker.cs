@@ -130,6 +130,72 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             {
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
             });
+        builder.Services.AddHttpClient<ItemOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<SupplyOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<DemandOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<MeasureUnitOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<PositionOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<DeviceOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<ToolingTypeOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+
+        builder.Services.AddHttpClient<WorkOrderChangeStatusOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<StockOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<OrderTransactionMaterialOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<MaterialReturnOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<ProductionOrderOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<ProductReceiptOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
@@ -159,6 +225,19 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IInventoryOperation>(sp => sp.GetRequiredService<InventoryOperationProxy>());
             builder.Services.AddScoped<IEmployeeOperation>(sp => sp.GetRequiredService<EmployeeOperationProxy>());
             builder.Services.AddScoped<IComponentOperation>(sp => sp.GetRequiredService<ProductOperationProxy>());
+            builder.Services.AddScoped<IItemOperation>(sp => sp.GetRequiredService<ItemOperationProxy>());
+            builder.Services.AddScoped<ISupplyOperation>(sp => sp.GetRequiredService<SupplyOperationProxy>());
+            builder.Services.AddScoped<IDemandOperation>(sp => sp.GetRequiredService<DemandOperationProxy>());
+            builder.Services.AddScoped<IMeasureUnitOperation>(sp => sp.GetRequiredService<MeasureUnitOperationProxy>());
+            builder.Services.AddScoped<IProfileOperation>(sp => sp.GetRequiredService<PositionOperationProxy>());
+            builder.Services.AddScoped<IWorkOrderChangeStatusOperation>(sp => sp.GetRequiredService<WorkOrderChangeStatusOperationProxy>());
+            builder.Services.AddScoped<IStockOperation>(sp => sp.GetRequiredService<StockOperationProxy>());
+            builder.Services.AddScoped<IOrderTransactionMaterialOperation>(sp => sp.GetRequiredService<OrderTransactionMaterialOperationProxy>());
+            builder.Services.AddScoped<MaterialReturnOperationProxy>(sp => sp.GetRequiredService<MaterialReturnOperationProxy>());
+            builder.Services.AddScoped<IToolOperation>(sp => sp.GetRequiredService<ToolingTypeOperationProxy>());
+            builder.Services.AddScoped<IDeviceOperation>(sp => sp.GetRequiredService<DeviceOperationProxy>());
+            builder.Services.AddScoped<IWorkOrderOperation>(sp => sp.GetRequiredService<ProductionOrderOperationProxy>());
+            builder.Services.AddScoped<IOrderTransactionProductOperation>(sp => sp.GetRequiredService<ProductReceiptOperationProxy>());
         }
         else
         {

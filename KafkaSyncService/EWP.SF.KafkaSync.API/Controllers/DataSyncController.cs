@@ -1,5 +1,4 @@
 
-
 using EWP.SF.Common.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessEntities.Kafka;
@@ -9,11 +8,13 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
+
 namespace EWP.SF.KafkaSync.API;
 
-public  class DataSyncController : BaseController
+public class DataSyncController : BaseController
 {
-	private readonly ILogger<DataSyncController> _logger;
+    private readonly ILogger<DataSyncController> _logger;
     private IWorkOrderOperation _workOrderOperation;
 
     public DataSyncController(ILogger<DataSyncController> logger, IWorkOrderOperation workOrderOperation)
@@ -21,6 +22,7 @@ public  class DataSyncController : BaseController
         _logger = logger;
         _workOrderOperation = workOrderOperation;
     }
+
     #region DataSync
     [HttpPost("DataSyncService/Producer")]
     public async Task<ResponseModel> SyncProducer(
@@ -32,7 +34,6 @@ public  class DataSyncController : BaseController
         if (ServiceRequest?.Services == null || !ServiceRequest.Services.Any())
         {
             returnValue.Message = "No services specified.";
-            //returnValue.StatusCode = 400;
             return returnValue;
         }
 
@@ -79,22 +80,20 @@ public  class DataSyncController : BaseController
         returnValue.Data = ServicesResponse;
         return returnValue;
     }
-/// <summary>
-	/// Create Work order progress for tool values
-	/// </summary>
-	[HttpPost("WorkOrderProgress/ComponentValues")]
-	//[RequestValidator]
-	//[RequiresToken]
-	public async Task<ResponseModel> WorkOrderProgressComponentlValues([FromBody] UpdateOrderProgressComponentRequest request)
-	{
-		string transactionId = await _workOrderOperation.UpdateWorkOrderComponent(request.WorkOrderId, request.Components, request.EmployeeId, new User(-1)).ConfigureAwait(false);
-		return new()
-		{
-			IsSuccess = !string.IsNullOrEmpty(transactionId),
-			Data = transactionId
-		};
-	}
-	
-	
-	#endregion DataSync
+
+    /// <summary>
+    /// Create Work order progress for tool values
+    /// </summary>
+    [HttpGet("WorkOrder/TransactionMaterial/WithoutExternalId")]
+    public async Task<ResponseModel> WorkOrderProgressComponentlValues([FromBody] TransactionMaterialSyncRequest request)
+    {
+        object syncData = await _workOrderOperation.UpdateWorkOrderComponent(request, GetContext().User).ConfigureAwait(false);
+        return new()
+        {
+            IsSuccess = syncData is not null,
+            Data = syncData
+        };
+    }
+
+    #endregion DataSync
 }

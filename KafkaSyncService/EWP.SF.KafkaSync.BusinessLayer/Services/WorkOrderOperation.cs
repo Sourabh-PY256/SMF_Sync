@@ -2797,9 +2797,31 @@ public class WorkOrderOperation : IWorkOrderOperation
 	/// <summary>
 	/// Transfers products from one work order to another.
 	/// </summary>
-	public async Task<string> UpdateWorkOrderComponent(string workOrderId, List<OrderComponent> componentValues, string employeeId, User systemOperator)
-	{
-		string returnValue = string.Empty;
+	public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
+    {
+        var material = request.OrderTransactionsMaterial?.FirstOrDefault();
+        string workOrderId = material?.OrderCode;
+        string employeeId = material?.EmployeeId;
+        List<OrderComponent> componentValues = request.OrderTransactionsMaterialDetail?.Select(d => new OrderComponent {
+            SourceId = d.ItemCode,
+            InputQty = d.Quantity,
+            LineId = d.LineNo,
+            ProcessId = material?.OperationNo,
+            Batches = new List<ComponentBatch> {
+                new ComponentBatch {
+                    Batch = d.LotNumber,
+                    Quantity = d.Quantity,
+                    Location = d.BinLocationCode,
+                    WarehouseCode = d.WarehouseCode,
+                    //BatchDate = d.ExpDate ?? DateTime.MinValue,
+                    InventoryStatus = d.InventoryStatusCode,
+                    Pallet = d.Pallet,
+                    Type = d.Type
+                }
+            }
+        }).ToList() ?? new List<OrderComponent>();
+
+		object returnValue = null;
 		string objectToInsert = "";
 		WorkOrder tempOrder = (await GetWorkOrder(workOrderId).ConfigureAwait(false)).FirstOrDefault();
 		List<OrderComponent> valuesToInsert = [];
@@ -3015,7 +3037,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 						}
 
 						scope.Complete();
-						returnValue = transactionId;
+						returnValue = ob2Ins;
 
 						//messagesToPush.ForEach(SyncInitializer.ForcePush);
 					}
@@ -3031,48 +3053,6 @@ public class WorkOrderOperation : IWorkOrderOperation
 					throw new Exception(ErrorList.FirstOrDefault().Value);
 				}
 			}
-
-			   // Replace with DataSyncServiceManager ExecuteServiceEndpoint
-			// var endpointResponse = await _dataSyncServiceManager.ExecuteServiceEndpoint(
-			// 	SyncERPEntity.MATERIAL_ISSUE_SERVICE,
-			// 	string.Empty,
-			// 	string.Empty,
-			// 	"POST",
-			// 	systemOperator
-			// ).ConfigureAwait(false);
-
-			//CanProceed = endpointResponse.StatusCode == HttpStatusCode.OK;
-			using var httpClient = new HttpClient();
-
-var request = new
-{
-    Services = new[] { "MaterialIssue" },
-    EntityCode = "",
-    BodyData = "",
-    MethodType = "POST"
-};
-
-var jsonContent = new StringContent(
-    JsonConvert.SerializeObject(request),
-    System.Text.Encoding.UTF8,
-    "application/json"
-);
-
-var response = await httpClient.PostAsync(
-    "http://localhost:8080/DataSyncService/Producer",
-    jsonContent
-).ConfigureAwait(false);
-
-CanProceed = response.IsSuccessStatusCode;
-			if (CanProceed)
-			{
-
-			}
-			else
-			{
-			   // ErrorList.Add(new KeyValuePair<string, string>("500", "ERP|" + endpointResponse.Message));
-			}
-			
 		}
 		return returnValue;
 	}

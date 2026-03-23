@@ -1,4 +1,5 @@
-﻿using EWP.SF.Common.Enumerators;
+using EWP.SF.Common.Enumerators;
+using Newtonsoft.Json;
 
 namespace EWP.SF.Common.Models;
 
@@ -709,3 +710,60 @@ public class ProductReturnIntegration
 	/// </summary>
 	public string InventoryStatus { get; set; }
 }
+
+/// <summary>
+///
+/// </summary>
+public class TransactionMaterialSyncRequest
+{
+	/// <summary>
+	///
+	/// </summary>
+	[JsonProperty("sf_order_transactions_material")]
+	public List<OrderTransactionMaterialSync> OrderTransactionsMaterial { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[JsonProperty("sf_order_transactions_material_detail")]
+	public List<OrderTransactionMaterialDetailSync> OrderTransactionsMaterialDetail { get; set; }
+}
+
+/// <summary>
+///
+/// </summary>
+public class OrderTransactionMaterialSync
+{
+	public string OperationNo { get; set; }
+	public string OrderCode { get; set; }
+	public string LineNo { get; set; }
+	public double Quantity { get; set; }
+	public string EmployeeId { get; set; }
+	public int UserId { get; set; }
+	public string TransactionId { get; set; }
+	public string Comments { get; set; }
+	public string ExternalId { get; set; }
+	public string ExternalDate { get; set; }
+}
+
+/// <summary>
+///
+/// </summary>
+public class OrderTransactionMaterialDetailSync
+{
+	public string TransactionId { get; set; }
+	public string ItemCode { get; set; }
+	public double Quantity { get; set; }
+	public string LotNumber { get; set; }
+	public string Pallet { get; set; }
+	public string BinLocationCode { get; set; }
+	public string InventoryStatusCode { get; set; }
+	public string ExpDate { get; set; }
+	public string WarehouseCode { get; set; }
+	public string Type { get; set; }
+	public string MachineCode { get; set; }
+	public string OriginalItem { get; set; }
+	public string LineNo { get; set; }
+	public string OrderLot { get; set; }
+}
+
