@@ -19,4 +19,5 @@ public interface IDataSyncServiceOperation
 
     Task<List<DataSyncErp>> ListDataSyncERP(string id = "", EnableType getInstances = EnableType.Yes);
     Task<User> GetUserWithoutValidations(User user);
+    Task<double> GetTimezoneOffset(string offSetName = "");
 }

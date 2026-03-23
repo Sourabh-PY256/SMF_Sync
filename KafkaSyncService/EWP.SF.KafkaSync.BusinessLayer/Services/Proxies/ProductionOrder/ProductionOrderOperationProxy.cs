@@ -22,21 +22,29 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         _logger = logger;
     }
 
-    public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(List<WorkOrderExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, bool isDataSynced = false, string logId = null)
+    public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(
+    List<WorkOrderExternal> workOrderList,
+    User systemOperator,
+    bool Validate,
+    LevelMessage Level,
+    bool isDataSynced = false,
+    string logId = null)
+{
+    var request = new
     {
-        var request = new
-        {
-            WorkOrderList = workOrderList,
-            SystemOperator = systemOperator,
-            Validate = Validate,
-            Level = Level,
-            IsDataSynced = isDataSynced,
-            LogId = logId
-        };
+        WorkOrderList = workOrderList,
+        SystemOperator = systemOperator,
+        IsDataSynced = isDataSynced,
+        LogId = logId
+    };
 
-        var response = await PostAsync<List<WorkOrderResponse>>("ProductionOrder/Bulk", request).ConfigureAwait(false);
-        return response ?? new List<WorkOrderResponse>();
-    }
+    var url = $"WorkOrder/{Validate}/{Level}";
+
+    var response = await PostAsync<List<WorkOrderResponse>>(url, request)
+                        .ConfigureAwait(false);
+
+    return response ?? new List<WorkOrderResponse>();
+}
 
     public List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {

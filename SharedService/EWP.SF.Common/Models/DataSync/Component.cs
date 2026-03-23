@@ -39,6 +39,212 @@ public class Component : ILoggableEntity
 	}
 
 	/// <summary>
+	/// Maps a ProductExternal object to a Component object.
+	/// </summary>
+	/// <param name="item">The external product data.</param>
+	/// <returns>A populated Component object.</returns>
+	public static Component FromProductExternal(ProductExternal item)
+	{
+		if (item == null) return null;
+
+		Component component = new()
+		{
+			Code = !string.IsNullOrEmpty(item.Code) ? item.Code : item.ProductCode,
+			Name = !string.IsNullOrEmpty(item.Name) ? item.Name : (string.IsNullOrEmpty(item.ProductName) ? item.ProductCode : item.ProductName),
+			ComponentType = item.ComponentType ?? ComponentType.Product,
+			Status = Status.Active,
+			WarehouseId = item.WarehouseCode,
+			Version = item.Version
+		};
+
+		if (item.ProcessEntry != null)
+		{
+			component.ProcessEntry = item.ProcessEntry;
+			// Ensure essential fields are mapped if they are at the top level in the JSON but not in ProcessEntry
+			if (string.IsNullOrEmpty(component.ProcessEntry.Code)) component.ProcessEntry.Code = component.Code;
+			if (string.IsNullOrEmpty(component.ProcessEntry.ComponentId)) component.ProcessEntry.ComponentId = component.Code;
+			if (string.IsNullOrEmpty(component.ProcessEntry.Warehouse)) component.ProcessEntry.Warehouse = component.WarehouseId;
+			if (component.ProcessEntry.Version == 0) component.ProcessEntry.Version = component.Version;
+			
+			// Map IDs to avoid DuplicateKey errors if the caller provided them
+			if (!string.IsNullOrEmpty(item.ProcessentryId) && string.IsNullOrEmpty(component.ProcessEntry.Id)) 
+				component.ProcessEntry.Id = item.ProcessentryId;
+			
+			if (!string.IsNullOrEmpty(component.ProcessEntry.Id))
+				component.Id = component.ProcessEntry.Id;
+
+			return component;
+		}
+
+		ProcessEntry pe = new()
+		{
+			Code = component.Code,
+			ComponentId = component.Code,
+			Name = component.Name,
+			Quantity = item.Quantity,
+			Version = item.Version,
+			Sequence = item.Sequence,
+			Warehouse = item.WarehouseCode,
+			Comments = item.Comments,
+			Formula = item.FormulaCode,
+			Schedule = string.Equals(item.Schedule, "Yes", StringComparison.OrdinalIgnoreCase) ? 1 : 0,
+			Status = item.Status?.ToUpperInvariant() == "ACTIVE" ? Status.Active : Status.Disabled,
+			BomVersion = !string.IsNullOrEmpty(item.BomVersion) ? long.Parse(item.BomVersion) : 0,
+			BomSequence = !string.IsNullOrEmpty(item.BomSequence) ? int.Parse(item.BomSequence) : 0,
+			RouteVersion = !string.IsNullOrEmpty(item.RouteVersion) ? long.Parse(item.RouteVersion) : 0,
+			RouteSequence = !string.IsNullOrEmpty(item.RouteSequence) ? int.Parse(item.RouteSequence) : 0,
+			Processes = [],
+			Labor = [],
+			Tools = [],
+			Components = []
+		};
+
+		if (item.Operations != null)
+		{
+			foreach (var op in item.Operations)
+			{
+				ProcessEntryProcess prc = new()
+				{
+					ProcessId = op.OperationNo.ToString(),
+					ProcessSubTypeId = op.OperationSubtype,
+					Quantity = op.Quantity,
+					Unit = op.OutputUoM,
+					TransferType = op.TransferType,
+					TransferQty = op.TransferQuantity,
+					OperationClassId = 1, // Production
+					Step = (int)Math.Floor(op.OperationNo),
+					Sort = (int)((op.OperationNo % 1) * 10),
+					SlackTimeAfterPrevOp = op.SlackTimeAftNextOp.HasValue ? op.SlackTimeAftNextOp.Value.ToString() : null,
+					SlackTimeBeforeNextOp = op.SlackTimeBefNextOp.HasValue ? op.SlackTimeBefNextOp.Value.ToString() : null,
+					MaxTimeBeforeNextOp = op.MaxTimeBefNextOp.HasValue ? op.MaxTimeBefNextOp.Value.ToString() : null,
+					MaxOpSpanIncrease = op.MaxOpSpanIncrease.HasValue ? op.MaxOpSpanIncrease.Value.ToString() : null,
+					AvailableDevices = [],
+					Subproducts = [],
+					Attributes = []
+				};
+
+				// Mapping Machines
+				if (op.OperationMachines != null)
+				{
+					foreach (var m in op.OperationMachines)
+					{
+						prc.AvailableDevices.Add(new DeviceSpeed
+						{
+							Id = m.MachineCode,
+							SetupTime = m.SetupTimeInSec,
+							ExecTime = m.OperationTimeInSec,
+							WaitTime = m.WaitingTimeInSec,
+							Selected = string.Equals(m.Primary, "Yes", StringComparison.OrdinalIgnoreCase),
+							LineId = m.LineID,
+							LineUID = m.LineUID,
+							Schedule = string.Equals(m.Schedule, "Yes", StringComparison.OrdinalIgnoreCase),
+							AutomaticSequencing = string.Equals(m.AutomaticSequencing, "Yes", StringComparison.OrdinalIgnoreCase),
+							IsBackflush = string.Equals(m.IssueMode, "Backflush", StringComparison.OrdinalIgnoreCase)
+						});
+					}
+				}
+
+				// Mapping Items (BOM)
+				if (op.OperationItems != null)
+				{
+					foreach (var itm in op.OperationItems)
+					{
+						pe.Components.Add(new ProcessEntryComponent
+						{
+							ProcessId = prc.ProcessId,
+							ComponentId = itm.ItemCode,
+							Quantity = itm.Quantity,
+							UnitId = itm.InventoryUoM,
+							WarehouseCode = itm.WarehouseCode,
+							LineId = itm.LineID.ToString(),
+							LineUID = itm.LineUID,
+							IsBackflush = string.Equals(itm.IssueMethod, "Backflush", StringComparison.OrdinalIgnoreCase)
+						});
+					}
+				}
+
+				// Mapping Labor
+				if (op.OperationLabor != null)
+				{
+					foreach (var lbr in op.OperationLabor)
+					{
+						pe.Labor.Add(new ProcessEntryLabor
+						{
+							ProcessId = prc.ProcessId,
+							LaborId = lbr.ProfileCode,
+							Quantity = lbr.Quantity,
+							Usage = lbr.Usage,
+							Source = lbr.Source,
+							Schedule = string.Equals(lbr.Schedule, "Yes", StringComparison.OrdinalIgnoreCase),
+							LineId = lbr.LineID.ToString(),
+							LineUID = lbr.LineUID,
+							IsBackflush = string.Equals(lbr.IssueMode, "Backflush", StringComparison.OrdinalIgnoreCase)
+						});
+					}
+				}
+
+				// Mapping Tools
+				if (op.OperationTools != null)
+				{
+					foreach (var tl in op.OperationTools)
+					{
+						pe.Tools.Add(new ProcessEntryTool
+						{
+							ProcessId = prc.ProcessId,
+							ToolId = tl.ToolingCode,
+							Quantity = tl.Quantity,
+							Usage = tl.Usage,
+							Source = tl.Source,
+							Schedule = string.Equals(tl.Schedule, "Yes", StringComparison.OrdinalIgnoreCase),
+							LineId = tl.LineID.ToString(),
+							LineUID = tl.LineUID,
+							IsBackflush = string.Equals(tl.IssueMode, "Backflush", StringComparison.OrdinalIgnoreCase)
+						});
+					}
+				}
+
+				// Mapping Byproducts
+				if (op.OperationByProducts != null)
+				{
+					foreach (var bp in op.OperationByProducts)
+					{
+						prc.Subproducts.Add(new SubProduct
+						{
+							ProcessId = prc.ProcessId,
+							Code = bp.ItemCode,
+							Quantity = bp.Quantity,
+							UnitId = bp.InventoryUoM,
+							WarehouseCode = bp.WarehouseCode,
+							LineId = bp.LineID.ToString(),
+							LineUID = bp.LineUID
+						});
+					}
+				}
+
+				// Mapping Attributes
+				if (op.Attributes != null)
+				{
+					foreach (var attr in op.Attributes)
+					{
+						prc.Attributes.Add(new ProcessEntryAttribute
+						{
+							ProcessId = prc.ProcessId,
+							AttributeId = attr.AttributeTypeCode,
+							Value = attr.AttributeCode,
+							Selected = true
+						});
+					}
+				}
+
+				pe.Processes.Add(prc);
+			}
+		}
+
+		component.ProcessEntry = pe;
+		return component;
+	}
+
+	/// <summary>
 	///
 	/// </summary>
 	[GridDrillDown]
@@ -950,6 +1156,22 @@ public class ProductExternal
 	[Required]
 	[MinLength(1, ErrorMessage = "Operations must contain at least one element")]
 	public List<ProductOperationExternal> Operations { get; set; }
+
+	// New fields to support direct Component-like JSON structure
+	[JsonProperty(PropertyName = "Code")]
+	public string Code { get; set; }
+
+	[JsonProperty(PropertyName = "Name")]
+	public string Name { get; set; }
+
+	[JsonProperty(PropertyName = "ComponentType")]
+	public ComponentType? ComponentType { get; set; }
+
+	[JsonProperty(PropertyName = "ProcessEntry")]
+	public ProcessEntry ProcessEntry { get; set; }
+
+	[JsonProperty(PropertyName = "ProcessentryId")]
+	public string ProcessentryId { get; set; }
 }
 
 /// <summary>

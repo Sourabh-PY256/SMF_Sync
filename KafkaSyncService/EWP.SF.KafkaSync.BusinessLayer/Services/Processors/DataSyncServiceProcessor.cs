@@ -947,8 +947,8 @@ public class DataSyncServiceProcessor
 								try
 								{
 									sfResponse = (await productOperation.ListUpdateProduct(
-									listElem,
-									listProductsOriginal,
+									listElem.Select(Component.FromProductExternal).ToList(),
+									listProductsOriginal?.Select(Component.FromProductExternal).ToList(),
 									SystemOperator,
 									false,
 									LevelMessage.Success
@@ -1032,7 +1032,7 @@ public class DataSyncServiceProcessor
 					case SyncERPEntity.PRODUCTION_ORDER_SERVICE:
 						List<WorkOrderExternal> listWorkOrders = JsonConvert.DeserializeObject<List<WorkOrderExternal>>(dataJson);
 						var productOrderOperation = GetOperation<IWorkOrderOperation>();
-						double offset = await productOrderOperation.GetTimezoneOffset("ERP").ConfigureAwait(false) * -1;
+						double offset = await _dataSyncServiceOperation.GetTimezoneOffset("ERP").ConfigureAwait(false) * -1;
 						listWorkOrders.ForEach(elem => productOrderOperation.AddWorkOrderDatesOffset(elem, offset));
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWorkOrders);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
@@ -2034,8 +2034,8 @@ public class DataSyncServiceProcessor
 		string endpointUrl = ServiceData.ErpData.BaseUrl + ServiceData.Path;
 		if (!string.IsNullOrEmpty(ServiceData.UrlParams))
 		{
-			var workOrderOperation = GetOperation<IWorkOrderOperation>();
-			double erpOffset = await workOrderOperation.GetTimezoneOffset("ERP");
+			var datasyncOperation = GetOperation<IDataSyncServiceOperation>();
+			double erpOffset = await datasyncOperation.GetTimezoneOffset("ERP");
 			DateTime offsetExecDate = ServiceData.LastExecutionDate.AddMinutes(-ServiceData.OffsetMin).AddHours(erpOffset);
 			string syncDate = offsetExecDate.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss");
 			if (syncAllData || ServiceData.DeltaSync == EnableType.No)

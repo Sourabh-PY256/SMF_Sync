@@ -7,6 +7,7 @@ public interface IDataImportOperation
 {
     List<Activity> GetDataImportTasks(ProcessTypeExternal operationType);
     List<Activity> GetDataImportTasks(ProductOperationExternal operationType, User systemOperator);
+    List<Activity> GetDataImportTasks(ProductExternal item, User systemOperator);
     Task<List<ProcessEntryComponent>> GetDataImportItems(ProductExternal item, ProcessEntry pe, User systemOperator);
     Task<List<ProcessEntryTool>> GetDataImportTooling(ProductExternal item, ProcessEntry pe, User systemOperator);
     List<DeviceSpeed> GetDataImportAvailableDevices(ProductOperationExternal operationType, ProcessEntryProcess oldOperation = null);

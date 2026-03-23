@@ -138,6 +138,19 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IInventoryOperation, InventoryKafkaProxy>();
             builder.Services.AddScoped<IEmployeeOperation, EmployeeKafkaProxy>();
             builder.Services.AddScoped<IComponentOperation, ProductKafkaProxy>();
+             builder.Services.AddScoped<IItemOperation, ItemKafkaProxy>();
+            builder.Services.AddScoped<ISupplyOperation, SupplyKafkaProxy>();
+            builder.Services.AddScoped<IDemandOperation, DemandKafkaProxy>();
+            builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitKafkaProxy>();
+            builder.Services.AddScoped<IProfileOperation, PositionKafkaProxy>();
+            builder.Services.AddScoped<IWorkOrderChangeStatusOperation, WorkOrderChangeStatusKafkaProxy>();
+            builder.Services.AddScoped<IStockOperation, StockKafkaProxy>();
+            builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionMaterialKafkaProxy>();
+            builder.Services.AddScoped<MaterialReturnKafkaProxy>();
+            builder.Services.AddScoped<IToolOperation, ToolingTypeKafkaProxy>();
+            builder.Services.AddScoped<IDeviceOperation, DeviceKafkaProxy>();
+            builder.Services.AddScoped<IWorkOrderOperation, ProductionOrderKafkaProxy>();
+            builder.Services.AddScoped<IOrderTransactionProductOperation, ProductReceiptKafkaProxy>();
         }
         else if (configuration.GetValue<bool>("AppSettings:UseExternalSyncApi"))
         {

@@ -367,10 +367,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 if (action == "ListUpdateProduct")
                 {
-                    var list = body.Data.ToObject<List<ProductExternal>>();
-                    var original = body.OriginalData?.ToObject<List<ProductExternal>>() ?? new List<ProductExternal>();
+                    var list = body.Data.ToObject<List<Component>>();
+                    var original = body.OriginalData?.ToObject<List<Component>>() ?? new List<Component>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
+
                     await httpProxy.ListUpdateProduct(list, original, message.User, validate, level).ConfigureAwait(false);
                 }
                 else if (action == "MergeProduct")

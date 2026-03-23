@@ -700,6 +700,13 @@ public  class DataImportOperation : IDataImportOperation
 		return tasks;
 	}
 
+	public List<Activity> GetDataImportTasks(ProductExternal item, User systemOperator)
+	{
+		// Currently, product-level tasks are not directly fetched from the ERP header.
+		// They are usually associated with specific operations.
+		return [];
+	}
+
 	/// <summary>
 	///
 	/// </summary>

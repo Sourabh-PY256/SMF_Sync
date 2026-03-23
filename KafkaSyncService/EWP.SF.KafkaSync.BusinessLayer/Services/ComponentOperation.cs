@@ -54,985 +54,164 @@ public class ComponentOperation : IComponentOperation
 	{
 		return _componentRepo.GetComponentByCode(Code);
 	}
-	public async Task<List<ResponseData>> ListUpdateProduct(List<ProductExternal> itemList, List<ProductExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
-	{
-	List<ResponseData> returnValue = [];
-		List<ProcedureExternal> proceduresExternal = [];
-		ResponseData MessageError;
-		bool NotifyOnce = true;
-		DataSyncErp currentERP = (await _dataSyncServiceOperation.ListDataSyncERP("[Active]", EnableType.No).ConfigureAwait(false)).FirstOrDefault();
 
+	// ─── Shared normalization ─────────────────────────────────────────────────
+	/// <summary>
+	/// Applies the same normalization and defaulting rules used by
+	/// <see cref="Component.FromProductExternal"/> so that both UI-sourced
+	/// <see cref="Component"/> objects and ERP-converted ones are always in a
+	/// consistent state before being persisted.
+	/// </summary>
+	private static void NormalizeComponent(Component component)
+	{
+		// 1. Code is mandatory
+		if (string.IsNullOrWhiteSpace(component.Code))
+			throw new ArgumentException("Product Code is required.");
+
+		// 2. Default Name to Code when not supplied
+		if (string.IsNullOrWhiteSpace(component.Name))
+			component.Name = component.Code;
+
+		// 3. Always treat this as a Product component
+		component.ComponentType = ComponentType.Product;
+
+		// 4. Default Status to Active
+		if (component.Status == default)
+			component.Status = Status.Active;
+
+		// 5. Ensure ProcessEntry exists and its key fields are in sync
+		component.ProcessEntry ??= new ProcessEntry();
+
+		ProcessEntry pe = component.ProcessEntry;
+
+		// Sync identifiers from parent Component
+		if (string.IsNullOrEmpty(pe.Code))       pe.Code      = component.Code;
+		if (string.IsNullOrEmpty(pe.Name))       pe.Name      = component.Name;
+		if (string.IsNullOrEmpty(pe.Warehouse))  pe.Warehouse = component.WarehouseId;
+		if (pe.Version == 0)                     pe.Version   = component.Version;
+
+		// 6. Default ProcessEntry Status to Active
+		if (pe.Status == default) pe.Status = Status.Active;
+
+		// 7. Ensure child collections are never null (mirrors FromProductExternal)
+		pe.Processes   ??= [];
+		pe.Labor       ??= [];
+		pe.Tools       ??= [];
+		pe.Components  ??= [];
+
+		// 8. Validate BOM/Route version/sequence are not negative
+		if (pe.BomVersion  < 0) pe.BomVersion  = 0;
+		if (pe.BomSequence < 0) pe.BomSequence = 0;
+		if (pe.RouteVersion  < 0) pe.RouteVersion  = 0;
+		if (pe.RouteSequence < 0) pe.RouteSequence = 0;
+
+		// 9. Normalize Schedule - must be 0 or 1
+		if (pe.Schedule is not (0 or 1)) pe.Schedule = 0;
+
+		// 10. Validate all process entries child collections
+		foreach (ProcessEntryProcess proc in pe.Processes)
+		{
+			proc.AvailableDevices ??= [];
+			proc.Subproducts      ??= [];
+			proc.Attributes       ??= [];
+		}
+	}
+
+	// ─── ProcessProduct overloads ─────────────────────────────────────────────
+
+	/// <summary>
+	/// Entry point for UI callers that send a <see cref="Component"/> model.
+	/// Applies shared normalization and delegates to the core merge logic.
+	/// </summary>
+	public Task<ResponseData> ProcessProduct(ActionDB mode, Component component, User systemOperator)
+	{
+		NormalizeComponent(component);
+		return MergeProduct(mode, component, systemOperator, intSource: IntegrationSource.SF);
+	}
+
+	/// <summary>
+	/// Entry point for ERP/DataSync callers that send a <see cref="ProductExternal"/> model.
+	/// Converts to <see cref="Component"/>, applies shared normalization, and delegates
+	/// to the core merge logic.
+	/// </summary>
+	public Task<ResponseData> ProcessProduct(ActionDB mode, ProductExternal externalProduct, User systemOperator)
+	{
+		Component component = Component.FromProductExternal(externalProduct);
+		NormalizeComponent(component); // safety pass – same rules for ERP too
+		return MergeProduct(mode, component, systemOperator, intSource: IntegrationSource.ERP);
+	}
+
+	/// <summary>
+	/// Bulk sync entry point for ERP/DataSync lists.
+	/// Accepts pre-converted <see cref="Component"/> lists.
+	/// Automatically determines mode (Create/Update) based on existing components,
+	/// then normalizes and merges via ProcessProduct.
+	/// </summary>
+	public async Task<List<ResponseData>> ListUpdateProduct(List<Component> itemList, List<Component> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+	{
+		List<ResponseData> returnValue = [];
 		if (itemList?.Count > 0)
 		{
-			// Catálogos Necesarios para validar productos
-			Machine[] machines = await _deviceOperation.ListDevices(false, true, true).ConfigureAwait(false);
-			List<Warehouse> warehouses = _warehouseOperation.ListWarehouse(systemOperator);
-			List<MeasureUnit> units = _measureUnitOperation.GetMeasureUnits();
-			MeasureUnit[] measures = [.. units.Where(x => x.IsProductionResult)];
-			List<ProcessType> processTypes = _processTypeOperation.GetProcessTypes(string.Empty, systemOperator);
-			ProcessTypeSubtype[] subProcessTypes = [.. processTypes.SelectMany(c => c.SubTypes)];
-			bool MultiVersionEnabled = Config.Configuration["Product-Versioning"].ToBool();
-			bool MultiWarehouseEnabled = Config.Configuration["Product-MultiWarehouse"].ToBool();
-			bool isForcedEdit = false;
-			NotifyOnce = itemList.Count == 1;
-			int Line = 0;
-			string BaseId = string.Empty;
-			foreach (ProductExternal cycleItem in itemList)
+			foreach (Component item in itemList)
 			{
-				ProductExternal item = cycleItem;
-				Line++;
 				try
 				{
-					BaseId = item.ProductCode;
-					string warehouseId = string.Empty;
-					Warehouse warehouse = warehouses.Where(x => string.Equals(x.Code, item.WarehouseCode, StringComparison.OrdinalIgnoreCase)).FirstOrDefault(x => x.Status != Status.Failed);
-					if (warehouse is null)
+					// For synchronization, determine the ActionDB mode automatically.
+					Component existingComponent = (await GetComponents(item.Code, true).ConfigureAwait(false))?.FirstOrDefault(c => c.Status != Status.Failed);
+					
+					ActionDB mode = ActionDB.Create;
+					if (existingComponent != null)
 					{
-						throw new Exception("Invalid Warehouse code");
-					}
-					else
-					{
-						warehouseId = warehouse.WarehouseId;
-					}
-					//Version
-					if (MultiVersionEnabled && item.Version == 0)
-					{
-						throw new Exception("Product version is required");
-					}
-					//Secuencia
-					if (item.Sequence == 0)
-					{
-						item.Sequence = 1;
-					}
-					ProcessEntry existingEntry = (await GetProcessEntry(item.ProductCode, warehouseId, item.Version, item.Sequence, systemOperator).ConfigureAwait(false))?.Find(x => x.Status != Status.Failed);
-					bool editMode = existingEntry is not null;
-					if (editMode && itemListOriginal is not null)
-					{
-						item = itemListOriginal.Find(x => x.ProductCode == cycleItem.ProductCode && x.WarehouseCode == cycleItem.WarehouseCode && x.Version == cycleItem.Version);
-						item ??= cycleItem;
-					}
-					if (!editMode && !string.Equals(item.Status.ToStr(), "ACTIVE", StringComparison.OrdinalIgnoreCase))
-					{
-						throw new Exception("Cannot import a new disabled product");
-					}
-					List<ValidationResult> results = [];
-					ValidationContext context = new(item, null, null);
-					if (!Validator.TryValidateObject(item, context, results))
-					{
-						throw new Exception($"{results[0]}");
-					}
-					//Validaciones Iniciales
-
-					string measureUnitId = string.Empty;
-					UnitType measureUnitType = 0;
-					//Se valida que tenga Llave el producto
-
-					Component existingComponent = (await GetComponents(item.ProductCode, true).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
-					if (existingComponent is null)
-					{
-						List<ComponentExternal> compList =
-						[
-							new ComponentExternal
-							{
-								InventoryUoM = item.InventoryUoM,
-								ItemCode = item.ProductCode,
-								ItemName = string.IsNullOrEmpty(item.ProductName) ? item.ProductCode : item.ProductName,
-								ProductionUoM = item.InventoryUoM,
-								Type = "Production",
-								ManagedBy = "None"
-							},
-						];
-						await ListUpdateComponent(compList, systemOperator, Validate, Level).ConfigureAwait(false);
-						existingComponent = (await GetComponents(item.ProductCode, true).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault();
-					}
-					// Se repiten las validaciones por si cambio
-					warehouse = warehouses.Find(x => string.Equals(x.Code, item.WarehouseCode, StringComparison.OrdinalIgnoreCase));
-					if (warehouse is null)
-					{
-						throw new Exception("Invalid Warehouse code");
-					}
-					else
-					{
-						warehouseId = warehouse.WarehouseId;
-					}
-					//Version
-					if (MultiVersionEnabled && item.Version == 0)
-					{
-						throw new Exception("Product version is required");
-					}
-					//Secuencia
-					if (item.Sequence == 0)
-					{
-						item.Sequence = 1;
+						item.Id = existingComponent.Id;
+						mode = ActionDB.Update;
 					}
 
-					if (existingComponent is not null)
-					{
-						existingComponent.ComponentType = ComponentType.Product;
-					}
-
-					// Nombre de producto
-					if (string.IsNullOrEmpty(item.ProductName))
-					{
-						if (existingComponent is not null && !string.IsNullOrEmpty(existingComponent.Name))
-						{
-							item.ProductName = existingComponent.Name;
-						}
-						else
-						{
-							item.ProductName = item.ProductCode;
-						}
-					}
-
-					if (!editMode && string.IsNullOrEmpty(item.InventoryUoM))
-					{
-						throw new Exception("Inventory UoM is required");
-					}
-					else if (!editMode || !string.IsNullOrEmpty(item.InventoryUoM))
-					{
-						MeasureUnit inventoryUnit = measures.FirstOrDefault(x => string.Equals(x.Code, item.InventoryUoM, StringComparison.OrdinalIgnoreCase));
-						if (inventoryUnit is null)
-						{
-							throw new Exception("Invalid Inventory UoM code");
-						}
-						else
-						{
-							measureUnitId = inventoryUnit.Code;
-							measureUnitType = inventoryUnit.Type;
-						}
-					}
-
-					double[] duplicatedOperations = [.. item.Operations.GroupBy(x => x.OperationNo).Where(g => g.Count() > 1).Select(y => y.Key)];
-					if (duplicatedOperations?.Length > 0)
-					{
-						throw new Exception(string.Format("Product one or more OperationNo values are duplicated"));
-					}
-
-					// Validando Operaciones
-					int opCount = 0;
-					foreach (ProductOperationExternal operation in item.Operations)
-					{
-						opCount++;
-
-						if (operation.OperationNo < 0)
-						{
-							throw new Exception(string.Format("Product Operation at position [{0}] : OperationNo is required. ", opCount));
-						}
-
-						// Para validar: Operation Type va a venir en el endpoint?
-						ProcessTypeSubtype CurrentOperationSubType = subProcessTypes.FirstOrDefault(pt => string.Equals(pt.Code, operation.OperationSubtype, StringComparison.OrdinalIgnoreCase));
-						ProcessType CurrentOperationType = null;
-						if (CurrentOperationSubType is null)
-						{
-							throw new Exception(string.Format("Product Operation No.{0} : SubOperationType not found. ", operation.OperationSubtype));
-						}
-						else
-						{
-							CurrentOperationType = processTypes.Find(op => op.Id == CurrentOperationSubType.ProcessTypeId);
-							operation.OperationType = CurrentOperationType.Id;
-						}
-
-						if (CurrentOperationType is null)
-						{
-							throw new Exception(string.Format("Product Operation No.{0} : SubOperationType parent not found. ", operation.OperationSubtype));
-						}
-
-						//Validar OutputUoM
-						if (string.IsNullOrEmpty(operation.OutputUoM))
-						{
-							throw new Exception(string.Format("Product Operation No.{0} : OutputUoM is required. ", operation.OperationNo));
-						}
-						else
-						{   // Validar Tipo de operación
-							MeasureUnit operationUnit = measures.FirstOrDefault(x => string.Equals(x.Code, operation.OutputUoM, StringComparison.OrdinalIgnoreCase) && x.Type.ToInt32() == CurrentOperationType.UnitTypeId) ?? throw new Exception(string.Format("Product Operation No.{0} : OutputUoM is invalid for OperationType {1} ", operation.OperationNo, operation.OperationType));
-						}
-
-						if (operation.OperationItems is not null)
-						{
-							int countItems = 0;
-							foreach (ProductOperationItemExternal itm in operation.OperationItems)
-							{
-								countItems++;
-								Component itemComp = ((await GetComponents(itm.ItemCode, true).ConfigureAwait(false))?.Where(c => c.Status != Status.Failed)?.FirstOrDefault()) ?? throw new Exception(string.Format("Product Operation No.{0} : ItemCode at position [{1}] is invalid. ", operation.OperationNo, countItems));
-								MeasureUnit ItemUOM = (measures.Where(x => x.Code.Equals(itm.InventoryUoM?.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))?.FirstOrDefault()) ?? throw new Exception(string.Format("Product Operation No.{0} - Item {1} : InventoryUoM not found or disabled. ", operation.OperationNo, itm.ItemCode));
-								Warehouse ItemWhs = (warehouses.Where(x => x.Code.Equals(itm.WarehouseCode?.ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))?.FirstOrDefault()) ?? throw new Exception(string.Format("Product Operation No.{0} - Item {1} : WarehouseCode not found. ", operation.OperationNo, itm.ItemCode));
-							}
-						}
-						if (operation.OperationLabor is not null)
-						{
-							int countItems = 0;
-							operation.OperationLabor.ForEach(itm =>
-							{
-								countItems++;
-								CatProfile itemComp = (_catalogRepo.GetCatalogProfile(itm.ProfileCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - Labor {1} : ProfileCode not found. ", operation.OperationNo, itm.ProfileCode));
-							});
-						}
-						if (operation.OperationTools is not null)
-						{
-							int countItems = 0;
-							operation.OperationTools.ForEach(itm =>
-							{
-								countItems++;
-								ToolType itemComp = (_toolOperation.ListToolTypes(itm.ToolingCode)?.Find(x => x.Status != Status.Failed)) ?? throw new Exception(string.Format("Product Operation No.{0} - ToolingType {1} : ToolingCode is invalid. ", operation.OperationNo, itm.ToolingCode));
-							});
-						}
-						if (operation.OperationMachines is not null)
-						{
-							int machineCount = 0;
-							operation.OperationMachines.ForEach(machine =>
-							{
-								machineCount++;
-								if (string.IsNullOrEmpty(machine.MachineCode))
-								{
-									throw new Exception(string.Format("Product Operation No.{0} - Machine at pos. [{1}] - MachineCode is required. ", operation.OperationNo, machineCount));
-								}
-								else
-								{
-									Machine currentMachine = machines.FirstOrDefault(m => string.Equals(m.Code, machine.MachineCode, StringComparison.OrdinalIgnoreCase) && m.Status == Status.Active && m.OEEConfiguration is not null) ?? throw new Exception(string.Format("Product Operation No.{0} - Machine[{1}] : MachineCode is invalid. ", operation.OperationNo, machine.MachineCode));
-									//if (currentMachine is not null && currentMachine.TypeId != CurrentOperationType.Id)
-									//{
-									//    throw new Exception(string.Format("Product Operation No.{0} - Machine {1} : OperationType not assigned to this machine. ", operation.OperationNo, machine.MachineCode));
-									//}
-								}
-
-								if (machine.MachineTools is not null)
-								{
-									int countItems = 0;
-									machine.MachineTools.ForEach(itm =>
-									{
-										countItems++;
-										ToolType itemComp = _toolOperation.ListToolTypes(itm.ToolingCode).FirstOrDefault() ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ToolingType {2} : Tooling Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ToolingCode));
-									});
-								}
-								if (machine.MachineLabor is not null)
-								{
-									int countItems = 0;
-									machine.MachineLabor.ForEach(itm =>
-									{
-										countItems++;
-										CatProfile itemComp = _catalogRepo.GetCatalogProfile(itm.ProfileCode).Find(x => x.Status != Status.Failed) ?? throw new Exception(string.Format("Product Operation No.{0} - Machine {1} - ProfileCode {2} :  Profile Code is invalid. ", operation.OperationNo, machine.MachineCode, itm.ProfileCode));
-									});
-								}
-							});
-						}
-						if (operation.OperationByProducts is not null)
-						{
-							int countByProd = 0;
-							foreach (ProductOperationByProductExternal byProduct in operation.OperationByProducts)
-							{
-								countByProd++;
-								Component itemComp = ((await GetComponents(byProduct.ItemCode, true).ConfigureAwait(false))?.Where(x => x.Status != Status.Failed)?.FirstOrDefault()) ?? throw new Exception(string.Format("Product Operation No.{0} - ByProduct {1} : ItemCode is invalid. ", operation.OperationNo, byProduct.ItemCode));
-								MeasureUnit ItemUOM = measures.FirstOrDefault(x => string.Equals(x.Code, byProduct.InventoryUoM, StringComparison.OrdinalIgnoreCase)) ?? throw new Exception(string.Format("Product Operation No.{0} - ByProduct {1} : InventoryUoM is invalid. ", operation.OperationNo, byProduct.ItemCode));
-								Warehouse ItemWhs = warehouses.Find(x => string.Equals(x.Code, byProduct.WarehouseCode, StringComparison.OrdinalIgnoreCase)) ?? throw new Exception(string.Format("Product Operation No.{0} - ByProduct {1} : WarehouseCode is invalid. ", operation.OperationNo, byProduct.ItemCode));
-							}
-						}
-					}
-
-					// Comienza rellenado de objetos internos
-
-					ProcessEntry pe = new()
-					{
-						Code = item.ProductCode,
-						Name = !string.IsNullOrEmpty(item.ProductName) ? item.ProductName : item.ProductCode,
-						Quantity = item.Quantity,
-						Processes = [],
-						Components = [],
-						Tasks = [],
-						Tools = [],
-						Labor = [],
-						Version = item.Version,
-						Sequence = item.Sequence,
-						Warehouse = warehouseId,
-						Comments = item.Comments,
-						Formula = item.FormulaCode,
-						Schedule = string.Equals(item.Schedule.ToStr(), "YES", StringComparison.OrdinalIgnoreCase).ToInt32(),
-					};
-
-					Component itemInfo = new()
-					{
-						Code = item.ProductCode,
-						Name = !string.IsNullOrEmpty(item.ProductName) ? item.ProductName : item.ProductCode,
-						ComponentType = ComponentType.Product,
-						// Version = item.Version,
-						Status = Status.Active
-					};
-					if (existingComponent is not null)
-					{
-						itemInfo = existingComponent;
-					}
-					if (!MultiWarehouseEnabled)
-					{
-						ProcessEntry activeEntry = (await GetProcessEntry(item.ProductCode, null, null, null, systemOperator).ConfigureAwait(false))?.Find(x => x.Status == Status.Active);
-						if (activeEntry is not null)
-						{
-							existingEntry = (await GetProcessEntry(item.ProductCode, activeEntry.Warehouse, activeEntry.Version, activeEntry.Sequence, systemOperator).ConfigureAwait(false))?.Find(x => x.Status != Status.Failed);
-							if (existingEntry is not null && activeEntry.Warehouse != warehouseId)
-							{
-								existingEntry.Warehouse = warehouseId;
-								existingEntry.Version = item.Version;
-								existingEntry.Sequence = item.Sequence;
-								isForcedEdit = true;
-							}
-						}
-					}
-					else
-					{
-						existingEntry = (await GetProcessEntry(item.ProductCode, warehouseId, item.Version, item.Sequence, systemOperator).ConfigureAwait(false))?.Find(x => x.Status != Status.Failed);
-					}
-					if (existingEntry is not null)
-					{
-						pe = existingEntry;
-						pe.Quantity = item.Quantity;
-						pe.Name = item.ProductName;
-						if (!string.IsNullOrEmpty(item.Comments))
-						{
-							pe.Comments = item.Comments;
-						}
-						if (!string.IsNullOrEmpty(item.Schedule))
-						{
-							pe.Schedule = string.Equals(item.Schedule.ToStr(), "YES", StringComparison.OrdinalIgnoreCase).ToInt32();
-						}
-					}
-
-					pe.UnitId = measureUnitId;
-					pe.UnitType = measureUnitType;
-					if (!string.IsNullOrEmpty(item.Status))
-					{
-						pe.Status = item.Status.Trim().ToUpperInvariant() switch
-						{
-							"ACTIVE" => Status.Active,
-							"DRAFT" => Status.Disabled
-						};
-					}
-					else
-					{
-						pe.Status = Status.Active;
-					}
-					// New Optional fields
-					if (!string.IsNullOrEmpty(item.BomVersion))
-					{
-						pe.BomVersion = item.BomVersion.ToInt32();
-					}
-					// New Optional fields
-					if (!string.IsNullOrEmpty(item.BomSequence))
-					{
-						pe.BomSequence = item.BomSequence.ToInt32();
-					}
-					// New Optional fields
-					if (!string.IsNullOrEmpty(item.RouteVersion))
-					{
-						pe.RouteVersion = item.RouteVersion.ToInt32();
-					}
-					// New Optional fields
-					if (!string.IsNullOrEmpty(item.RouteSequence))
-					{
-						pe.RouteSequence = item.RouteSequence.ToInt32();
-					}
-
-					List<ProcessEntryProcess> oldProcesses = pe.Processes;
-					List<ProcessEntryTool> oldTools = pe.Tools;
-					List<ProcessEntryLabor> oldLabors = pe.Labor;
-					List<ProcessEntryComponent> oldComponents = pe.Components;
-					pe.Components = [];
-
-					//Operations
-					if (item.Operations?.Count > 0)
-					{
-						pe.Processes = [];
-
-						// tasks
-						foreach (ProductOperationExternal itmOperation in item.Operations)
-						{
-							ProcessTypeSubtype CurrentOperationSubType = subProcessTypes.FirstOrDefault(pt => string.Equals(pt.Code, itmOperation.OperationSubtype, StringComparison.OrdinalIgnoreCase));
-							ProcessType CurrentOperationType = processTypes.Find(pt => string.Equals(pt.Code, CurrentOperationSubType.ProcessTypeId, StringComparison.OrdinalIgnoreCase));
-							try
-							{
-								MeasureUnit operationUnit = measures.FirstOrDefault(x => string.Equals(x.Code, itmOperation.OutputUoM, StringComparison.OrdinalIgnoreCase));
-								ProcessEntryProcess oldOperation = null;
-								if (editMode || !string.IsNullOrEmpty(pe.Id))
-								{
-									oldOperation = oldProcesses?.Find(x => x.ProcessId.ToDouble() == itmOperation.OperationNo.ToDouble());
-								}
-								ProcessEntryProcess prc = new()
-								{
-									ProcessId = itmOperation.OperationNo.ToStr(),
-									ProcessTypeId = CurrentOperationSubType.ProcessTypeId,
-									ProcessSubTypeId = CurrentOperationSubType.Code,
-									Name = CurrentOperationSubType.Name,
-									Step = Math.Floor(itmOperation.OperationNo).ToInt32(),
-									Sort = itmOperation.OperationNo == 0 ? 0 : (10 * (itmOperation.OperationNo.ToDecimal() % Math.Floor(itmOperation.OperationNo.ToDecimal()))).ToDouble().ToInt32(),
-									TransferType = null,
-									TransferQty = null,
-									SlackTimeAfterPrevOp = null,
-									SlackTimeBeforeNextOp = null,
-									MaxTimeBeforeNextOp = null,
-									MaxOpSpanIncrease = null,
-									Quantity = itmOperation.Quantity,
-									OperationClassId = 1, // Production
-									Unit = operationUnit.Code
-								};
-
-								if (!editMode || !string.IsNullOrEmpty(itmOperation.TransferType))
-								{
-									prc.TransferType = itmOperation.TransferType?.ToUpperInvariant() == "AFTERTRANSFER" ? "AfterTransfer" : "AfterComplete";
-								}
-
-								if (!editMode && oldOperation is null)
-								{
-									prc.TransferQty = itmOperation.TransferQuantity.HasValue ? itmOperation.TransferQuantity.Value : (double?)0;
-								}
-								else if (oldOperation is not null)
-								{
-									if (itmOperation.TransferQuantity.HasValue && !isForcedEdit)
-									{
-										prc.TransferQty = itmOperation.TransferQuantity.Value;
-									}
-									else
-									{
-										prc.TransferQty = oldOperation.TransferQty;
-									}
-								}
-
-								if (!editMode && oldOperation is null)
-								{
-									if (itmOperation.SlackTimeAftNextOp.HasValue)
-									{
-										prc.SlackTimeAfterPrevOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeAftNextOp.ToInt32(), true);
-									}
-									else
-									{
-										prc.SlackTimeAfterPrevOp = Helper.Common.SecondsToTimeString(0, true);
-									}
-								}
-								else if (oldOperation is not null)
-								{
-									if (itmOperation.SlackTimeAftNextOp.HasValue && !isForcedEdit)
-									{
-										prc.SlackTimeAfterPrevOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeAftNextOp.ToInt32(), true);
-									}
-									else
-									{
-										prc.SlackTimeAfterPrevOp = oldOperation.SlackTimeAfterPrevOp;
-									}
-								}
-
-								if (!editMode && oldOperation is null)
-								{
-									if (itmOperation.SlackTimeBefNextOp.HasValue)
-									{
-										prc.SlackTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeBefNextOp.ToInt32(), true);
-									}
-									else
-									{
-										prc.SlackTimeBeforeNextOp = Helper.Common.SecondsToTimeString(0, true);
-									}
-								}
-								else if (oldOperation is not null)
-								{
-									if (itmOperation.SlackTimeBefNextOp.HasValue && !isForcedEdit)
-									{
-										prc.SlackTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.SlackTimeBefNextOp.ToInt32(), true);
-									}
-									else
-									{
-										prc.SlackTimeBeforeNextOp = oldOperation.SlackTimeBeforeNextOp;
-									}
-								}
-
-								if (!editMode && oldOperation is null)
-								{
-									if (itmOperation.MaxTimeBefNextOp.HasValue)
-									{
-										prc.MaxTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.MaxTimeBefNextOp.ToInt32(), true);
-									}
-									else
-									{
-										prc.MaxTimeBeforeNextOp = Helper.Common.SecondsToTimeString(0, true);
-									}
-								}
-								else if (oldOperation is not null)
-								{
-									if (itmOperation.MaxTimeBefNextOp.HasValue && !isForcedEdit)
-									{
-										prc.MaxTimeBeforeNextOp = Helper.Common.SecondsToTimeString(itmOperation.MaxTimeBefNextOp.ToInt32(), true);
-									}
-									else
-									{
-										prc.MaxTimeBeforeNextOp = oldOperation.MaxTimeBeforeNextOp;
-									}
-								}
-
-								if (!editMode && oldOperation is null)
-								{
-									if (itmOperation.MaxOpSpanIncrease.HasValue)
-									{
-										prc.MaxOpSpanIncrease = Helper.Common.SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
-									}
-									else
-									{
-										prc.MaxOpSpanIncrease = Helper.Common.SecondsToTimeString(0, true);
-									}
-								}
-								else if (oldOperation is not null)
-								{
-									if (itmOperation.MaxOpSpanIncrease.HasValue && !isForcedEdit)
-									{
-										prc.MaxOpSpanIncrease = Helper.Common.SecondsToTimeString(itmOperation.MaxOpSpanIncrease.ToInt32(), true);
-									}
-									else
-									{
-										prc.MaxOpSpanIncrease = oldOperation.MaxOpSpanIncrease;
-									}
-								}
-
-								// Campos no mapeados
-								if ((editMode || isForcedEdit) && oldOperation is not null)
-								{
-									prc.SpareStringField1 = oldOperation.SpareStringField1;
-									prc.SpareStringField2 = oldOperation.SpareStringField2;
-									prc.SpareNumberField = oldOperation.SpareNumberField;
-								}
-
-								//Attributes
-								if (!editMode && !isForcedEdit)
-								{
-									if (itmOperation.Attributes?.Count > 0)
-									{
-										prc.Attributes = [];
-										itmOperation.Attributes.ForEach(prdAttr =>
-										{
-											prc.Attributes.Add(new ProcessEntryAttribute
-											{
-												AttributeId = prdAttr.AttributeTypeCode,
-												Selected = true,
-												Value = prdAttr.AttributeCode
-											});
-										});
-									}
-								}
-								else if (oldOperation is not null)
-								{
-									if (itmOperation.Attributes?.Count > 0 && !isForcedEdit)
-									{
-										prc.Attributes = [];
-										itmOperation.Attributes.ForEach(prdAttr =>
-										{
-											prc.Attributes.Add(new ProcessEntryAttribute
-											{
-												AttributeId = prdAttr.AttributeTypeCode,
-												Selected = true,
-												Value = prdAttr.AttributeCode
-											});
-										});
-									}
-									else
-									{
-										prc.Attributes = oldOperation.Attributes;
-									}
-								}
-								int OldOperationTimeType = 0;
-								if (oldProcesses is not null)
-								{
-									ProcessEntryProcess oldProcess = oldProcesses.Find(x => x.Name == prc.Name && x.ProcessTypeId == prc.ProcessTypeId && x.Step == prc.Step && x.Sort == prc.Sort);
-									if (oldProcess is not null)
-									{
-										prc.ProcessId = oldProcess.ProcessId;
-										OldOperationTimeType = oldProcess.ProcessTimeType.ToInt32();
-									}
-								}
-								prc.ProcessTimeType = itmOperation.OperationTimeType switch
-								{
-									"SpecificOpTime" => 4,
-									"SpecificRatePerHour" => 5,
-									"SpecificBatchTime" => 6,
-									_ => 4
-								};
-								if ((string.IsNullOrEmpty(itmOperation.OperationTimeType) || isForcedEdit) && oldProcesses is not null)
-								{
-									prc.ProcessTimeType = OldOperationTimeType;
-								}
-
-								// Tasks
-								if (itmOperation.Tasks?.Count > 0)
-								{
-									List<Activity> tasks = _dataImportOperation.GetDataImportTasks(itmOperation, systemOperator);
-									tasks ??= [];
-									if (!editMode)
-									{
-										tasks.ForEach(tsk => tsk.ProcessId = prc.ProcessId);
-										if (pe.Tasks is null)
-										{
-											pe.Tasks = tasks;
-										}
-										else
-										{
-											pe.Tasks.AddRange(tasks);
-										}
-									}
-									else
-									{
-										tasks.ForEach(tsk =>
-										{
-											pe.Tasks.Where(x => x.SortId == tsk.SortId && x.TriggerId == tsk.TriggerId)?.ToList()?.ForEach(x =>
-											{
-												x.ManualDelete = true;
-											});
-											tsk.ProcessId = prc.ProcessId;
-											pe.Tasks.Add(tsk);
-										});
-									}
-								}
-								else if (CurrentOperationType is not null && !editMode && CurrentOperationType.Tasks is not null)
-								{
-									pe.Tasks ??= [];
-									CurrentOperationType.Tasks.ForEach(tsk =>
-									{
-										pe.Tasks.Add(new Activity
-										{
-											Id = tsk.Id,
-											ProcessId = prc.ProcessId,
-											SortId = tsk.SortId,
-											TriggerId = tsk.TriggerId,
-											IsMandatory = tsk.IsMandatory,
-											Origin = "OperationType"
-										});
-									});
-								}
-								// Machines
-								prc.AvailableDevices = _dataImportOperation.GetDataImportAvailableDevices(itmOperation, oldOperation);
-								if (prc.AvailableDevices?.Any(d => d.Selected) == false)
-								{
-									DeviceSpeed firstDevice = prc.AvailableDevices?.OrderBy(o => o.LineId)?.FirstOrDefault(x => x.Id != "00000000-0000-0000-0000-000000000000");
-									firstDevice ??= prc.AvailableDevices?.OrderBy(o => o.LineId)?.FirstOrDefault();
-									firstDevice.Selected = true;
-								}
-								// Adicionar maquinas previas /Alternativas cuando es SAP B1
-								if (currentERP is not null && (currentERP.ErpCode == "SAP_B1" || currentERP.ErpCode == "SAP_B1_OPT") && oldOperation?.AvailableDevices is not null)
-								{
-									prc.AvailableDevices ??= [];
-									oldOperation.AvailableDevices.ForEach(dev =>
-									{
-										//if (!dev.Selected)
-										{
-											DeviceSpeed oldval = new()
-											{
-												LineUID = dev.LineUID,
-												LineId = string.IsNullOrEmpty(dev.LineId) ? "0" : dev.LineId,
-												Id = dev.Id,
-												Quantity = dev.Quantity,
-												AutomaticSequencing = dev.AutomaticSequencing,
-												ExecTime = dev.ExecTime,
-												LotCapacity = dev.LotCapacity,
-												Schedule = dev.Schedule,
-												Selected = false,
-												SetupTime = dev.SetupTime,
-												TimeUnit = dev.TimeUnit,
-												Unit = dev.Unit,
-												WaitTime = dev.WaitTime,
-												IsBackflush = dev.IsBackflush
-											};
-											if (!prc.AvailableDevices.Any(x => x.Id == dev.Id))
-											{
-												prc.AvailableDevices.Add(oldval);
-											}
-										}
-									});
-								}
-								if (prc.AvailableDevices?.Any(d => d.Selected) == false)
-								{
-									DeviceSpeed firstDevice = prc.AvailableDevices?.OrderBy(o => o.LineId)?.FirstOrDefault(x => x.Id != "00000000-0000-0000-0000-000000000000");
-									firstDevice ??= prc.AvailableDevices?.OrderBy(o => o.LineId)?.FirstOrDefault();
-									firstDevice.Selected = true;
-								}
-								if (editMode && oldOperation is not null && prc.AvailableDevices is not null)
-								{
-									prc.AvailableDevices.Where(m => string.IsNullOrEmpty(m.LineUID))?.ToList()?.ForEach(m =>
-									{
-										ProductMachineExternal curm = itmOperation.OperationMachines.Find(om => om.MachineCode == m.Id && om.LineID == m.LineId);
-										DeviceSpeed speed = oldOperation.AvailableDevices?.Find(om => om.LineId == m.LineId);
-										if (speed is not null)
-										{
-											m.LineUID = speed.LineUID;
-											m.LotCapacity = speed.LotCapacity;
-											m.WaitTime = speed.WaitTime;
-											if (curm is not null)
-											{
-												if (string.IsNullOrEmpty(curm.AutomaticSequencing))
-												{
-													m.AutomaticSequencing = speed.AutomaticSequencing;
-												}
-												if (string.IsNullOrEmpty(curm.Schedule))
-												{
-													m.Schedule = speed.Schedule;
-												}
-												if (string.IsNullOrEmpty(curm.IssueMode))
-												{
-													m.IsBackflush = speed.IsBackflush;
-												}
-											}
-											else
-											{
-												m.Schedule = speed.Schedule;
-												m.AutomaticSequencing = speed.AutomaticSequencing;
-												m.IsBackflush = speed.IsBackflush;
-											}
-										}
-										else
-										{
-											m.LineUID = Guid.CreateVersion7().ToString();
-										}
-									});
-								}
-								// Sub products
-								prc.Subproducts = await _dataImportOperation.GetDataImportSubProducts(itmOperation).ConfigureAwait(false);
-								if (editMode && oldOperation is not null && prc.Subproducts is not null)
-								{
-									prc.Subproducts.Where(m => string.IsNullOrEmpty(m.LineUID))?.ToList()?.ForEach(m =>
-									{
-										SubProduct sprd = oldOperation.Subproducts?.Find(om => om.LineId == m.LineId);
-										if (sprd is not null)
-										{
-											m.LineUID = sprd.LineUID;
-										}
-										else
-										{
-											m.LineUID = Guid.CreateVersion7().ToString();
-										}
-									});
-								}
-								//Attributes
-								prc.Attributes?.ForEach(x => x.ProcessId = prc.ProcessId);
-								pe.Processes.Add(prc);
-							}
-							catch (ResponseDataException ex)
-							{
-								returnValue.Add(new ResponseData
-								{
-									Action = ex.Action,
-									Code = item.ProductCode,
-									Entity = "Product",
-									IsSuccess = false,
-									Message = ex.Message
-								});
-							}
-						}
-						int lastStep = pe.Processes.OrderBy(o => o.Step).Select(o => o.Step).LastOrDefault();
-						if (lastStep > 0)
-						{
-							if (pe.Processes.Count(x => x.Step == lastStep) > 1)
-							{
-								throw new Exception("Parallel Operations are not allowed at the end.");
-							}
-
-							foreach (ProcessEntryProcess process in pe.Processes.Where(x => x.Step == lastStep))
-							{
-								process.IsOutput = true;
-							}
-						}
-					}
-
-					//TODO REVISAR LINE ID, AGREGAR VALIDACIONES MANDATORIO Y LLENAR LINEUID
-					pe.Tools = await _dataImportOperation.GetDataImportTooling(item, pe, systemOperator).ConfigureAwait(false);
-					if (editMode && pe.Tools is not null && oldTools is not null)
-					{
-						pe.Tools.Where(tooling => string.IsNullOrEmpty(tooling.LineUID))?.ToList()?.ForEach(tlng =>
-						{
-							ProductOperationToolExternal origTool = item.Operations.Find(x => x.OperationNo.ToDouble() == tlng.ProcessId.ToDouble())?.OperationTools.Find(ot => ot.ToolingCode == tlng.ToolId && ot.LineID == tlng.LineId.ToInt32());
-							ProcessEntryTool oldTooling = oldTools?.Find(x => x.LineId.ToInt32() == tlng.LineId.ToInt32());
-							if (oldTooling is not null)
-							{
-								if (string.IsNullOrEmpty(tlng.Usage) || tlng.Usage == "0")
-								{
-									tlng.Usage = oldTooling.Usage;
-								}
-								tlng.Source = oldTooling.Source;
-								tlng.Cost = oldTooling.Cost;
-								if (origTool is not null && string.IsNullOrEmpty(origTool.Schedule))
-								{
-									tlng.Schedule = oldTooling.Schedule;
-								}
-							}
-							if (oldTooling is not null && !string.IsNullOrEmpty(oldTooling.LineUID))
-							{
-								tlng.LineUID = oldTooling.LineUID;
-							}
-							else
-							{
-								tlng.LineUID = Guid.CreateVersion7().ToStr();
-							}
-						});
-					}
-
-					pe.Labor = await _dataImportOperation.GetDataImportLabor(item, pe, systemOperator).ConfigureAwait(false);
-					if (editMode && pe.Labor is not null && oldLabors is not null)
-					{
-						pe.Labor.Where(x => string.IsNullOrEmpty(x.LineUID))?.ToList()?.ForEach(lbr =>
-						{
-							ProductOperationLaborExternal origLbr = item.Operations.Find(x => x.OperationNo.ToDouble() == lbr.ProcessId.ToDouble())?.OperationLabor.Find(ot => ot.ProfileCode == lbr.LaborId && ot.LineID == lbr.LineId.ToInt32());
-							ProcessEntryLabor OldLabor = oldLabors?.Find(x => x.LineId.ToInt32() == lbr.LineId.ToInt32());
-							if (OldLabor is not null)
-							{
-								if (string.IsNullOrEmpty(lbr.Usage) || lbr.Usage == "0")
-								{
-									lbr.Usage = OldLabor.Usage;
-								}
-								lbr.Source = OldLabor.Source;
-								lbr.Cost = OldLabor.Cost;
-								if (origLbr is not null && string.IsNullOrEmpty(origLbr.Schedule))
-								{
-									lbr.Schedule = OldLabor.Schedule;
-								}
-							}
-							if (OldLabor is not null && !string.IsNullOrEmpty(OldLabor.LineUID))
-							{
-								lbr.LineUID = OldLabor.LineUID;
-							}
-							else
-							{
-								lbr.LineUID = Guid.CreateVersion7().ToStr();
-							}
-						});
-					}
-					pe.Components = await _dataImportOperation.GetDataImportItems(item, pe, systemOperator).ConfigureAwait(false);
-					if (editMode && pe.Components is not null && oldComponents is not null)
-					{
-						pe.Components.Where(x => string.IsNullOrEmpty(x.LineUID))?.ToList()?.ForEach(cmp =>
-						{
-							ProductOperationItemExternal origItm = item.Operations.Find(x => x.OperationNo.ToDouble() == cmp.ProcessId.ToDouble())?.OperationItems.Find(ot => ot.ItemCode == cmp.ComponentId && ot.LineID == cmp.LineId.ToInt32());
-							ProcessEntryComponent oldComp = oldComponents?.Find(x => x.LineId.ToInt32() == cmp.LineId.ToInt32());
-							if (oldComp is not null)
-							{
-								cmp.Source = oldComp.Source;
-								cmp.Class = oldComp.Class;
-								if (origItm is not null && string.IsNullOrEmpty(origItm.Schedule))
-								{
-									cmp.IsSchedule = oldComp.IsSchedule;
-								}
-								if (origItm is not null && string.IsNullOrEmpty(origItm.Type))
-								{
-									cmp.Class = oldComp.Class;
-								}
-								if (origItm is not null && string.IsNullOrEmpty(origItm.IssueMethod))
-								{
-									cmp.IsBackflush = oldComp.IsBackflush;
-								}
-								if (origItm is not null && string.IsNullOrEmpty(origItm.Source))
-								{
-									cmp.Source = oldComp.Source;
-								}
-							}
-							if (oldComp is not null && !string.IsNullOrEmpty(oldComp.LineUID))
-							{
-								cmp.LineUID = oldComp.LineUID;
-							}
-							else
-							{
-								cmp.LineUID = Guid.CreateVersion7().ToStr();
-							}
-						});
-					}
-
-					if (!editMode && pe.Tasks is not null)
-					{
-						foreach (Activity tsk in pe.Tasks)
-						{
-							if (!string.IsNullOrEmpty(tsk.Id) && string.Equals(tsk.Origin, "OPERATIONTYPE", StringComparison.OrdinalIgnoreCase))
-							{
-								Activity clonedActivity = await _activityOperation.CloneActivity(new Activity(tsk.Id), systemOperator, "PRODUCT").ConfigureAwait(false);
-								if (clonedActivity is not null)
-								{
-									tsk.Id = clonedActivity.Id;
-								}
-							}
-						}
-					}
-
-					itemInfo.ProcessEntry = pe;
-					ResponseData resp;
-					if (Validate)
-					{
-						resp = _componentRepo.MergeProduct(itemInfo, systemOperator, Validate, Level);
-						await _attachmentOperation.SaveImageEntity("Item", itemInfo.Image, itemInfo.Code, systemOperator).ConfigureAwait(false);
-						if (itemInfo.AttachmentIds is not null)
-						{
-							foreach (string attachment in itemInfo.AttachmentIds)
-							{
-								await _attachmentOperation.AttachmentSync(attachment, itemInfo.Code, systemOperator).ConfigureAwait(false);
-							}
-						}
-					}
-					else
-					{
-						if (string.IsNullOrEmpty(itemInfo.ProcessEntry.Id))
-						{
-							itemInfo.ProcessEntry.Id = string.Empty;
-						}
-						ResponseData itemFound = _componentRepo.MergeProduct(itemInfo, systemOperator, true, Level);
-						await _attachmentOperation.SaveImageEntity("Item", itemInfo.Image, itemInfo.Code, systemOperator).ConfigureAwait(false);
-						if (itemInfo.AttachmentIds is not null)
-						{
-							foreach (string attachment in itemInfo.AttachmentIds)
-							{
-								await _attachmentOperation.AttachmentSync(attachment, itemInfo.Code, systemOperator).ConfigureAwait(false);
-							}
-						}
-						if (itemFound.Action == ActionDB.Update)
-						{
-							itemInfo.Id = itemFound.Id;
-							if (!string.IsNullOrEmpty(itemInfo.ProcessEntry.Id))
-							{
-								itemInfo.ProcessEntryId = itemInfo.ProcessEntry.Id;
-							}
-						}
-						resp = await MergeProduct(itemFound.Action, itemInfo, systemOperator, Validate, Level, NotifyOnce, false, true, IntegrationSource.ERP).ConfigureAwait(false);
-						if (resp.IsSuccess)
-						{
-							itemInfo.ProcessEntryId = resp.Id;
-							_componentRepo.MergeComponent(itemInfo, systemOperator, Validate);
-						}
-					}
+					// Use ProcessProduct -> this runs NormalizeComponent so ERP behaves like UI
+					ResponseData resp = await ProcessProduct(mode, item, systemOperator).ConfigureAwait(false);
 					returnValue.Add(resp);
 				}
 				catch (Exception ex)
 				{
-					MessageError = new ResponseData
+					returnValue.Add(new ResponseData
 					{
-						Id = BaseId,
-						Message = ex.Message,
-						Code = "Line:" + Line.ToStr()
-					};
-					returnValue.Add(MessageError);
+						Code = item.Code,
+						Entity = "Product",
+						IsSuccess = false,
+						Message = ex.Message
+					});
 				}
 			}
 		}
-		if (!Validate)
-		{
-			// if (!NotifyOnce)
-			// {
-			// 	Services.ServiceManager.SendMessage(MessageBrokerType.CatalogChanged, new { Catalog = Entities.Product, Action = ActionDB.IntegrateAll.ToStr() });
-			// }
-			returnValue = Level switch
-			{
-				LevelMessage.Warning => [.. returnValue.Where(x => !string.IsNullOrEmpty(x.Message))],
-				LevelMessage.Error => [.. returnValue.Where(x => !x.IsSuccess)],
-				_ => returnValue
-			};
-		}
-
 		return returnValue;
 	}
+
 	/// <summary>
-	/// Merges a Product into the system.
+	/// Core persistence logic. Merges a normalized <see cref="Component"/> into the system.
+	/// Call <see cref="ProcessProduct"/> for new work — it ensures normalization runs first.
 	/// </summary>
-	/// <exception cref="UnauthorizedAccessException"></exception>
-	public async Task<ResponseData> MergeProduct(ActionDB mode, Component componentInfo, User systemOperator, bool Validate = false, LevelMessage Level = LevelMessage.Success, bool _ = true, bool isNewVersion = false, bool __ = false, IntegrationSource intSource = IntegrationSource.SF)
+	public async Task<ResponseData> MergeProduct(ActionDB mode, Component componentInfo, User systemOperator, bool Validate = false, LevelMessage Level = LevelMessage.Success, bool NotifyOnce = true, bool isNewVersion = false, bool isExternalEndpoint = false, IntegrationSource intSource = IntegrationSource.SF)
 	{
 		ResponseData returnValue = null;
+
 
 		if (componentInfo.ProcessEntry.MinQuantity > componentInfo.ProcessEntry.MaxQuantity && componentInfo.ProcessEntry.MaxQuantity > 0)
 		{
 			throw new Exception("Maximum quantity must be greater than Minimum Quantity");
 		}
+
+		// UNIFIED LOGIC: Enrich with ERP data if the source is ERP
+		if (intSource == IntegrationSource.ERP && componentInfo.ComponentType == ComponentType.Product && componentInfo.ProcessEntry is not null)
+		{
+			ProcessEntry pe = componentInfo.ProcessEntry;
+			ProductExternal item = new() { ProductCode = pe.Code, WarehouseCode = pe.Warehouse, Version = pe.Version, Sequence = pe.Sequence };
+			
+			// Fetch external details from ERP logic
+			pe.Tasks = _dataImportOperation.GetDataImportTasks(item, systemOperator);
+			pe.Components = await _dataImportOperation.GetDataImportItems(item, pe, systemOperator).ConfigureAwait(false);
+			pe.Tools = await _dataImportOperation.GetDataImportTooling(item, pe, systemOperator).ConfigureAwait(false);
+			pe.Labor = await _dataImportOperation.GetDataImportLabor(item, pe, systemOperator).ConfigureAwait(false);
+		}
+
 		TransactionOptions tso = new()
 		{
 			IsolationLevel = IsolationLevel.ReadCommitted

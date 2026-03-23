@@ -22,8 +22,8 @@ public class ProductKafkaProxy : BaseKafkaProxy, IComponentOperation
     { }
 
     public async Task<List<ResponseData>> ListUpdateProduct(
-        List<ProductExternal> itemList,
-        List<ProductExternal> itemListOriginal,
+        List<Component> itemList,
+        List<Component> itemListOriginal,
         User systemOperator,
         bool Validate,
         LevelMessage Level)
@@ -43,6 +43,28 @@ public class ProductKafkaProxy : BaseKafkaProxy, IComponentOperation
         return [result];
     }
 
+    public async Task<ResponseData> ProcessProduct(ActionDB mode, Component component, User systemOperator)
+    {
+        var result = await PublishAsync(
+            SyncERPEntity.PRODUCT_SERVICE,
+            "ProcessProduct",
+            systemOperator,
+            new { Mode = mode, Component = component }
+        ).ConfigureAwait(false);
+        return result;
+    }
+
+    public async Task<ResponseData> ProcessProduct(ActionDB mode, ProductExternal externalProduct, User systemOperator)
+    {
+        var result = await PublishAsync(
+            SyncERPEntity.PRODUCT_SERVICE,
+            "ProcessProduct",
+            systemOperator,
+            new { Mode = mode, ExternalProduct = externalProduct }
+        ).ConfigureAwait(false);
+        return result;
+    }
+
     public async Task<ResponseData> MergeProduct(
         ActionDB mode,
         Component componentInfo,
@@ -54,21 +76,8 @@ public class ProductKafkaProxy : BaseKafkaProxy, IComponentOperation
         bool isExternalEndpoint = false,
         IntegrationSource intSource = IntegrationSource.SF)
     {
-        return await PublishAsync(
-            SyncERPEntity.PRODUCT_SERVICE,
-            "MergeProduct",
-            systemOperator,
-            new
-            {
-                Mode = mode,
-                Component = componentInfo,
-                Validate,
-                Level,
-                NotifyOnce,
-                isNewVersion,
-                isExternalEndpoint,
-                intSource
-            }).ConfigureAwait(false);
+        // Fallback to the UI endpoint behavior
+        return await ProcessProduct(mode, componentInfo, systemOperator).ConfigureAwait(false);
     }
 
     // ─── Read operations (not available via Kafka proxy) ─────────────────────

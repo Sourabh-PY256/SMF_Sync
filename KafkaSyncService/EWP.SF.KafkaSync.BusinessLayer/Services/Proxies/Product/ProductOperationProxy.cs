@@ -18,15 +18,41 @@ public class ProductOperationProxy : BaseHttpProxy, IComponentOperation
     }
 
     public async Task<List<ResponseData>> ListUpdateProduct(
-        List<ProductExternal> itemList,
-        List<ProductExternal> itemListOriginal,
+        List<Component> itemList,
+        List<Component> itemListOriginal,
         User systemOperator,
         bool Validate,
         LevelMessage Level)
     {
-        // Endpoint: product/{validate}/{level}
-        string endpoint = $"product/{Validate.ToString().ToLower()}/{Level}";
-        return await PostAsync<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);
+        var results = new List<ResponseData>();
+        foreach (var item in itemList)
+        {
+            // Call the single-item Merge endpoint for each component.
+            // Using "Product/Merge/Create" matches the current user preference.
+            string endpoint = "Product/Merge/Update";
+            var response = await PostAsync<ResponseModel>(endpoint, item).ConfigureAwait(false);
+
+            results.Add(new ResponseData
+            {
+                IsSuccess = response.IsSuccess,
+                Message = response.Message,
+                Entity = response.Data,
+                Code = item.Code,
+                Action = ActionDB.Update,
+                Version = item.Version
+            });
+        }
+        return results;
+    }
+
+    public Task<ResponseData> ProcessProduct(ActionDB mode, Component component, User systemOperator)
+    {
+        return PostAsync<ResponseData>($"Product/Merge/{mode}", component);
+    }
+
+    public Task<ResponseData> ProcessProduct(ActionDB mode, ProductExternal externalProduct, User systemOperator)
+    {
+        return PostAsync<ResponseData>($"Product/Sync/{mode}", externalProduct);
     }
 
     public async Task<ResponseData> MergeProduct(
@@ -40,18 +66,8 @@ public class ProductOperationProxy : BaseHttpProxy, IComponentOperation
         bool isExternalEndpoint = false,
         IntegrationSource intSource = IntegrationSource.SF)
     {
-        return await PostAsync<ResponseData>("Product/Merge", new
-        {
-            Mode = mode,
-            Component = componentInfo,
-            systemOperator,
-            Validate,
-            Level,
-            NotifyOnce,
-            isNewVersion,
-            isExternalEndpoint,
-            intSource
-        }).ConfigureAwait(false);
+        // Fallback to the UI endpoint, matching the controller's expectation
+        return await ProcessProduct(mode, componentInfo, systemOperator).ConfigureAwait(false);
     }
 
     // ─── Read operations (not available via HTTP proxy) ───────────────────────
