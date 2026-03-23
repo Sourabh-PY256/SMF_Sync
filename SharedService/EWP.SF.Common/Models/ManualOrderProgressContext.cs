@@ -767,3 +767,63 @@ public class OrderTransactionMaterialDetailSync
 	public string OrderLot { get; set; }
 }
 
+/// <summary>
+/// 
+/// </summary>
+public class TransactionProductSyncRequest
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonProperty("sf_order_transactions_product")]
+    public List<OrderTransactionProductSync> OrderTransactionsProduct { get; set; }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    [JsonProperty("sf_order_transactions_product_detail")]
+    public List<OrderTransactionProductDetailSync> OrderTransactionsProductDetail { get; set; }
+}
+
+/// <summary>
+/// 
+/// </summary>
+public class OrderTransactionProductSync
+{
+    public string TransactionId { get; set; }
+    public string OperationNo { get; set; }
+    public string OrderCode { get; set; }
+    public DateTime StartEntryDate { get; set; }
+    public DateTime EndEntryDate { get; set; }
+    public double Quantity { get; set; }
+    public double OrderFactor { get; set; }
+    public double ProcessFactor { get; set; }
+    public string EmployeeId { get; set; }
+    public int UserId { get; set; }
+    public string ActivityInstanceId { get; set; }
+    public bool IsPartial { get; set; }
+    public string IssuedLot { get; set; }
+    public string Comments { get; set; }
+    public string ExternalId { get; set; }
+    public string ExternalDate { get; set; }
+}
+
+/// <summary>
+/// 
+/// </summary>
+public class OrderTransactionProductDetailSync
+{
+    public string TransactionId { get; set; }
+    public string ItemCode { get; set; }
+    public string LotNumber { get; set; }
+    public string Pallet { get; set; }
+    public string BinLocationCode { get; set; }
+    public double Quantity { get; set; }
+    public string LotStatusCode { get; set; }
+    public string InventoryStatusCode { get; set; }
+    public string LineNo { get; set; }
+    public string WarehouseCode { get; set; }
+    public string MachineCode { get; set; }
+    public string OriginalMachine { get; set; }
+}
+

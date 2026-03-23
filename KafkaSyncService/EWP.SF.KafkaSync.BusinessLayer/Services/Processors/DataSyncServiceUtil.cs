@@ -37,7 +37,7 @@ public static class DataSyncServiceUtil
                 objSearch ??= jObject;
                 if (listMapSchema is not null)
                 {
-                    responseArray.Add(MapProperties(objSearch, listMapSchema, ignoreDefaults));
+                    responseArray.Add(MapProperties(objSearch, listMapSchema, ignoreDefaults, jObject));
                 }
             }
             response = responseArray;
@@ -53,7 +53,7 @@ public static class DataSyncServiceUtil
             objSearch ??= jsResult;
             if (listMapSchema is not null)
             {
-                response = MapProperties(objSearch, listMapSchema, ignoreDefaults);
+                response = MapProperties(objSearch, listMapSchema, ignoreDefaults, jsResult);
             }
         }
         return response;
@@ -64,188 +64,337 @@ public static class DataSyncServiceUtil
         public static IServiceProvider Provider { get; set; }
     }
 
-    public static dynamic MapProperties(JToken objSearch, List<DataSyncMapSchema> listMapSchema, bool ignoreDefault = false)
+    public static dynamic MapProperties(JToken objSearch, List<DataSyncMapSchema> listMapSchema, bool ignoreDefault = false, JToken parentToken = null)
     {
         if (objSearch.Type == JTokenType.Array)
         {
             List<dynamic> response = [];
             foreach (JToken e in objSearch.ToArray())
             {
-                dynamic elem = MapObject(e, listMapSchema, ignoreDefault);
+                dynamic elem = MapObject(e, listMapSchema, ignoreDefault, parentToken);
                 response.Add(elem);
             }
             return response;
         }
         else if (objSearch.Type == JTokenType.Object)
         {
-            return MapObject(objSearch, listMapSchema, ignoreDefault);
+            return MapObject(objSearch, listMapSchema, ignoreDefault, parentToken);
         }
 
         return null; // Handle other JToken types if needed
     }
 
-    public static dynamic MapObject(JToken objToken, List<DataSyncMapSchema> listMapSchema, bool ignoreDefault = false)
+    // public static dynamic MapObject(JToken objToken, List<DataSyncMapSchema> listMapSchema, bool ignoreDefault = false)
+    // {
+    //     dynamic response = new JObject();
+    //     foreach (DataSyncMapSchema f in listMapSchema)
+    //     {
+    //         if (f.Type == "string")
+    //         {
+    //             string defaultValue = !string.IsNullOrEmpty(f.DefaultValue) ? f.DefaultValue.Trim() : string.Empty;
+    //             if (ignoreDefault)
+    //             {
+    //                 defaultValue = null;
+    //             }
+
+    //             string value;
+    //             try
+    //             {
+    //                 value = objToken.Value<string>(f.OriginProperty) ?? defaultValue;
+    //                 if (!string.IsNullOrEmpty(defaultValue) && string.IsNullOrEmpty(value))
+    //                 {
+    //                     value = defaultValue;
+    //                 }
+    //             }
+    //             catch
+    //             {
+    //                 value = objToken[f.OriginProperty].ToStr() ?? defaultValue;
+    //             }
+
+    //             // ✅ Apply MappingValues only for string type
+    //             if (f.MappingValues != null && f.MappingValues.Any())
+    //             {
+    //                 var mapped = f.MappingValues.FirstOrDefault(m => m.ERPValue == value);
+    //                 if (mapped != null)
+    //                 {
+    //                     value = mapped.SFValue;
+    //                 }
+    //             }
+
+    //             if (DateTime.TryParse(value, out DateTime dateValue) && value.Length == 19)
+    //             {
+    //                 value = dateValue.ToString("s");
+    //             }
+    //             response[f.MapProperty] = value?.Trim();
+    //         }
+
+    //         if (f.Type == "integer")
+    //         {
+    //             int? defaultValue = (f.DefaultValue ?? "0").ToInt32();
+    //             if (ignoreDefault)
+    //             {
+    //                 defaultValue = null;
+    //             }
+    //             int value = objToken.Value<int>(f.OriginProperty);
+    //             if (Math.Abs(value) < 0.0001 && Math.Abs((double)defaultValue.GetValueOrDefault()) >= 0.0001)
+    //             {
+    //                 if (!ignoreDefault)
+    //                 {
+    //                     response[f.MapProperty] = defaultValue;
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 response[f.MapProperty] = value;
+    //             }
+    //         }
+
+    //         if (f.Type == "float")
+    //         {
+    //             float? defaultValue;
+    //             _ = float.TryParse(f.DefaultValue, out float tempDefault);
+    //             defaultValue = tempDefault;
+    //             if (ignoreDefault)
+    //             {
+    //                 defaultValue = null;
+    //             }
+    //             float value = objToken.Value<float>(f.OriginProperty);
+
+    //             if (Math.Abs(value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+    //             {
+    //                 if (!ignoreDefault)
+    //                 {
+    //                     response[f.MapProperty] = defaultValue;
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 response[f.MapProperty] = value;
+    //             }
+    //         }
+
+    //         if (f.Type == "double")
+    //         {
+    //             double? defaultValue = f.DefaultValue.ToDouble();
+    //             if (ignoreDefault)
+    //             {
+    //                 defaultValue = null;
+    //             }
+    //             double? value = objToken.Value<double?>(f.OriginProperty);
+    //             if (value is not null)
+    //             {
+    //                 if (Math.Abs(value.GetValueOrDefault()) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+    //                 {
+    //                     if (!ignoreDefault)
+    //                     {
+    //                         response[f.MapProperty] = defaultValue;
+    //                     }
+    //                 }
+    //                 else
+    //                 {
+    //                     response[f.MapProperty] = value;
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 if (!ignoreDefault)
+    //                 {
+    //                     response[f.MapProperty] = defaultValue;
+    //                 }
+    //             }
+    //         }
+
+    //         if (f.Type == "decimal")
+    //         {
+    //             decimal? defaultValue = f.DefaultValue.ToDecimal();
+    //             if (ignoreDefault)
+    //             {
+    //                 defaultValue = null;
+    //             }
+    //             decimal value = objToken.Value<decimal>(f.OriginProperty);
+
+    //             if (value == 0 && defaultValue != 0)
+    //             {
+    //                 if (!ignoreDefault)
+    //                 {
+    //                     response[f.MapProperty] = defaultValue;
+    //                 }
+    //             }
+    //             else
+    //             {
+    //                 response[f.MapProperty] = value;
+    //             }
+    //         }
+
+    //         if (f.Type == "bool")
+    //         {
+    //             response[f.MapProperty] = objToken.Value<bool>(f.OriginProperty);
+    //         }
+
+    //         if (f.Type == "list")
+    //         {
+    //             JToken value = objToken.Value<JToken>(f.OriginProperty) ?? "";
+    //             dynamic elemChild = MapProperties(value, f.Children, ignoreDefault);
+    //             string elemChildStr = JsonConvert.SerializeObject(elemChild);
+    //             response[f.MapProperty] = JsonConvert.DeserializeObject<dynamic>(elemChildStr);
+    //         }
+
+    //         if (f.Type == "datetime" && !string.IsNullOrEmpty(objToken[f.OriginProperty].ToStr()))
+    //         {
+    //             response[f.MapProperty] = objToken.Value<DateTime>(f.OriginProperty);
+    //         }
+    //     }
+    //     return response;
+    // }
+
+    public static dynamic MapObject(JToken objToken, List<DataSyncMapSchema> listMapSchema, bool ignoreDefault = false, JToken parentToken = null)
+{
+    dynamic response = new JObject();
+
+    foreach (DataSyncMapSchema f in listMapSchema)
     {
-        dynamic response = new JObject();
-        foreach (DataSyncMapSchema f in listMapSchema)
+        // Handle parent property references with $parent. notation
+        JToken token = null;
+        if (string.IsNullOrEmpty(f.OriginProperty))
         {
-            if (f.Type == "string")
+            // Empty origin property means use only defaultValue
+            token = null;
+        }
+        else if (f.OriginProperty.StartsWith("$parent.") && parentToken != null)
+        {
+            string parentProperty = f.OriginProperty.Substring(8); // Remove "$parent." prefix
+            token = parentToken.SelectToken(parentProperty);
+        }
+        else
+        {
+            token = objToken.SelectToken(f.OriginProperty); // ✅ Current object property
+        }
+
+        if (f.Type == "string")
+        {
+            string defaultValue = !string.IsNullOrEmpty(f.DefaultValue) ? f.DefaultValue.Trim() : string.Empty;
+            if (ignoreDefault)
+                defaultValue = null;
+
+            string value = token?.ToString() ?? defaultValue;
+
+            if (!string.IsNullOrEmpty(defaultValue) && string.IsNullOrEmpty(value))
+                value = defaultValue;
+
+            // MappingValues
+            if (f.MappingValues != null && f.MappingValues.Any())
             {
-                string defaultValue = !string.IsNullOrEmpty(f.DefaultValue) ? f.DefaultValue.Trim() : string.Empty;
-                if (ignoreDefault)
-                {
-                    defaultValue = null;
-                }
-
-                string value;
-                try
-                {
-                    value = objToken.Value<string>(f.OriginProperty) ?? defaultValue;
-                    if (!string.IsNullOrEmpty(defaultValue) && string.IsNullOrEmpty(value))
-                    {
-                        value = defaultValue;
-                    }
-                }
-                catch
-                {
-                    value = objToken[f.OriginProperty].ToStr() ?? defaultValue;
-                }
-
-                // ✅ Apply MappingValues only for string type
-                if (f.MappingValues != null && f.MappingValues.Any())
-                {
-                    var mapped = f.MappingValues.FirstOrDefault(m => m.ERPValue == value);
-                    if (mapped != null)
-                    {
-                        value = mapped.SFValue;
-                    }
-                }
-
-                if (DateTime.TryParse(value, out DateTime dateValue) && value.Length == 19)
-                {
-                    value = dateValue.ToString("s");
-                }
-                response[f.MapProperty] = value?.Trim();
+                var mapped = f.MappingValues.FirstOrDefault(m => m.ERPValue == value);
+                if (mapped != null)
+                    value = mapped.SFValue;
             }
 
-            if (f.Type == "integer")
+            if (DateTime.TryParse(value, out DateTime dateValue) && value.Length == 19)
+                value = dateValue.ToString("s");
+
+            response[f.MapProperty] = value?.Trim();
+        }
+
+        if (f.Type == "integer")
+        {
+            int? defaultValue = (f.DefaultValue ?? "0").ToInt32();
+            if (ignoreDefault)
+                defaultValue = null;
+
+            int value = token?.Value<int>() ?? 0;
+
+            if (Math.Abs(value) < 0.0001 && Math.Abs((double)defaultValue.GetValueOrDefault()) >= 0.0001)
             {
-                int? defaultValue = (f.DefaultValue ?? "0").ToInt32();
-                if (ignoreDefault)
-                {
-                    defaultValue = null;
-                }
-                int value = objToken.Value<int>(f.OriginProperty);
-                if (Math.Abs(value) < 0.0001 && Math.Abs((double)defaultValue.GetValueOrDefault()) >= 0.0001)
-                {
-                    if (!ignoreDefault)
-                    {
-                        response[f.MapProperty] = defaultValue;
-                    }
-                }
-                else
-                {
-                    response[f.MapProperty] = value;
-                }
+                if (!ignoreDefault)
+                    response[f.MapProperty] = defaultValue;
             }
-
-            if (f.Type == "float")
+            else
             {
-                float? defaultValue;
-                _ = float.TryParse(f.DefaultValue, out float tempDefault);
-                defaultValue = tempDefault;
-                if (ignoreDefault)
-                {
-                    defaultValue = null;
-                }
-                float value = objToken.Value<float>(f.OriginProperty);
-
-                if (Math.Abs(value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
-                {
-                    if (!ignoreDefault)
-                    {
-                        response[f.MapProperty] = defaultValue;
-                    }
-                }
-                else
-                {
-                    response[f.MapProperty] = value;
-                }
-            }
-
-            if (f.Type == "double")
-            {
-                double? defaultValue = f.DefaultValue.ToDouble();
-                if (ignoreDefault)
-                {
-                    defaultValue = null;
-                }
-                double? value = objToken.Value<double?>(f.OriginProperty);
-                if (value is not null)
-                {
-                    if (Math.Abs(value.GetValueOrDefault()) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
-                    {
-                        if (!ignoreDefault)
-                        {
-                            response[f.MapProperty] = defaultValue;
-                        }
-                    }
-                    else
-                    {
-                        response[f.MapProperty] = value;
-                    }
-                }
-                else
-                {
-                    if (!ignoreDefault)
-                    {
-                        response[f.MapProperty] = defaultValue;
-                    }
-                }
-            }
-
-            if (f.Type == "decimal")
-            {
-                decimal? defaultValue = f.DefaultValue.ToDecimal();
-                if (ignoreDefault)
-                {
-                    defaultValue = null;
-                }
-                decimal value = objToken.Value<decimal>(f.OriginProperty);
-
-                if (value == 0 && defaultValue != 0)
-                {
-                    if (!ignoreDefault)
-                    {
-                        response[f.MapProperty] = defaultValue;
-                    }
-                }
-                else
-                {
-                    response[f.MapProperty] = value;
-                }
-            }
-
-            if (f.Type == "bool")
-            {
-                response[f.MapProperty] = objToken.Value<bool>(f.OriginProperty);
-            }
-
-            if (f.Type == "list")
-            {
-                JToken value = objToken.Value<JToken>(f.OriginProperty) ?? "";
-                dynamic elemChild = MapProperties(value, f.Children, ignoreDefault);
-                string elemChildStr = JsonConvert.SerializeObject(elemChild);
-                response[f.MapProperty] = JsonConvert.DeserializeObject<dynamic>(elemChildStr);
-            }
-
-            if (f.Type == "datetime" && !string.IsNullOrEmpty(objToken[f.OriginProperty].ToStr()))
-            {
-                response[f.MapProperty] = objToken.Value<DateTime>(f.OriginProperty);
+                response[f.MapProperty] = value;
             }
         }
-        return response;
+
+        if (f.Type == "float")
+        {
+            float.TryParse(f.DefaultValue, out float tempDefault);
+            float? defaultValue = ignoreDefault ? null : tempDefault;
+
+            float value = token?.Value<float>() ?? 0;
+
+            if (Math.Abs(value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+            {
+                if (!ignoreDefault)
+                    response[f.MapProperty] = defaultValue;
+            }
+            else
+            {
+                response[f.MapProperty] = value;
+            }
+        }
+
+        if (f.Type == "double")
+        {
+            double? defaultValue = ignoreDefault ? null : f.DefaultValue.ToDouble();
+            double? value = token?.Value<double?>();
+
+            if (value is not null)
+            {
+                if (Math.Abs(value.Value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+                {
+                    if (!ignoreDefault)
+                        response[f.MapProperty] = defaultValue;
+                }
+                else
+                {
+                    response[f.MapProperty] = value;
+                }
+            }
+            else if (!ignoreDefault)
+            {
+                response[f.MapProperty] = defaultValue;
+            }
+        }
+
+        if (f.Type == "decimal")
+        {
+            decimal? defaultValue = ignoreDefault ? null : f.DefaultValue.ToDecimal();
+            decimal value = token?.Value<decimal>() ?? 0;
+
+            if (value == 0 && defaultValue != 0)
+            {
+                if (!ignoreDefault)
+                    response[f.MapProperty] = defaultValue;
+            }
+            else
+            {
+                response[f.MapProperty] = value;
+            }
+        }
+
+        if (f.Type == "bool")
+        {
+            response[f.MapProperty] = token?.Value<bool>() ?? false;
+        }
+
+        if (f.Type == "list")
+        {
+            JToken value = token ?? new JArray(); // ✅ safe fallback
+            // Pass current objToken as parentToken for nested children
+            dynamic elemChild = MapProperties(value, f.Children, ignoreDefault, objToken);
+            response[f.MapProperty] = JToken.FromObject(elemChild);
+        }
+
+        if (f.Type == "datetime")
+        {
+            if (token != null && DateTime.TryParse(token.ToString(), out DateTime dt))
+            {
+                response[f.MapProperty] = dt;
+            }
+        }
     }
+
+    return response;
+}
 
     public static string GetErpErrors(this string input, string name)
     {

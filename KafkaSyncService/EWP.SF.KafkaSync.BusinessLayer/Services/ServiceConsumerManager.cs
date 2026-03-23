@@ -92,12 +92,42 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                         }
                         else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE)
                         {
+                            message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
 
                             var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
                             var request = JsonConvert.DeserializeObject<TransactionMaterialSyncRequest>(message.BodyData);
 
                             var syncData = await workOrderOperation.UpdateWorkOrderComponent(request, message.User).ConfigureAwait(false);
+
+                            if (syncData != null)
+                            {
+                                // Proceed to ERP sync with the returned data
+                                var response = await processor.SyncExecution(
+                                    message.ServiceData,
+                                    message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
+                                    triggerType,
+                                    message.User,
+                                    message.EntityCode ?? string.Empty,
+                                    JsonConvert.SerializeObject(syncData)
+                                ).ConfigureAwait(false);
+
+                                _logger.LogInformation("{Service} ERP Sync execution complete via microservice", message.Service);
+                            }
+                            else
+                            {
+                                _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
+                            }
+                        }
+                        else if (message.Service == SyncERPEntity.PRODUCT_RECEIPT_SERVICE)
+                        {
+                            message.ServiceData.HttpMethod = "POST";
+                            _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
+
+                            var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
+                            var request = JsonConvert.DeserializeObject<TransactionProductSyncRequest>(message.BodyData);
+
+                            var syncData = await workOrderOperation.UpdateWorkOrderProduct(request, message.User).ConfigureAwait(false);
 
                             if (syncData != null)
                             {

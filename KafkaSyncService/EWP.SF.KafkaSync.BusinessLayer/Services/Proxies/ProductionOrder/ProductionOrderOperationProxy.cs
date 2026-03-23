@@ -5,6 +5,7 @@ using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
@@ -58,17 +59,92 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     public Task<List<WorkOrder>> GetWorkOrder(string workOrderId) => throw new NotSupportedException();
     public Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
     public void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset) => throw new NotSupportedException();
+    // public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
+    // {
+        
+
+    //     var microserviceRequest = new
+    //     {
+    //         TransactionId = request.OrderTransactionsMaterial[0].TransactionId,
+    //         SystemOperator = systemOperator
+    //     };
+
+
+    //     var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+    //     return response?.Data;
+
+    // }
+
     public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
     {
-        var microserviceRequest = new
+        try
         {
-            Data = request,
+            var microserviceRequest = new
+            {
+                TransactionId = request.OrderTransactionsMaterial[0].TransactionId
+            };
+
+            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId",microserviceRequest).ConfigureAwait(false);
+
+            if (response?.Data == null)
+            {
+                return null;
+            }
+
+            JObject dataObj = JObject.FromObject(response.Data);
+
+            JToken transactions = dataObj["Transactions"];
+
+            return transactions; 
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while fetching transaction material: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator)
+    {
+        try
+        {
+            var microserviceRequest = new
+            {
+                TransactionId = request.OrderTransactionsProduct[0].TransactionId,
+            };
+           
+             var response = await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId",microserviceRequest).ConfigureAwait(false);
+
+            if (response?.Data == null)
+            {
+                return null;
+            }
+
+            JObject dataObj = JObject.FromObject(response.Data);
+
+            JToken transactions = dataObj["Transactions"];
+
+            return transactions;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while fetching transaction product: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        var request = new
+        {
+            ExternalId = externalId,
+            RequestBody = requestBody,
             SystemOperator = systemOperator
         };
 
-        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
         return response?.Data;
     }
+    
+
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
 }

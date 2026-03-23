@@ -62,6 +62,8 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
     public Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
     public void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset) => throw new NotSupportedException();
     public Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator) => throw new NotSupportedException();
+    public Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator) => throw new NotSupportedException();
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
+    public Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
 }

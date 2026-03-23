@@ -1830,7 +1830,7 @@ public class DataSyncServiceProcessor
 		}
 				}
 		dynamic requestErpMapped = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.RequestMapSchema, RequestBody) ?? throw new Exception("No data to process");
-		string requestErpJson = JsonConvert.SerializeObject(requestErpMapped);
+		string requestErpJson = JsonConvert.SerializeObject(requestErpMapped[0]);
 		LogInfo.SfMappedJson = requestErpJson;
 		LogInfo.EndpointUrl = ServiceData.ErpData.BaseUrl + ServiceData.Path;
 		_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
@@ -1963,7 +1963,7 @@ public class DataSyncServiceProcessor
 			// Handle post-success operations for MATERIAL_ISSUE_SERVICE
 			if (ServiceData.Entity.Name == SyncERPEntity.MATERIAL_ISSUE_SERVICE)
 			{
-				await HandleMaterialIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData).ConfigureAwait(false);
+				await HandleMaterialIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
 			}
 		}
 
@@ -2461,6 +2461,31 @@ public class DataSyncServiceProcessor
 							};
 
 							await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
+							
+							// Extraction and external ID update call
+							try 
+							{
+								if (!string.IsNullOrEmpty(erpResult.Response))
+								{
+									JObject rawResponse = JObject.Parse(erpResult.Response);
+									var batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+									
+									if (!string.IsNullOrEmpty(batchNbr))
+									{
+										_logger.LogInformation("Extracted batchNbr: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
+										var workOrderOperation = GetOperation<IWorkOrderOperation>();
+										await workOrderOperation.UpdateExternalID(batchNbr, requestErpJson, SystemOperator).ConfigureAwait(false);
+									}
+									else 
+									{
+										_logger.LogWarning("Could not extract batchNbr from ERP response message[0].entity.batchNbr.value");
+									}
+								}
+							}
+							catch (Exception ex)
+							{
+								_logger.LogError(ex, "Failed to extract batchNbr or call UpdateExternalID microservice: {Message}", ex.Message);
+							}
 
 							successCount++;
 							_logger.LogInformation("Successfully synced transaction {TransactionId} to ERP with ExternalId {ExternalId}, published to Kafka for database update",
@@ -2579,7 +2604,7 @@ public class DataSyncServiceProcessor
 	/// Publishes to Kafka for ORDER_TRANSACTION_SERVICE to handle database update
 	/// Supports both single transaction and array of transactions
 	/// </summary>
-	private async Task HandleMaterialIssueSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData)
+	private async Task HandleMaterialIssueSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData, string rawResponseJson = null)
 	{
 		try
 		{
@@ -2685,6 +2710,31 @@ public class DataSyncServiceProcessor
 
 				await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
 				_logger.LogInformation("Published Kafka message for transaction {TransactionId} with ExternalId {ExternalId}", transactionId, externalId);
+			}
+
+			// Extraction and external ID update call (common for both single and batch if rawResponseJson is provided)
+			try
+			{
+				if (!string.IsNullOrEmpty(rawResponseJson))
+				{
+					JObject rawResponse = JObject.Parse(rawResponseJson);
+					var batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+
+					if (!string.IsNullOrEmpty(batchNbr))
+					{
+						_logger.LogInformation("Extracted batchNbr: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
+						var workOrderOperation = GetOperation<IWorkOrderOperation>();
+						await workOrderOperation.UpdateExternalID(batchNbr, requestBody, systemOperator).ConfigureAwait(false);
+					}
+					else
+					{
+						_logger.LogWarning("Could not extract batchNbr from ERP response message[0].entity.batchNbr.value");
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to extract batchNbr or call UpdateExternalID microservice: {Message}", ex.Message);
 			}
 		}
 		catch (Exception ex)

@@ -19,7 +19,11 @@ public abstract class BaseHttpProxy
         _httpClient = httpClient;
         _configuration = configuration;
         _authService = authService;
-        _baseUrl = configuration[$"AppSettings:{baseUrlKey}"] ?? configuration[baseUrlKey] ?? "http://localhost:5000";
+        _baseUrl = configuration[$"AppSettings:{baseUrlKey}"] 
+                  ?? configuration[baseUrlKey] 
+                  ?? configuration["AppSettings:ExternalServiceUrl"] 
+                  ?? configuration["ExternalServiceUrl"] 
+                  ?? "http://localhost:5000";
     }
 
     private async Task<string> GetAccessTokenAsync()
