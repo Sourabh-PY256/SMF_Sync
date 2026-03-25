@@ -93,6 +93,10 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
     public Task<string> UpdateWorkOrderComponent(string workOrderId, List<OrderComponent> componentValues, string employeeId, User systemOperator) => throw new NotSupportedException();
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
     public Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+    public Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+
+    public Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
 
     public Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
@@ -101,6 +105,11 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
     }
 
     public Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<object> UpdateMachineIssue(MachineIssueSyncRequest  request, User systemOperator)
     {
         throw new NotImplementedException();
     }

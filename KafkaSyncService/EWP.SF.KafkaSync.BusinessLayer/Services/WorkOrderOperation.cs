@@ -2798,6 +2798,9 @@ public class WorkOrderOperation : IWorkOrderOperation
 	/// Transfers products from one work order to another.
 	/// </summary>
 	public Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+	public Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+
+	public Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
 
 	public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
     {
@@ -3579,6 +3582,11 @@ public async Task<ProductionOrder> GetProductionOrder(string OrderCode)
 	}
 
     public Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<object> UpdateMachineIssue(MachineIssueSyncRequest  request, User systemOperator)
     {
         throw new NotImplementedException();
     }

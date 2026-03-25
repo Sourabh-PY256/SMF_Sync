@@ -127,11 +127,37 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 return null;
             }
 
-            JObject dataObj = JObject.FromObject(response.Data);
+            JToken dataToken = NormalizeResponseData(response.Data);
+            if (dataToken == null)
+            {
+                return null;
+            }
 
-            JToken transactions = dataObj["Transactions"];
+            if (dataToken.Type == JTokenType.Object && dataToken["Transactions"] != null)
+            {
+                var transactions = dataToken["Transactions"];
 
-            return transactions;
+                // Ensure it's an array
+                return transactions.Type == JTokenType.Array
+                    ? transactions
+                    : new JArray(transactions);
+            }
+
+            
+            if (dataToken.Type == JTokenType.Object)
+            {
+                return new JArray(dataToken);
+            }
+
+            
+            if (dataToken.Type == JTokenType.Array)
+            {
+                return dataToken;
+            }
+
+            return null;
+
+            
         }
         catch (Exception ex)
         {
@@ -139,7 +165,53 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
     }
 
+    private static JToken NormalizeResponseData(object data)
+    {
+        if (data == null)
+        {
+            return null;
+        }
+
+        if (data is JToken token)
+        {
+            return token;
+        }
+
+        if (data is string text)
+        {
+            var trimmed = text.Trim();
+
+            if (trimmed.StartsWith("{{") && trimmed.EndsWith("}}") && trimmed.Length >= 4)
+            {
+                trimmed = trimmed.Substring(1, trimmed.Length - 2);
+            }
+
+            try
+            {
+                return JToken.Parse(trimmed);
+            }
+            catch (JsonReaderException)
+            {
+                return JValue.CreateString(text);
+            }
+        }
+
+        return JToken.FromObject(data);
+    }
+
     public async Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator)
+    {
+       var request = new
+        {
+            oprationId = externalId,
+            externalId = requestBody
+        };
+
+        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
+        return response?.Data;
+    }
+
+    public async Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator)
     {
         var request = new
         {
@@ -148,10 +220,134 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             SystemOperator = systemOperator
         };
 
-        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
+        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
         return response?.Data;
     }
-    
+
+    public async Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        var request = new
+        {
+            oprationId = externalId,
+            externalId = requestBody
+        };
+
+        var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
+        return response?.Data;
+    }
+
+    public async Task<object> UpdateLaborIssueExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        var request = new
+        {
+            oprationId = externalId,
+            externalId = requestBody
+        };
+
+        var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
+        return response?.Data;
+    }
+
+    public async Task<object> UpdateMachineIssue(MachineIssueSyncRequest request, User systemOperator)
+    {
+        try
+        {
+            var microserviceRequest = new
+            {
+                TransactionId = request.TransactionId
+            };
+
+            var response = await PostAsync<ResponseModel>("WorkOrder/MachineIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+
+            if (response?.Data == null)
+            {
+                return null;
+            }
+
+            JToken dataToken = NormalizeResponseData(response.Data);
+            if (dataToken == null)
+            {
+                return null;
+            }
+            
+            if (dataToken.Type == JTokenType.Array)
+            {
+                return dataToken;
+            }
+
+            if (dataToken.Type == JTokenType.Object)
+            {
+                if (dataToken["Transactions"] != null)
+                {
+                    var transactions = dataToken["Transactions"];
+
+                    return transactions.Type == JTokenType.Array
+                        ? transactions
+                        : new JArray(transactions);
+                }
+
+                return new JArray(dataToken);
+            }
+
+            return null;
+           
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while fetching machine issue: {ex.Message}", ex);
+        }
+    }
+
+
+    public async Task<object> UpdateLaborIssue(MachineIssueSyncRequest request, User systemOperator)
+    {
+        try
+        {
+            var microserviceRequest = new
+            {
+                TransactionId = request.TransactionId
+            };
+
+            var response = await PostAsync<ResponseModel>("WorkOrder/LaborIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+
+            if (response?.Data == null)
+            {
+                return null;
+            }
+
+            JToken dataToken = NormalizeResponseData(response.Data);
+            if (dataToken == null)
+            {
+                return null;
+            }
+            
+            if (dataToken.Type == JTokenType.Array)
+            {
+                return dataToken;
+            }
+
+            if (dataToken.Type == JTokenType.Object)
+            {
+                if (dataToken["Transactions"] != null)
+                {
+                    var transactions = dataToken["Transactions"];
+
+                    return transactions.Type == JTokenType.Array
+                        ? transactions
+                        : new JArray(transactions);
+                }
+
+                return new JArray(dataToken);
+            }
+
+            return null;
+           
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while fetching machine issue: {ex.Message}", ex);
+        }
+    }
 
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();

@@ -18,6 +18,7 @@ using EWP.SF.Common.ResponseModels;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models.Catalogs;
 using Microsoft.Extensions.DependencyInjection;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 
@@ -1965,6 +1966,21 @@ public class DataSyncServiceProcessor
 			{
 				await HandleMaterialIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
 			}
+
+			// Handle post-success operations for PRODUCT_RECEIPT_SERVICE
+			if (ServiceData.Entity.Name == SyncERPEntity.PRODUCT_RECEIPT_SERVICE)
+			{
+				await HandleProductReceiptSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
+			}
+			if (ServiceData.Entity.Name == SyncERPEntity.MACHINE_ISSUE_SERVICE)
+			{
+				await HandleMachineIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
+			}
+			if (ServiceData.Entity.Name == SyncERPEntity.LABOR_ISSUE_SERVICE)
+			{
+				await HandleMachineIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
+			}
+			
 		}
 
 		LogSingleInfoFinish = new DataSyncServiceLogDetail
@@ -2608,127 +2624,22 @@ public class DataSyncServiceProcessor
 	{
 		try
 		{
-			var kafkaService = GetOperation<IKafkaService>();
-			string topic = $"producer-sync-{SyncERPEntity.ORDER_TRANSACTION_SERVICE.ToLower()}";
-
-			// Parse request body - could be single object or array
-			dynamic requestData = JsonConvert.DeserializeObject(requestBody);
-
-			// Check if request is an array
-			bool isArray = requestData is JArray;
-
-			if (isArray)
-			{
-				// Handle array of transactions
-				JArray requestArray = (JArray)requestData;
-				JArray responseArray = responseErp is JArray ? (JArray)responseErp : null;
-
-				if (responseArray == null || requestArray.Count != responseArray.Count)
-				{
-					throw new Exception($"Request/Response count mismatch. Request: {requestArray.Count}, Response: {responseArray?.Count ?? 0}");
-				}
-
-				// Process each transaction
-				for (int i = 0; i < requestArray.Count; i++)
-				{
-					dynamic request = requestArray[i];
-					dynamic response = responseArray[i];
-
-					string transactionId = request["TransactionId"];
-					string externalId = response["ExternalId"] ?? response["DocEntry"] ?? response["Id"];
-
-					if (string.IsNullOrEmpty(transactionId))
-					{
-						_logger.LogWarning("TransactionId not found in request at index {Index}", i);
-						continue;
-					}
-
-					if (string.IsNullOrEmpty(externalId))
-					{
-						_logger.LogWarning("ExternalId not found in response for transaction {TransactionId}", transactionId);
-						continue;
-					}
-
-					// Publish to Kafka - ORDER_TRANSACTION_SERVICE will handle the database update
-					string key = $"order-transaction-{transactionId}-{Guid.NewGuid()}";
-
-					// Create BodyData with TransactionId and ExternalId
-					var bodyData = new
-					{
-						TransactionId = transactionId,
-						ExternalId = externalId
-					};
-
-					var kafkaMessage = new SyncMessage
-					{
-						Service = SyncERPEntity.ORDER_TRANSACTION_SERVICE,
-						Trigger = TriggerType.SmartFactory.ToString(),
-						ExecutionType = (int)ServiceExecOrigin.Event,
-						EntityCode = string.Empty,
-						BodyData = JsonConvert.SerializeObject(bodyData)
-					};
-
-					await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
-					_logger.LogInformation("Published Kafka message for transaction {TransactionId} with ExternalId {ExternalId}", transactionId, externalId);
-				}
-			}
-			else
-			{
-				// Handle single transaction (backward compatibility)
-				string transactionId = requestData["TransactionId"];
-				string externalId = responseErp["ExternalId"] ?? responseErp["DocEntry"] ?? responseErp["Id"];
-
-				if (string.IsNullOrEmpty(transactionId))
-				{
-					throw new Exception("TransactionId not found in request body");
-				}
-
-				if (string.IsNullOrEmpty(externalId))
-				{
-					throw new Exception("ExternalId not found in ERP response");
-				}
-
-				// Publish to Kafka - ORDER_TRANSACTION_SERVICE will handle the database update
-				string key = $"order-transaction-{transactionId}-{Guid.NewGuid()}";
-
-				// Create BodyData with TransactionId and ExternalId
-				var bodyData = new
-				{
-					TransactionId = transactionId,
-					ExternalId = externalId
-				};
-
-				var kafkaMessage = new SyncMessage
-				{
-					Service = SyncERPEntity.ORDER_TRANSACTION_SERVICE,
-					Trigger = TriggerType.SmartFactory.ToString(),
-					ExecutionType = (int)ServiceExecOrigin.Event,
-					EntityCode = string.Empty,
-					BodyData = JsonConvert.SerializeObject(bodyData)
-					// ServiceData not needed - ProcessOrderTransactionService doesn't require it
-				};
-
-				await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
-				_logger.LogInformation("Published Kafka message for transaction {TransactionId} with ExternalId {ExternalId}", transactionId, externalId);
-			}
-
-			// Extraction and external ID update call (common for both single and batch if rawResponseJson is provided)
 			try
 			{
 				if (!string.IsNullOrEmpty(rawResponseJson))
 				{
 					JObject rawResponse = JObject.Parse(rawResponseJson);
-					var batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+					var batchNbr = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
 
 					if (!string.IsNullOrEmpty(batchNbr))
 					{
-						_logger.LogInformation("Extracted batchNbr: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
-						var workOrderOperation = GetOperation<IWorkOrderOperation>();
+						_logger.LogInformation("Extracted docEntry: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
+						var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
 						await workOrderOperation.UpdateExternalID(batchNbr, requestBody, systemOperator).ConfigureAwait(false);
 					}
 					else
 					{
-						_logger.LogWarning("Could not extract batchNbr from ERP response message[0].entity.batchNbr.value");
+						_logger.LogWarning("Could not extract docEntry from ERP response message.data.docEntry");
 					}
 				}
 			}
@@ -2742,6 +2653,107 @@ public class DataSyncServiceProcessor
 			// Log error but don't fail the main operation
 			// The material issue was successful in ERP, this is just post-processing
 			_logger.LogError(ex, "Post-success processing failed: {Message}", ex.Message);
+			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
+		}
+	}
+
+	/// <summary>
+	/// Handles post-success operations for Product Receipt Service
+	/// Extracts generated document (batchNbr) from ERP response and calls UpdateExternalID microservice
+	/// </summary>
+	private async Task HandleProductReceiptSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData, string rawResponseJson = null)
+	{
+		try
+		{
+			if (string.IsNullOrEmpty(rawResponseJson))
+			{
+				_logger.LogWarning("Raw ERP response is empty. Skipping UpdateExternalID for PRODUCT_RECEIPT_SERVICE.");
+				return;
+			}
+
+			JObject rawResponse = JObject.Parse(rawResponseJson);
+			var batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+
+			if (!string.IsNullOrEmpty(batchNbr))
+			{
+				_logger.LogInformation("Extracted batchNbr: {BatchNbr}. Calling TransactionProduct UpdateExternalID microservice.", batchNbr);
+				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
+				await workOrderOperation.UpdateProductExternalID(batchNbr, requestBody, systemOperator).ConfigureAwait(false);
+			}
+			else
+			{
+				_logger.LogWarning("Could not extract batchNbr from ERP response message[0].entity.batchNbr.value");
+			}
+		}
+		catch (Exception ex)
+		{
+			// Log error but don't fail the main operation
+			_logger.LogError(ex, "Post-success processing for PRODUCT_RECEIPT_SERVICE failed: {Message}", ex.Message);
+			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
+		}
+	}
+
+	private async Task HandleMachineIssueSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData, string rawResponseJson = null)
+	{
+		try
+		{
+			if (string.IsNullOrEmpty(rawResponseJson))
+			{
+				_logger.LogWarning("Raw ERP response is empty. Skipping UpdateExternalID for MACHINE_ISSUE_SERVICE.");
+				return;
+			}
+
+			JObject rawResponse = JObject.Parse(rawResponseJson);
+			var docEntry = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+
+			if (!string.IsNullOrEmpty(docEntry))
+			{
+				_logger.LogInformation("Extracted docEntry: {DocEntry}. Calling TransactionProduct UpdateExternalID microservice.", docEntry);
+				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
+				string externalId = docEntry; // Assuming docEntry is the ExternalId to be updated. Adjust if needed.
+				await workOrderOperation.UpdateMachineIssueExternalID(externalId, requestBody, systemOperator).ConfigureAwait(false);
+			}
+			else
+			{
+				_logger.LogWarning("Could not extract docEntry from ERP response message[0].data.docEntry");
+			}
+		}
+		catch (Exception ex)
+		{
+			// Log error but don't fail the main operation
+			_logger.LogError(ex, "Post-success processing for MACHINE_ISSUE_SERVICE failed: {Message}", ex.Message);
+			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
+		}
+	}
+	private async Task HandleLaborIssueSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData, string rawResponseJson = null)
+	{
+		try
+		{
+			if (string.IsNullOrEmpty(rawResponseJson))
+			{
+				_logger.LogWarning("Raw ERP response is empty. Skipping UpdateExternalID for MACHINE_ISSUE_SERVICE.");
+				return;
+			}
+
+			JObject rawResponse = JObject.Parse(rawResponseJson);
+			var docEntry = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+
+			if (!string.IsNullOrEmpty(docEntry))
+			{
+				_logger.LogInformation("Extracted docEntry: {DocEntry}. Calling LaborIssue UpdateExternalID microservice.", docEntry);
+				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
+				string externalId = docEntry; // Assuming docEntry is the ExternalId to be updated. Adjust if needed.
+				await workOrderOperation.UpdateLaborIssueExternalID(externalId, requestBody, systemOperator).ConfigureAwait(false);
+			}
+			else
+			{
+				_logger.LogWarning("Could not extract docEntry from ERP response message[0].data.docEntry");
+			}
+		}
+		catch (Exception ex)
+		{
+			// Log error but don't fail the main operation
+			_logger.LogError(ex, "Post-success processing for LABOR_ISSUE_SERVICE failed: {Message}", ex.Message);
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
 	}

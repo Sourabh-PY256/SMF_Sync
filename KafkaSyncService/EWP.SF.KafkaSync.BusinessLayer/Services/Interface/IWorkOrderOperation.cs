@@ -17,6 +17,10 @@ public interface IWorkOrderOperation : IWorkOrderChangeStatusOperation
     Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator);
     Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default);
     Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator);
+    Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator);
+
+    Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator);
+    Task<object> UpdateMachineIssue(MachineIssueSyncRequest request, User systemOperator);
 
 
 
