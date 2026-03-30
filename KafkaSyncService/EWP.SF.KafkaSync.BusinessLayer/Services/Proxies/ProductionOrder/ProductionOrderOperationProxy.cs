@@ -298,6 +298,49 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
     }
 
+    public async Task<object> CallOrderErpSyncService(WorkOrder request, User systemOperator)
+    {
+        try
+        {
+            var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
+            if (response?.Data == null)
+            {
+                return null;
+            }
+
+            JToken dataToken = NormalizeResponseData(response.Data);
+            if (dataToken == null)
+            {
+                return null;
+            }
+            
+            if (dataToken.Type == JTokenType.Array)
+            {
+                return dataToken;
+            }
+
+            if (dataToken.Type == JTokenType.Object)
+            {
+                if (dataToken["Transactions"] != null)
+                {
+                    var transactions = dataToken["Transactions"];
+
+                    return transactions.Type == JTokenType.Array
+                        ? transactions
+                        : new JArray(transactions);
+                }
+
+                return new JArray(dataToken);
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while fetching machine issue: {ex.Message}", ex);
+        }
+    }
+
 
     public async Task<object> UpdateLaborIssue(MachineIssueSyncRequest request, User systemOperator)
     {

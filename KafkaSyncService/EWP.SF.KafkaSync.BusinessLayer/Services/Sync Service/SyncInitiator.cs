@@ -1,7 +1,7 @@
 ﻿
 using EWP.SF.Common.Models;
 using NLog;
-using EWP.SF.LicenseModule;
+//using EWP.SF.LicenseModule;
 
 #pragma warning disable
 
@@ -46,7 +46,7 @@ public static class SyncInitializer
 		{
 			if (string.IsNullOrEmpty(_hwId))
 			{
-				_hwId = Utility.GetHwIdAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+				//_hwId = Utility.GetHwIdAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 			}
 
 			return _hwId;
