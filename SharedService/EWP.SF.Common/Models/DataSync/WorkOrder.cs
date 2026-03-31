@@ -3603,7 +3603,7 @@ public class ProductionOrderOperation
 	/// <summary>
 	///
 	/// </summary>
-	public int OperationNo { get; set; }
+	public double OperationNo { get; set; }
 
 	/// <summary>
 	///

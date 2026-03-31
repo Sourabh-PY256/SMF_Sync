@@ -298,11 +298,17 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
     }
 
-    public async Task<object> CallOrderErpSyncService(WorkOrder request, User systemOperator)
+    public async Task<object> CallOrderErpSyncService(ProductionOrder request, User systemOperator)
     {
         try
         {
-            var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
+
+            var payload = new WorkOrderRequest
+            {
+                Order = request,
+                SystemOperator = systemOperator
+            };
+            var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", payload).ConfigureAwait(false);
             if (response?.Data == null)
             {
                 return null;

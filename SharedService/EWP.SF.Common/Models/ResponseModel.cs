@@ -66,3 +66,9 @@ public class ResponseModel
 		Data = data;
 	}
 }
+
+public class WorkOrderRequest
+{
+    public ProductionOrder Order { get; set; }
+    public User SystemOperator { get; set; }
+}

@@ -212,7 +212,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
 
                             var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            var request = JsonConvert.DeserializeObject<WorkOrder>(message.BodyData);
+                            var request = JsonConvert.DeserializeObject<ProductionOrder>(message.BodyData);
 
                             var syncData = await workOrderOperation.CallOrderErpSyncService(request, message.User).ConfigureAwait(false);
 
