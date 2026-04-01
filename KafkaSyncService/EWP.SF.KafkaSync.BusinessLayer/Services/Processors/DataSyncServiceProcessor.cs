@@ -1032,6 +1032,34 @@ public class DataSyncServiceProcessor
 
 					case SyncERPEntity.PRODUCTION_ORDER_SERVICE:
 						List<WorkOrderExternal> listWorkOrders = JsonConvert.DeserializeObject<List<WorkOrderExternal>>(dataJson);
+						//for satisfying the model requirement 
+						foreach (var order in listWorkOrders ?? new List<WorkOrderExternal>())
+						{
+							
+							if (order.Version <= 0)
+							{
+								order.Version = 1;
+							}
+
+							foreach (var operation in order.Operations)
+							{
+								foreach (var item in operation.Items ?? new List<WorkOrderItem>())
+								{
+									
+									if (string.IsNullOrWhiteSpace(item.Type))
+									{
+										item.Type = "Material";
+									}
+
+									
+									if (string.IsNullOrWhiteSpace(item.Source))
+									{
+										item.Source = "BOM";
+									}
+								}
+							}
+						}
+
 						var productOrderOperation = GetOperation<IWorkOrderOperation>();
 						double offset = await _dataSyncServiceOperation.GetTimezoneOffset("ERP").ConfigureAwait(false) * -1;
 						listWorkOrders.ForEach(elem => productOrderOperation.AddWorkOrderDatesOffset(elem, offset));

@@ -31,17 +31,15 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     bool isDataSynced = false,
     string logId = null)
 {
-    var request = new
-    {
-        WorkOrderList = workOrderList,
-        SystemOperator = systemOperator,
-        IsDataSynced = isDataSynced,
-        LogId = logId
-    };
+    // var request = new
+    // {
+    //     WorkOrderList = workOrderList
+    // };
 
-    var url = $"WorkOrder/{Validate}/{Level}";
+    //var url = $"WorkOrder/{Validate}/{Level}";
+    var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
 
-    var response = await PostAsync<List<WorkOrderResponse>>(url, request)
+    var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
                         .ConfigureAwait(false);
 
     return response ?? new List<WorkOrderResponse>();

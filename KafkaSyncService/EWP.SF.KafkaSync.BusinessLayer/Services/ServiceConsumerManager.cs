@@ -90,7 +90,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                             _logger.LogInformation("ORDER_TRANSACTION_SERVICE processing complete: {Message}", response.Message);
                         }
-                        else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE)
+                        else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE && message.ServiceData.HttpMethod == "POST" )
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
@@ -119,7 +119,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                 _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
                             }
                         }
-                        else if (message.Service == SyncERPEntity.PRODUCT_RECEIPT_SERVICE)
+                        else if (message.Service == SyncERPEntity.PRODUCT_RECEIPT_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
@@ -148,7 +148,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                 _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
                             }
                         }
-                         else if (message.Service == SyncERPEntity.MACHINE_ISSUE_SERVICE)
+                         else if (message.Service == SyncERPEntity.MACHINE_ISSUE_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
@@ -177,7 +177,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                 _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
                             }
                         }
-                        else if (message.Service == SyncERPEntity.LABOR_ISSUE_SERVICE)
+                        else if (message.Service == SyncERPEntity.LABOR_ISSUE_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
@@ -206,7 +206,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                 _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
                             }
                         }
-                         else if (message.Service == SyncERPEntity.PRODUCTION_ORDER_SERVICE)
+                        else if (message.Service == SyncERPEntity.PRODUCTION_ORDER_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);

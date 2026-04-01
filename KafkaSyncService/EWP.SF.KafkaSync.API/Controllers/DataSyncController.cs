@@ -61,7 +61,6 @@ public class DataSyncController : BaseController
                         Service = service,
                         Trigger = TriggerType.Erp.ToString(),
                         ExecutionType = (int)ServiceExecOrigin.KafkaProducer,
-                        User = ServiceRequest.SystemOperator,
                         EntityCode = ServiceRequest.EntityCode,
                         BodyData = ServiceRequest.BodyData,
                         ServiceData = validation.ServiceData

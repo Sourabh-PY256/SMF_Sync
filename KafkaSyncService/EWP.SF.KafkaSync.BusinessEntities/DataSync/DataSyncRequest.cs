@@ -10,8 +10,6 @@ public class DataSyncExecuteRequest
 
 	public string BodyData { get; set; }
 
-	public User SystemOperator { get; set; } 
-
 	private string? _methodType;
 	public string MethodType
 	{
