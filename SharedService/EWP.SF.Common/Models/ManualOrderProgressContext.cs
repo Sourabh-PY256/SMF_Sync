@@ -785,6 +785,74 @@ public class TransactionProductSyncRequest
     public List<OrderTransactionProductDetailSync> OrderTransactionsProductDetail { get; set; }
 }
 
+public class TransactionProductReceiptSyncRequest
+{
+    public string TransactionId { get; set; }
+    public string ExternalId { get; set; }
+    public string ExternalComponentId { get; set; }
+    public int OperationNo { get; set; }
+    public DateTime Date { get; set; }
+
+    public string Batch { get; set; }
+    public string Pallet { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal Rejected { get; set; }
+
+    public List<CustomData> CustomData { get; set; }
+    public List<Product> Products { get; set; }
+
+    public string Comments { get; set; }
+    public string Employee { get; set; }
+    public string Location { get; set; }
+    public string InventoryStatus { get; set; }
+}
+
+public class CustomData
+{
+    public string Key { get; set; }
+    public string? Value { get; set; } // nullable (you have null values)
+}
+
+public class Product
+{
+    public string ItemCode { get; set; }
+    public string LineId { get; set; }
+    public string LineType { get; set; }
+    public string Warehouse { get; set; }
+    public decimal Quantity { get; set; }
+
+    public List<Lot> Lots { get; set; }
+}
+
+public class Lot
+{
+    public string? BatchId { get; set; }
+    public string? ComponentId { get; set; }
+    public string Batch { get; set; }
+    public string Location { get; set; }
+    public string InventoryStatus { get; set; }
+    public string Pallet { get; set; }
+    public decimal Quantity { get; set; }
+
+    public DateTime BatchDate { get; set; }
+
+    public string? BatchStatus { get; set; }
+    public string? OrderId { get; set; }
+    public decimal Allocated { get; set; }
+    public string WarehouseCode { get; set; }
+    public string LineId { get; set; }
+    public bool IsSelected { get; set; }
+
+    public string? Type { get; set; }
+    public string? UoM { get; set; }
+    public string? WarehouseName { get; set; }
+    public string? BinLocationName { get; set; }
+    public string? InventoryStatusName { get; set; }
+    public string? Comments { get; set; }
+    public string? ScrapTypeCode { get; set; }
+    public string? ProcessId { get; set; }
+}
+
 /// <summary>
 /// 
 /// </summary>

@@ -598,6 +598,12 @@ public class WorkOrder : ILoggableEntity
 	///
 	/// </summary>
 	[GridIgnoreProperty]
+	public string Code { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	[GridIgnoreProperty]
 	public string OrderCode { get; set; }
 
 	/// <summary>
@@ -2832,6 +2838,32 @@ public class WorkOrderChangeStatus
 /// </summary>
 public class OperatorsOrder
 {
+	public string FacilityCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string FacilityName { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string FacilityImage { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string FloorCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string FloorName { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string FloorImage { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -2897,6 +2929,16 @@ public class OperatorsOrder
 	/// </summary>
 	public string OperationName { get; set; }
 
+	public DateTime? OperationActualStartDate { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public DateTime? OperationActualEndDate { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
 	/// <summary>
 	///
 	/// </summary>
@@ -2988,6 +3030,8 @@ public class OperatorsOrder
 	/// </summary>
 	public double OperationAcceptedQty { get; set; }
 
+	public bool IsOutput { get; set; }
+
 	/// <summary>
 	///
 	/// </summary>
@@ -3058,8 +3102,24 @@ public class OperatorsOrder
 	///
 	/// </summary>
 	public bool DowntimeInProgress { get; set; }
+
+
+	/// <summary>
+	///
+	/// </summary>
+	public List<OperatorUser> CurrentOperators { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public double OperationLotCapacity { get; set; }
 }
 
+public class OperatorUser
+{
+	public string name { get; set; }
+	public string photo { get; set; }
+}
 /// <summary>
 ///
 /// </summary>
@@ -3591,6 +3651,8 @@ public class ProductionOrderOperation
 	///
 	/// </summary>
 	public string OperationSubTypeCode { get; set; }
+
+	public string OperationSubTypeName { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -3789,6 +3851,7 @@ public class ProductionOrderMachine
 	/// </summary>
 	public Status Status { get; set; }
 
+	public double PlannedTime { get; set; }
 	/// <summary>
 	///
 	/// </summary>
@@ -4020,4 +4083,27 @@ public class ProductionOrderByProduct
 	///
 	/// </summary>
 	public string LineUID { get; set; }
+}
+public class RequestComponent : OrderComponent
+{
+	/// <summary>
+	///
+	/// </summary>
+	public string OrderCode { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string OrderType { get; set; }
+
+	/// <summary>
+	///
+	/// </summary>
+	public string OperationCode { get; set; }
+}
+
+public class ProductionOrderRequest
+{
+    public ProductionOrder Order { get; set; }
+    public User SystemOperator { get; set; }
 }

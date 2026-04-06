@@ -109,13 +109,13 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
     }
 
-    public async Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator)
+    public async Task<object> UpdateWorkOrderProduct(TransactionProductReceiptSyncRequest request, User systemOperator)
     {
         try
         {
             var microserviceRequest = new
             {
-                TransactionId = request.OrderTransactionsProduct[0].TransactionId,
+                TransactionId = request.TransactionId,
             };
            
              var response = await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId",microserviceRequest).ConfigureAwait(false);
@@ -301,12 +301,14 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         try
         {
 
-            var payload = new WorkOrderRequest
-            {
-                Order = request,
-                SystemOperator = systemOperator
-            };
-            var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", payload).ConfigureAwait(false);
+            // if (request?.Operations != null)
+            // {
+            //     foreach (var operation in request.Operations)
+            //     {
+            //         operation.OperationNo = (int)operation.OperationNo; // strip decimal
+            //     }
+            // }
+            var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
             if (response?.Data == null)
             {
                 return null;

@@ -3581,7 +3581,7 @@ public async Task<ProductionOrder> GetProductionOrder(string OrderCode)
 		return await _workOrderRepo.GetProductionOrder(OrderCode).ConfigureAwait(false);
 	}
 
-    public Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator)
+    public Task<object> UpdateWorkOrderProduct(TransactionProductReceiptSyncRequest request, User systemOperator)
     {
         throw new NotImplementedException();
     }

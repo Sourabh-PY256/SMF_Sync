@@ -14,7 +14,7 @@ public interface IWorkOrderOperation : IWorkOrderChangeStatusOperation
     Task<List<WorkOrderResponse>> ListUpdateProductionOrder(List<WorkOrderExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, bool isDataSynced = false, string logId = null);
     void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset);
     Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator);
-    Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator);
+    Task<object> UpdateWorkOrderProduct(TransactionProductReceiptSyncRequest request, User systemOperator);
     Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default);
     Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator);
     Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator);

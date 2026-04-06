@@ -50,6 +50,12 @@ public abstract class BaseHttpProxy
         var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            throw new Exception($"HTTP {(int)response.StatusCode} - URL: {url} - Body: {errorBody}");
+        }
+
         var responseContent = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<T>(responseContent);
     }

@@ -104,7 +104,7 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
         throw new NotImplementedException();
     }
 
-    public Task<object> UpdateWorkOrderProduct(TransactionProductSyncRequest request, User systemOperator)
+    public Task<object> UpdateWorkOrderProduct(TransactionProductReceiptSyncRequest request, User systemOperator)
     {
         throw new NotImplementedException();
     }
