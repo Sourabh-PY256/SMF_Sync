@@ -92,10 +92,98 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
     }
     public Task<string> UpdateWorkOrderComponent(string workOrderId, List<OrderComponent> componentValues, string employeeId, User systemOperator) => throw new NotSupportedException();
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
-    public Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
-    public Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+    public async Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        try
+        {
+            var result = await PublishAsync(
+                SyncERPEntity.PRODUCTION_ORDER_SERVICE,
+                "UpdateExternalID",
+                systemOperator,
+                new
+                {
+                    oprationId = externalId,
+                    externalId = requestBody
+                }).ConfigureAwait(false);
 
-    public Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator) => throw new NotSupportedException();
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ProductionOrderKafkaProxy] UpdateExternalID failed. ExternalId: {ExternalId}", externalId);
+            throw new Exception($"Error while publishing UpdateExternalID: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        try
+        {
+            var result = await PublishAsync(
+                SyncERPEntity.PRODUCTION_ORDER_SERVICE,
+                "UpdateProductExternalID",
+                systemOperator,
+                new
+                {
+                    ExternalId = externalId,
+                    RequestBody = requestBody,
+                    SystemOperator = systemOperator
+                }).ConfigureAwait(false);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ProductionOrderKafkaProxy] UpdateProductExternalID failed. ExternalId: {ExternalId}", externalId);
+            throw new Exception($"Error while publishing UpdateProductExternalID: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        try
+        {
+            var result = await PublishAsync(
+                SyncERPEntity.MACHINE_ISSUE_SERVICE,
+                "UpdateMachineIssueExternalID",
+                systemOperator,
+                new
+                {
+                    oprationId = externalId,
+                    externalId = requestBody
+                }).ConfigureAwait(false);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ProductionOrderKafkaProxy] UpdateMachineIssueExternalID failed. ExternalId: {ExternalId}", externalId);
+            throw new Exception($"Error while publishing UpdateMachineIssueExternalID: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<object> UpdateLaborIssueExternalID(string externalId, string requestBody, User systemOperator)
+    {
+        try
+        {
+            var result = await PublishAsync(
+                SyncERPEntity.LABOR_ISSUE_SERVICE,
+                "UpdateLaborIssueExternalID",
+                systemOperator,
+                new
+                {
+                    oprationId = externalId,
+                    externalId = requestBody
+                }).ConfigureAwait(false);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ProductionOrderKafkaProxy] UpdateLaborIssueExternalID failed. ExternalId: {ExternalId}", externalId);
+            throw new Exception($"Error while publishing UpdateLaborIssueExternalID: {ex.Message}", ex);
+        }
+    }
 
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
 
@@ -109,8 +197,22 @@ public class ProductionOrderKafkaProxy : BaseKafkaProxy, IWorkOrderOperation
         throw new NotImplementedException();
     }
 
-    public Task<object> UpdateMachineIssue(MachineIssueSyncRequest  request, User systemOperator)
+    public async Task<object> UpdateMachineIssue(MachineIssueSyncRequest  request, User systemOperator)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var result = await PublishAsync(
+                SyncERPEntity.MACHINE_ISSUE_SERVICE,
+                "UpdateMachineIssue",
+                systemOperator,
+                request).ConfigureAwait(false);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[ProductionOrderKafkaProxy] UpdateMachineIssue failed.");
+            throw new Exception($"Error while publishing UpdateMachineIssue: {ex.Message}", ex);
+        }
     }
 }

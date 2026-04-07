@@ -14,9 +14,9 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     private readonly ILogger<ProductionOrderOperationProxy> _logger;
 
     public ProductionOrderOperationProxy(
-        HttpClient httpClient, 
-        IConfiguration configuration, 
-        IAuthenticationService authService, 
+        HttpClient httpClient,
+        IConfiguration configuration,
+        IAuthenticationService authService,
         ILogger<ProductionOrderOperationProxy> logger)
         : base(httpClient, configuration, authService)
     {
@@ -30,20 +30,20 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     LevelMessage Level,
     bool isDataSynced = false,
     string logId = null)
-{
-    // var request = new
-    // {
-    //     WorkOrderList = workOrderList
-    // };
+    {
+        // var request = new
+        // {
+        //     WorkOrderList = workOrderList
+        // };
 
-    //var url = $"WorkOrder/{Validate}/{Level}";
-    var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
+        //var url = $"WorkOrder/{Validate}/{Level}";
+        var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
 
-    var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
-                        .ConfigureAwait(false);
+        var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
+                            .ConfigureAwait(false);
 
-    return response ?? new List<WorkOrderResponse>();
-}
+        return response ?? new List<WorkOrderResponse>();
+    }
 
     public List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
@@ -65,21 +65,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     public Task<List<WorkOrder>> GetWorkOrder(string workOrderId) => throw new NotSupportedException();
     public Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
     public void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset) => throw new NotSupportedException();
-    // public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
-    // {
-        
-
-    //     var microserviceRequest = new
-    //     {
-    //         TransactionId = request.OrderTransactionsMaterial[0].TransactionId,
-    //         SystemOperator = systemOperator
-    //     };
-
-
-    //     var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
-    //     return response?.Data;
-
-    // }
 
     public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
     {
@@ -90,7 +75,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 TransactionId = request.OrderTransactionsMaterial[0].TransactionId
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId",microserviceRequest).ConfigureAwait(false);
+            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
@@ -101,7 +86,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
 
             JToken transactions = dataObj["Transactions"];
 
-            return transactions; 
+            return transactions;
         }
         catch (Exception ex)
         {
@@ -117,8 +102,8 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             {
                 TransactionId = request.TransactionId,
             };
-           
-             var response = await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId",microserviceRequest).ConfigureAwait(false);
+
+            var response = await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
@@ -141,13 +126,13 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                     : new JArray(transactions);
             }
 
-            
+
             if (dataToken.Type == JTokenType.Object)
             {
                 return new JArray(dataToken);
             }
 
-            
+
             if (dataToken.Type == JTokenType.Array)
             {
                 return dataToken;
@@ -155,7 +140,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
 
             return null;
 
-            
+
         }
         catch (Exception ex)
         {
@@ -199,51 +184,83 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
 
     public async Task<object> UpdateExternalID(string externalId, string requestBody, User systemOperator)
     {
-       var request = new
+        try
         {
-            oprationId = externalId,
-            externalId = requestBody
-        };
+            var request = new
+            {
+                oprationId = externalId,
+                externalId = requestBody
+            };
 
-        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
-        return response?.Data;
+            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while updating external ID: {ex.Message}", ex);
+        }
+
     }
 
     public async Task<object> UpdateProductExternalID(string externalId, string requestBody, User systemOperator)
     {
-        var request = new
+        try
         {
-            ExternalId = externalId,
-            RequestBody = requestBody,
-            SystemOperator = systemOperator
-        };
+            var request = new
+            {
+                ExternalId = externalId,
+                RequestBody = requestBody,
+                SystemOperator = systemOperator
+            };
 
-        var response = await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
-        return response?.Data;
+            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while updating product external ID: {ex.Message}", ex);
+        }
+
     }
 
     public async Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator)
     {
-        var request = new
+        try
         {
-            oprationId = externalId,
-            externalId = requestBody
-        };
+            var request = new
+            {
+                oprationId = externalId,
+                externalId = requestBody
+            };
 
-        var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
-        return response?.Data;
+            var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while updating machine issue external ID: {ex.Message}", ex);
+        }
+
     }
 
     public async Task<object> UpdateLaborIssueExternalID(string externalId, string requestBody, User systemOperator)
     {
-        var request = new
+        try
         {
-            oprationId = externalId,
-            externalId = requestBody
-        };
+            var request = new
+            {
+                oprationId = externalId,
+                externalId = requestBody
+            };
 
-        var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
-        return response?.Data;
+            var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
+            return response?.Data;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while updating labor issue external ID: {ex.Message}", ex);
+        }
+
     }
 
     public async Task<object> UpdateMachineIssue(MachineIssueSyncRequest request, User systemOperator)
@@ -267,7 +284,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             {
                 return null;
             }
-            
+
             if (dataToken.Type == JTokenType.Array)
             {
                 return dataToken;
@@ -288,7 +305,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             }
 
             return null;
-           
+
         }
         catch (Exception ex)
         {
@@ -300,14 +317,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     {
         try
         {
-
-            // if (request?.Operations != null)
-            // {
-            //     foreach (var operation in request.Operations)
-            //     {
-            //         operation.OperationNo = (int)operation.OperationNo; // strip decimal
-            //     }
-            // }
             var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
             if (response?.Data == null)
             {
@@ -319,7 +328,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             {
                 return null;
             }
-            
+
             if (dataToken.Type == JTokenType.Array)
             {
                 return dataToken;
@@ -369,7 +378,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             {
                 return null;
             }
-            
+
             if (dataToken.Type == JTokenType.Array)
             {
                 return dataToken;
@@ -390,7 +399,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             }
 
             return null;
-           
+
         }
         catch (Exception ex)
         {

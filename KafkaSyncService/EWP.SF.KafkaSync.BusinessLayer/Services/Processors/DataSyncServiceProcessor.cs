@@ -77,7 +77,7 @@ public class DataSyncServiceProcessor
 		string logId = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 		LogInfo.Id = logId;
 		response.LogId = logId;
-		
+
 		try
 		{
 			// Check if service is already running (Distributed Lock)
@@ -92,7 +92,7 @@ public class DataSyncServiceProcessor
 
 			// Set status to Executing in DB
 			_ = _dataSyncServiceOperation.UpdateDataSyncServiceStatus(ServiceData.Id, ServiceStatus.Executing);
-			
+
 			//ServiceManager.Datasync_NotifyStart(ServiceData, EntityCode);
 			// Actualizar fecha de ultima ejecución solo cuando no sea GET o no exista un EntityCode definido
 
@@ -159,7 +159,7 @@ public class DataSyncServiceProcessor
 		{
 			// Reset status to Active in DB
 			_ = _dataSyncServiceOperation.UpdateDataSyncServiceStatus(ServiceData.Id, ServiceStatus.Active);
-			
+
 			//ServiceManager.Datasync_NotifyStop(ServiceData, EntityCode, initDate);
 			_logger.LogInformation("DataSync {EntityName} finishing execution...", ServiceData.Entity.Name);
 		}
@@ -214,8 +214,8 @@ public class DataSyncServiceProcessor
 				int successRecords = 0;
 				switch (ServiceData.Entity.Name)
 				{
-					
-                    // Not Applicable for any ERP
+
+					// Not Applicable for any ERP
 					case SyncERPEntity.ALLOCATION_SERVICE:
 					case SyncERPEntity.FULL_ALLOCATION_SERVICE:
 						StockAllocationExternal[] listAllocStock = JsonConvert.DeserializeObject<StockAllocationExternal[]>(dataJson);
@@ -224,10 +224,11 @@ public class DataSyncServiceProcessor
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
 						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						ResponseData sfAllocationResponse = null;
-						try {
+						try
+						{
 							if (listAllocStock.Length > 0)
 							{
-							    sfAllocationResponse = stockAllocation.ListUpdateAllocationBulk(listAllocStock, SystemOperator, false, LevelMessage.Success, true);
+								sfAllocationResponse = stockAllocation.ListUpdateAllocationBulk(listAllocStock, SystemOperator, false, LevelMessage.Success, true);
 								successRecords = 0;
 								if (sfAllocationResponse.IsSuccess)
 								{
@@ -251,7 +252,7 @@ public class DataSyncServiceProcessor
 							LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfAllocationResponse);
 						}
 
-						 break;
+						break;
 
 					case SyncERPEntity.BIN_LOCATION_SERVICE:
 						List<BinLocationExternal> listBinLocations = JsonConvert.DeserializeObject<List<BinLocationExternal>>(dataJson);
@@ -276,7 +277,7 @@ public class DataSyncServiceProcessor
 									SfMappedJson = JsonConvert.SerializeObject(elem)
 								};
 
-								
+
 								ResponseData sfResponse = null;
 								try
 								{
@@ -355,7 +356,7 @@ public class DataSyncServiceProcessor
 										failedRecords++;
 										LogSingleInfo.LogType = DataSyncLogType.Error;
 										LogSingleInfo.MessageException = ex.Message;
-										returnDetailList.Add(LogSingleInfo); 
+										returnDetailList.Add(LogSingleInfo);
 									}
 								}
 								//_ = _dataSyncServiceOperation.InsertDataSyncServiceLogDetailBulk(returnDetailList);
@@ -363,7 +364,7 @@ public class DataSyncServiceProcessor
 							//LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
 						}
 						break;
-						case SyncERPEntity.DEMAND_FORECAST_SERVICE:
+					case SyncERPEntity.DEMAND_FORECAST_SERVICE:
 						List<DemandExternal> listDemandForecasts = JsonConvert.DeserializeObject<List<DemandExternal>>(dataJson);
 						List<DemandExternal> listDemandForecastsOriginal = JsonConvert.DeserializeObject<List<DemandExternal>>(dataJsonOriginal);
 						var demandForecastOperation = GetOperation<IDemandOperation>();
@@ -1035,7 +1036,7 @@ public class DataSyncServiceProcessor
 						//for satisfying the model requirement 
 						foreach (var order in listWorkOrders ?? new List<WorkOrderExternal>())
 						{
-							
+
 							if (order.Version <= 0)
 							{
 								order.Version = 1;
@@ -1045,13 +1046,13 @@ public class DataSyncServiceProcessor
 							{
 								foreach (var item in operation.Items ?? new List<WorkOrderItem>())
 								{
-									
+
 									if (string.IsNullOrWhiteSpace(item.Type))
 									{
 										item.Type = "Material";
 									}
 
-									
+
 									if (string.IsNullOrWhiteSpace(item.Source))
 									{
 										item.Source = "BOM";
@@ -1087,7 +1088,7 @@ public class DataSyncServiceProcessor
 								WorkOrderResponse sfResponse = null;
 								try
 								{
-									sfResponse = (await productOrderOperation.ListUpdateProductionOrder  (
+									sfResponse = (await productOrderOperation.ListUpdateProductionOrder(
 									listElem,
 									SystemOperator,
 									false,
@@ -1332,11 +1333,11 @@ public class DataSyncServiceProcessor
 						}
 						break;
 
-					
+
 					case SyncERPEntity.STOCK_SERVICE:
 					case SyncERPEntity.FULL_STOCK_SERVICE:
-					List<StockExternal> stocks = JsonConvert.DeserializeObject<List<StockExternal>>(dataJson);
-					var stockOperation = GetOperation<IStockOperation>();
+						List<StockExternal> stocks = JsonConvert.DeserializeObject<List<StockExternal>>(dataJson);
+						var stockOperation = GetOperation<IStockOperation>();
 						if (stocks != null && stocks.Any())
 						//StockExternal stock = JsonConvert.DeserializeObject<StockExternal>(dataJson);
 						{
@@ -1373,14 +1374,14 @@ public class DataSyncServiceProcessor
 							}
 						}
 
-							// DataSyncServiceLogDetail LogSingleInfo = new()
-							// {
-							// 	Id = LogDetail.Id,
-							// 	LogId = LogInfo.Id,
-							// 	AttemptNo = LogDetail.AttemptNo + 1,
-							// 	LastAttemptDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone)
-							// };
-							//(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
+						// DataSyncServiceLogDetail LogSingleInfo = new()
+						// {
+						// 	Id = LogDetail.Id,
+						// 	LogId = LogInfo.Id,
+						// 	AttemptNo = LogDetail.AttemptNo + 1,
+						// 	LastAttemptDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone)
+						// };
+						//(successRecords, failedRecords) = await ProcessResponse(sfResponse, successRecords, failedRecords, LogSingleInfo).ConfigureAwait(false);
 						//}
 						break;
 
@@ -1431,7 +1432,7 @@ public class DataSyncServiceProcessor
 							}
 						}
 						break;
-						case SyncERPEntity.SUPPLY_MRP_SERVICE:
+					case SyncERPEntity.SUPPLY_MRP_SERVICE:
 						List<SupplyExternal> supplieMRPs = JsonConvert.DeserializeObject<List<SupplyExternal>>(dataJson);
 
 						var supplyMRPOperation = GetOperation<ISupplyOperation>();
@@ -1573,7 +1574,7 @@ public class DataSyncServiceProcessor
 										IsSuccess = false,
 										Message = ex.Message
 									};
-									
+
 									LogInfo.SfResponseJson = JsonConvert.SerializeObject(sfListResponse);
 									throw;
 								}
@@ -1698,20 +1699,20 @@ public class DataSyncServiceProcessor
 
 					default:
 						throw new Exception("No instance configured to receive data from ERP");
-						
+
 				}
 				//update last execution time
 				if (onResponse is not null && !isError)
-						{
-							onResponse();
-						}
+				{
+					onResponse();
+				}
 				// Log
 				LogInfo.FailedRecords = failedRecords;
 				LogInfo.SuccessRecords = successRecords;
 				HttpResponse.FailRecords = failedRecords;
 				HttpResponse.SuccessRecords = successRecords;
 				LogInfo.ExecutionFinishDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
-                
+
 				//Encender Servicio nuevamente
 				// _ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 			}
@@ -1764,100 +1765,100 @@ public class DataSyncServiceProcessor
 		if (string.IsNullOrEmpty(RequestBody))
 		{
 
-		switch (ServiceData.Entity.Name)
-		{
-			// Not Applicable for any ERP
-			case SyncERPEntity.MATERIAL_ISSUE_SERVICE:
-				// Get WorkOrderOperation service to call GetMaterialTransactionRequestParams
-				// This will retrieve all transactions where ExternalId is null or empty
-				var workOrderOperation = GetOperation<IWorkOrderOperation>();
-				object requestParams = await workOrderOperation.GetMaterialTransactionRequestParams(SystemOperator).ConfigureAwait(false);
+			switch (ServiceData.Entity.Name)
+			{
+				// Not Applicable for any ERP
+				case SyncERPEntity.MATERIAL_ISSUE_SERVICE:
+					// Get WorkOrderOperation service to call GetMaterialTransactionRequestParams
+					// This will retrieve all transactions where ExternalId is null or empty
+					var workOrderOperation = GetOperation<IWorkOrderOperation>();
+					object requestParams = await workOrderOperation.GetMaterialTransactionRequestParams(SystemOperator).ConfigureAwait(false);
 
-				// Check if we need to process transactions individually
-				dynamic requestParamsObj = JsonConvert.DeserializeObject(JsonConvert.SerializeObject(requestParams));
-				if (requestParamsObj.ProcessIndividually != null && (bool)requestParamsObj.ProcessIndividually)
-				{
-					// Process each transaction individually
-					return await ProcessMaterialTransactionsIndividually(
-						LogInfo, ServiceData, SystemOperator, ExecOrigin,
-						requestParamsObj.Transactions, EntityCode, HttpResponse, onResponse
-					).ConfigureAwait(false);
-				}
-
-				RequestBody = JsonConvert.SerializeObject(requestParams);
-				break;
-
-			case SyncERPEntity.ORDER_TRANSACTION_SERVICE:
-				// Handle order transaction sync from ERP via SyncProducer endpoint
-				// ERP sends TransactionId and ExternalId after processing the material issue
-				if (!string.IsNullOrEmpty(RequestBody))
-				{
-					try
+					// Check if we need to process transactions individually
+					dynamic requestParamsObj = JsonConvert.DeserializeObject(JsonConvert.SerializeObject(requestParams));
+					if (requestParamsObj.ProcessIndividually != null && (bool)requestParamsObj.ProcessIndividually)
 					{
-						// Parse the request body from ERP
-						dynamic messageData = JsonConvert.DeserializeObject(RequestBody);
-						string transactionId = messageData?.TransactionId?.ToString();
-						string externalId = messageData?.ExternalId?.ToString();
-
-						if (string.IsNullOrEmpty(transactionId))
-						{
-							throw new Exception("TransactionId is required in ORDER_TRANSACTION_SERVICE request");
-						}
-
-						if (string.IsNullOrEmpty(externalId))
-						{
-							throw new Exception("ExternalId is required in ORDER_TRANSACTION_SERVICE request");
-						}
-
-						_logger.LogInformation("Processing ORDER_TRANSACTION_SERVICE for TransactionId: {TransactionId}, ExternalId: {ExternalId}",
-							transactionId, externalId);
-
-						// Update the ExternalId in the database
-						var orderTransactionMaterialRepo = GetOperation<IOrderTransactionMaterialRepo>();
-						bool updateSuccess = await orderTransactionMaterialRepo.UpdateOrderTransactionMaterialExternalId(
-							transactionId,
-							externalId,
-							SystemOperator
+						// Process each transaction individually
+						return await ProcessMaterialTransactionsIndividually(
+							LogInfo, ServiceData, SystemOperator, ExecOrigin,
+							requestParamsObj.Transactions, EntityCode, HttpResponse, onResponse
 						).ConfigureAwait(false);
-
-						if (updateSuccess)
-						{
-							HttpResponse.StatusCode = HttpStatusCode.OK;
-							HttpResponse.Message = $"Successfully updated ExternalId for transaction {transactionId}";
-							_logger.LogInformation("Successfully updated ExternalId for transaction {TransactionId} with ExternalId {ExternalId}",
-								transactionId, externalId);
-						}
-						else
-						{
-							HttpResponse.StatusCode = HttpStatusCode.InternalServerError;
-							HttpResponse.Message = $"Failed to update ExternalId for transaction {transactionId}";
-							_logger.LogError("Failed to update ExternalId for transaction {TransactionId}", transactionId);
-						}
-
-						return HttpResponse;
 					}
-					catch (Exception ex)
+
+					RequestBody = JsonConvert.SerializeObject(requestParams);
+					break;
+
+				case SyncERPEntity.ORDER_TRANSACTION_SERVICE:
+					// Handle order transaction sync from ERP via SyncProducer endpoint
+					// ERP sends TransactionId and ExternalId after processing the material issue
+					if (!string.IsNullOrEmpty(RequestBody))
 					{
-						_logger.LogError(ex, "Error processing ORDER_TRANSACTION_SERVICE: {Message}", ex.Message);
-						HttpResponse.StatusCode = HttpStatusCode.BadRequest;
-						HttpResponse.Message = $"Error processing ORDER_TRANSACTION_SERVICE: {ex.Message}";
+						try
+						{
+							// Parse the request body from ERP
+							dynamic messageData = JsonConvert.DeserializeObject(RequestBody);
+							string transactionId = messageData?.TransactionId?.ToString();
+							string externalId = messageData?.ExternalId?.ToString();
+
+							if (string.IsNullOrEmpty(transactionId))
+							{
+								throw new Exception("TransactionId is required in ORDER_TRANSACTION_SERVICE request");
+							}
+
+							if (string.IsNullOrEmpty(externalId))
+							{
+								throw new Exception("ExternalId is required in ORDER_TRANSACTION_SERVICE request");
+							}
+
+							_logger.LogInformation("Processing ORDER_TRANSACTION_SERVICE for TransactionId: {TransactionId}, ExternalId: {ExternalId}",
+								transactionId, externalId);
+
+							// Update the ExternalId in the database
+							var orderTransactionMaterialRepo = GetOperation<IOrderTransactionMaterialRepo>();
+							bool updateSuccess = await orderTransactionMaterialRepo.UpdateOrderTransactionMaterialExternalId(
+								transactionId,
+								externalId,
+								SystemOperator
+							).ConfigureAwait(false);
+
+							if (updateSuccess)
+							{
+								HttpResponse.StatusCode = HttpStatusCode.OK;
+								HttpResponse.Message = $"Successfully updated ExternalId for transaction {transactionId}";
+								_logger.LogInformation("Successfully updated ExternalId for transaction {TransactionId} with ExternalId {ExternalId}",
+									transactionId, externalId);
+							}
+							else
+							{
+								HttpResponse.StatusCode = HttpStatusCode.InternalServerError;
+								HttpResponse.Message = $"Failed to update ExternalId for transaction {transactionId}";
+								_logger.LogError("Failed to update ExternalId for transaction {TransactionId}", transactionId);
+							}
+
+							return HttpResponse;
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "Error processing ORDER_TRANSACTION_SERVICE: {Message}", ex.Message);
+							HttpResponse.StatusCode = HttpStatusCode.BadRequest;
+							HttpResponse.Message = $"Error processing ORDER_TRANSACTION_SERVICE: {ex.Message}";
+							return HttpResponse;
+						}
+					}
+					else
+					{
+						// If no RequestBody, this might be from the internal Kafka notification
+						// (published after material issue sync in ProcessMaterialTransactionsIndividually)
+						_logger.LogInformation("ORDER_TRANSACTION_SERVICE called without body - transaction already updated");
+						HttpResponse.StatusCode = HttpStatusCode.OK;
+						HttpResponse.Message = "Order transaction already processed";
 						return HttpResponse;
 					}
-				}
-				else
-				{
-					// If no RequestBody, this might be from the internal Kafka notification
-					// (published after material issue sync in ProcessMaterialTransactionsIndividually)
-					_logger.LogInformation("ORDER_TRANSACTION_SERVICE called without body - transaction already updated");
-					HttpResponse.StatusCode = HttpStatusCode.OK;
-					HttpResponse.Message = "Order transaction already processed";
-					return HttpResponse;
-				}
 
-		default:
-		throw new Exception("No request body found");
+				default:
+					throw new Exception("No request body found");
+			}
 		}
-				}
 		dynamic requestErpMapped = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.RequestMapSchema, RequestBody) ?? throw new Exception("No data to process");
 		string requestErpJson = JsonConvert.SerializeObject(requestErpMapped[0]);
 		LogInfo.SfMappedJson = requestErpJson;
@@ -2008,7 +2009,7 @@ public class DataSyncServiceProcessor
 			{
 				await HandleMachineIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
 			}
-			
+
 		}
 
 		LogSingleInfoFinish = new DataSyncServiceLogDetail
@@ -2505,22 +2506,22 @@ public class DataSyncServiceProcessor
 							};
 
 							await kafkaService.ProduceMessageAsync(topic, key, kafkaMessage).ConfigureAwait(false);
-							
+
 							// Extraction and external ID update call
-							try 
+							try
 							{
 								if (!string.IsNullOrEmpty(erpResult.Response))
 								{
 									JObject rawResponse = JObject.Parse(erpResult.Response);
 									var batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
-									
+
 									if (!string.IsNullOrEmpty(batchNbr))
 									{
 										_logger.LogInformation("Extracted batchNbr: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
 										var workOrderOperation = GetOperation<IWorkOrderOperation>();
 										await workOrderOperation.UpdateExternalID(batchNbr, requestErpJson, SystemOperator).ConfigureAwait(false);
 									}
-									else 
+									else
 									{
 										_logger.LogWarning("Could not extract batchNbr from ERP response message[0].entity.batchNbr.value");
 									}
@@ -2657,17 +2658,26 @@ public class DataSyncServiceProcessor
 				if (!string.IsNullOrEmpty(rawResponseJson))
 				{
 					JObject rawResponse = JObject.Parse(rawResponseJson);
-					var batchNbr = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+					string batchNbr = null;
+
+					// Try SAP B1 structure first: message.data.docEntry
+					batchNbr = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+
+					// If not found, try Acumatica structure: message[0].entity.batchNbr.value
+					if (string.IsNullOrEmpty(batchNbr))
+					{
+						batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+					}
 
 					if (!string.IsNullOrEmpty(batchNbr))
 					{
-						_logger.LogInformation("Extracted docEntry: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
+						_logger.LogInformation("Extracted docEntry/batchNbr: {BatchNbr}. Calling UpdateExternalID microservice.", batchNbr);
 						var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
 						await workOrderOperation.UpdateExternalID(batchNbr, requestBody, systemOperator).ConfigureAwait(false);
 					}
 					else
 					{
-						_logger.LogWarning("Could not extract docEntry from ERP response message.data.docEntry");
+						_logger.LogWarning("Could not extract docEntry/batchNbr from ERP response. Neither SAP B1 nor Acumatica structure matched.");
 					}
 				}
 			}
@@ -2678,8 +2688,6 @@ public class DataSyncServiceProcessor
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't fail the main operation
-			// The material issue was successful in ERP, this is just post-processing
 			_logger.LogError(ex, "Post-success processing failed: {Message}", ex.Message);
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
@@ -2700,22 +2708,30 @@ public class DataSyncServiceProcessor
 			}
 
 			JObject rawResponse = JObject.Parse(rawResponseJson);
-			var batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+			string batchNbr = null;
+
+			// Try Acumatica structure: message[0].entity.batchNbr.value
+			batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+
+			// If not found, try SAP B1 structure: message.data.docEntry
+			if (string.IsNullOrEmpty(batchNbr))
+			{
+				batchNbr = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+			}
 
 			if (!string.IsNullOrEmpty(batchNbr))
 			{
-				_logger.LogInformation("Extracted batchNbr: {BatchNbr}. Calling TransactionProduct UpdateExternalID microservice.", batchNbr);
+				_logger.LogInformation("Extracted batchNbr/docEntry: {BatchNbr}. Calling TransactionProduct UpdateExternalID microservice.", batchNbr);
 				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
 				await workOrderOperation.UpdateProductExternalID(batchNbr, requestBody, systemOperator).ConfigureAwait(false);
 			}
 			else
 			{
-				_logger.LogWarning("Could not extract batchNbr from ERP response message[0].entity.batchNbr.value");
+				_logger.LogWarning("Could not extract batchNbr/docEntry from ERP response. Neither Acumatica nor SAP B1 structure matched.");
 			}
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't fail the main operation
 			_logger.LogError(ex, "Post-success processing for PRODUCT_RECEIPT_SERVICE failed: {Message}", ex.Message);
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
@@ -2732,55 +2748,70 @@ public class DataSyncServiceProcessor
 			}
 
 			JObject rawResponse = JObject.Parse(rawResponseJson);
-			var docEntry = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+			string externalId = null;
 
-			if (!string.IsNullOrEmpty(docEntry))
+			// Try SAP B1 structure: message.data.docEntry
+			externalId = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+
+			// If not found, try Acumatica structure: message[0].entity.batchNbr.value
+			if (string.IsNullOrEmpty(externalId))
 			{
-				_logger.LogInformation("Extracted docEntry: {DocEntry}. Calling TransactionProduct UpdateExternalID microservice.", docEntry);
+				externalId = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+			}
+
+			if (!string.IsNullOrEmpty(externalId))
+			{
+				_logger.LogInformation("Extracted externalId: {ExternalId}. Calling MachineIssue UpdateExternalID microservice.", externalId);
 				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
-				string externalId = docEntry; // Assuming docEntry is the ExternalId to be updated. Adjust if needed.
 				await workOrderOperation.UpdateMachineIssueExternalID(externalId, requestBody, systemOperator).ConfigureAwait(false);
 			}
 			else
 			{
-				_logger.LogWarning("Could not extract docEntry from ERP response message[0].data.docEntry");
+				_logger.LogWarning("Could not extract docEntry/batchNbr from ERP response. Neither SAP B1 nor Acumatica structure matched.");
 			}
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't fail the main operation
 			_logger.LogError(ex, "Post-success processing for MACHINE_ISSUE_SERVICE failed: {Message}", ex.Message);
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
 	}
+
 	private async Task HandleLaborIssueSuccess(dynamic responseErp, string requestBody, User systemOperator, DataSyncService serviceData, string rawResponseJson = null)
 	{
 		try
 		{
 			if (string.IsNullOrEmpty(rawResponseJson))
 			{
-				_logger.LogWarning("Raw ERP response is empty. Skipping UpdateExternalID for MACHINE_ISSUE_SERVICE.");
+				_logger.LogWarning("Raw ERP response is empty. Skipping UpdateExternalID for LABOR_ISSUE_SERVICE.");
 				return;
 			}
 
 			JObject rawResponse = JObject.Parse(rawResponseJson);
-			var docEntry = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+			string externalId = null;
 
-			if (!string.IsNullOrEmpty(docEntry))
+			// Try SAP B1 structure: message.data.docEntry
+			externalId = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+
+			// If not found, try Acumatica structure: message[0].entity.batchNbr.value
+			if (string.IsNullOrEmpty(externalId))
 			{
-				_logger.LogInformation("Extracted docEntry: {DocEntry}. Calling LaborIssue UpdateExternalID microservice.", docEntry);
+				externalId = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
+			}
+
+			if (!string.IsNullOrEmpty(externalId))
+			{
+				_logger.LogInformation("Extracted externalId: {ExternalId}. Calling LaborIssue UpdateExternalID microservice.", externalId);
 				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
-				string externalId = docEntry; // Assuming docEntry is the ExternalId to be updated. Adjust if needed.
 				await workOrderOperation.UpdateLaborIssueExternalID(externalId, requestBody, systemOperator).ConfigureAwait(false);
 			}
 			else
 			{
-				_logger.LogWarning("Could not extract docEntry from ERP response message[0].data.docEntry");
+				_logger.LogWarning("Could not extract docEntry/batchNbr from ERP response. Neither SAP B1 nor Acumatica structure matched.");
 			}
 		}
 		catch (Exception ex)
 		{
-			// Log error but don't fail the main operation
 			_logger.LogError(ex, "Post-success processing for LABOR_ISSUE_SERVICE failed: {Message}", ex.Message);
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
