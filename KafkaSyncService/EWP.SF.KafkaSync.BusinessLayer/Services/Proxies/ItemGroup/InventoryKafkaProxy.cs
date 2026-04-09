@@ -70,12 +70,11 @@ public class InventoryKafkaProxy : BaseKafkaProxy, IInventoryOperation
         => throw new NotSupportedException(
             "GetInventory cannot be called through the Kafka proxy. " +
             "Inject IInventoryOperation (non-Kafka) for read operations.");
-
-    public List<InventoryItemGroup> ListInventory(
+     public async Task<List<InventoryItemGroup>> ListInventory(
         User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null)
         => throw new NotSupportedException(
             "ListInventory cannot be called through the Kafka proxy. " +
-            "Inject IInventoryOperation (non-Kafka) for read operations.");
+            "Inject IInventoryOperation (non-Kafka) for read operations.");             
 
     public SaleOrder[] ListSalesOrder(
         string Id, string SalesOrder, string CustomerCode, User systemOperator, 

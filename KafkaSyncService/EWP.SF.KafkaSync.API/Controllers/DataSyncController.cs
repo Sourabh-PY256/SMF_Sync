@@ -80,20 +80,7 @@ public class DataSyncController : BaseController
         returnValue.Data = ServicesResponse;
         return returnValue;
     }
-
-    /// <summary>
-    /// Create Work order progress for tool values
-    /// </summary>
-    [HttpGet("WorkOrder/TransactionMaterial/WithoutExternalId")]
-    public async Task<ResponseModel> WorkOrderProgressComponentlValues([FromBody] TransactionMaterialSyncRequest request)
-    {
-        object syncData = await _workOrderOperation.UpdateWorkOrderComponent(request, GetContext().User).ConfigureAwait(false);
-        return new()
-        {
-            IsSuccess = syncData is not null,
-            Data = syncData
-        };
-    }
+   
 
     #endregion DataSync
 }

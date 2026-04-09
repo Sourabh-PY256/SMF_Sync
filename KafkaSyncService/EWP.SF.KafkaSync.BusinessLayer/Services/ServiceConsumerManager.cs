@@ -259,19 +259,12 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             StartInvItemGroup();
             StartProductConsumer();
             StartItemConsumer();
-            // Start Supply service consumer to forward supply-related Kafka messages
             StartSupplyConsumer();
-            // Start Demand service consumer to forward demand-related Kafka messages
             StartDemandConsumer();
-            // Start Measure Unit service consumer to forward unitmeasure-related Kafka messages
             StartMeasureUnitConsumer();
-            // Start Position service consumer to forward position-related Kafka messages
             StartPositionConsumer();
-            // Start Work Order Change Status service consumer
             StartWorkOrderChangeStatusConsumer();
-            // Start Stock service consumer
             StartStockConsumer();
-            // Start Material transaction consumer
             StartMaterialConsumer();
             StartEmpEmployee();
             StartDeviceConsumer();

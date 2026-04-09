@@ -102,6 +102,7 @@ public class InventoryOperation : IInventoryOperation
     public async Task<ResponseData> MergeInventory(InventoryItemGroup InventoryInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true, string logId = null)
     {
         ResponseData returnValue = new();
+        
 
         #region Permission validation
 
@@ -115,7 +116,7 @@ public class InventoryOperation : IInventoryOperation
         returnValue = _inventoryRepo.MergeInventory(InventoryInfo, systemOperator, Validate);
         if (!Validate && returnValue is not null)
         {
-            InventoryItemGroup ObjInventory = ListInventory(systemOperator, returnValue.Code).Find(x => x.Status != Status.Failed);
+            InventoryItemGroup ObjInventory = (await ListInventory(systemOperator, returnValue.Code).ConfigureAwait(false)).FirstOrDefault(x => x.Status != Status.Failed);
             await ObjInventory.Log(returnValue.Action == ActionDB.Create ? EntityLogType.Create : EntityLogType.Update, systemOperator).ConfigureAwait(false);
             if (NotifyOnce)
             {
@@ -133,7 +134,7 @@ public class InventoryOperation : IInventoryOperation
         }
         return returnValue;
     }
-    public List<InventoryItemGroup> ListInventory(User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null)
+    public async Task<List<InventoryItemGroup>> ListInventory(User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null)
     {
         #region Permission validation
 

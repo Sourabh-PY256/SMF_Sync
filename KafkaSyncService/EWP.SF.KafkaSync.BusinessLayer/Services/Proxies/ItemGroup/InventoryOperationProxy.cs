@@ -52,18 +52,42 @@ public class InventoryOperationProxy : BaseHttpProxy, IInventoryOperation
 
     
 
-    public InventoryItemGroup GetInventory(string Code)
+    public async Task<InventoryItemGroup> GetInventory(string Code)
         => throw new NotSupportedException(
             "GetInventory is not available through the HTTP proxy.");
 
-    public List<InventoryItemGroup> ListInventory(
+    public async Task<List<InventoryItemGroup>> ListInventory(
         User systemOperator, string InventoryCode = "", DateTime? DeltaDate = null)
-        => throw new NotSupportedException(
-            "ListInventory is not available through the HTTP proxy.");
+    {
+        List<ResponseModel> responseData = new List<ResponseModel>();
+        try
+        {
+            var inventoryList = new List<InventoryItemGroup>();
+            string endpoint = $"Inventory/List";
+            responseData = await GetAsync<List<ResponseModel>>(endpoint).ConfigureAwait(false);
+            if (responseData != null && responseData.Any())
+            {
+                inventoryList = responseData.SelectMany(r => r.Data as List<InventoryItemGroup>).ToList();
+                return inventoryList;
+            }
+            return inventoryList;
+        
+        }
+        catch (Exception ex)
+        {
+            
+            throw;
+        }
+    }
 
     public SaleOrder[] ListSalesOrder(
         string Id, string SalesOrder, string CustomerCode, User systemOperator, 
         bool getAsMasterDetail = false, DateTime? DeltaDate = null)
         => throw new NotSupportedException(
             "ListSalesOrder is not available through the HTTP proxy.");
+
+    InventoryItemGroup IInventoryOperation.GetInventory(string Code)
+    {
+        throw new NotImplementedException();
+    }
 }

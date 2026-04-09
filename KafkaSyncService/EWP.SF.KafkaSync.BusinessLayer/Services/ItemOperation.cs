@@ -28,7 +28,7 @@ public async Task<List<ResponseData>> ListUpdateComponentBulk(List<ComponentExte
         List<ResponseData> returnValue = [];
         ResponseData MessageError;
         List<MeasureUnit> unitsList = GetMeasureUnits();
-        List<InventoryItemGroup> inventories = _inventoryOperation.ListInventory(systemOperator, null);
+        List<InventoryItemGroup> inventories = await _inventoryOperation.ListInventory(systemOperator, null);
         List<Component> componentsToMerge = [];
         bool NotifyOnce = false;
         if (itemList?.Count > 0)
