@@ -36,6 +36,39 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         //     WorkOrderList = workOrderList
         // };
 
+        foreach (var order in workOrderList)
+        {
+            // Fix Status casing
+            if (!string.IsNullOrEmpty(order.Status))
+                order.Status = System.Globalization.CultureInfo.CurrentCulture
+                                    .TextInfo.ToTitleCase(order.Status.ToLower());
+
+            foreach (var op in order.Operations ?? [])
+            {
+                // Null out empty regex-validated strings
+                if (string.IsNullOrEmpty(op.OperationTimeType))
+                    op.OperationTimeType = null;
+
+                foreach (var item in op.Items ?? [])
+                {
+                    if (string.IsNullOrEmpty(item.IssueMethod))
+                        item.IssueMethod = null;
+
+                    if (string.IsNullOrEmpty(item.Type))
+                        item.Type = null;
+
+                    if (string.IsNullOrEmpty(item.Source))
+                        item.Source = null;
+                }
+
+                foreach (var machine in op.Machines ?? [])
+                {
+                    if (string.IsNullOrEmpty(machine.IssueMode))
+                        machine.IssueMode = null;
+                }
+            }
+        }
+
         //var url = $"WorkOrder/{Validate}/{Level}";
         var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
 

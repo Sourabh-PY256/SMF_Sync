@@ -84,98 +84,62 @@ public static class DataSyncServiceUtil
         return null; // Handle other JToken types if needed
     }
     public static dynamic MapObject(JToken objToken, List<DataSyncMapSchema> listMapSchema, bool ignoreDefault = false, JToken parentToken = null)
-{
-    dynamic response = new JObject();
-
-    foreach (DataSyncMapSchema f in listMapSchema)
     {
-        // Handle parent property references with $parent. notation
-        JToken token = null;
-        if (string.IsNullOrEmpty(f.OriginProperty))
-        {
-            // Empty origin property means use only defaultValue
-            token = null;
-        }
-        else if (f.OriginProperty.StartsWith("$parent.") && parentToken != null)
-        {
-            string parentProperty = f.OriginProperty.Substring(8); // Remove "$parent." prefix
-            token = parentToken.SelectToken(parentProperty);
-        }
-        else
-        {
-            token = objToken.SelectToken(f.OriginProperty); // ✅ Current object property
-        }
+        dynamic response = new JObject();
 
-        if (f.Type == "string")
+        foreach (DataSyncMapSchema f in listMapSchema)
         {
-            string defaultValue = !string.IsNullOrEmpty(f.DefaultValue) ? f.DefaultValue.Trim() : string.Empty;
-            if (ignoreDefault)
-                defaultValue = null;
-
-            string value = token?.ToString() ?? defaultValue;
-
-            if (!string.IsNullOrEmpty(defaultValue) && string.IsNullOrEmpty(value))
-                value = defaultValue;
-
-            // MappingValues
-            if (f.MappingValues != null && f.MappingValues.Any())
+            // Handle parent property references with $parent. notation
+            JToken token = null;
+            if (string.IsNullOrEmpty(f.OriginProperty))
             {
-                var mapped = f.MappingValues.FirstOrDefault(m => m.ERPValue == value);
-                if (mapped != null)
-                    value = mapped.SFValue;
+                // Empty origin property means use only defaultValue
+                token = null;
             }
-
-            if (DateTime.TryParse(value, out DateTime dateValue) && value.Length == 19)
-                value = dateValue.ToString("s");
-
-            response[f.MapProperty] = value?.Trim();
-        }
-
-        if (f.Type == "integer")
-        {
-            int? defaultValue = (f.DefaultValue ?? "0").ToInt32();
-            if (ignoreDefault)
-                defaultValue = null;
-
-            int value = token?.Value<int>() ?? 0;
-
-            if (Math.Abs(value) < 0.0001 && Math.Abs((double)defaultValue.GetValueOrDefault()) >= 0.0001)
+            else if (f.OriginProperty.StartsWith("$parent.") && parentToken != null)
             {
-                if (!ignoreDefault)
-                    response[f.MapProperty] = defaultValue;
+                string parentProperty = f.OriginProperty.Substring(8); // Remove "$parent." prefix
+                token = parentToken.SelectToken(parentProperty);
             }
             else
             {
-                response[f.MapProperty] = value;
+                token = objToken.SelectToken(f.OriginProperty); // ✅ Current object property
             }
-        }
 
-        if (f.Type == "float")
-        {
-            float.TryParse(f.DefaultValue, out float tempDefault);
-            float? defaultValue = ignoreDefault ? null : tempDefault;
-
-            float value = token?.Value<float>() ?? 0;
-
-            if (Math.Abs(value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+            if (f.Type == "string")
             {
-                if (!ignoreDefault)
-                    response[f.MapProperty] = defaultValue;
+                string defaultValue = !string.IsNullOrEmpty(f.DefaultValue) ? f.DefaultValue.Trim() : string.Empty;
+                if (ignoreDefault)
+                    defaultValue = null;
+
+                string value = token?.ToString() ?? defaultValue;
+
+                if (!string.IsNullOrEmpty(defaultValue) && string.IsNullOrEmpty(value))
+                    value = defaultValue;
+
+                // MappingValues
+                if (f.MappingValues != null && f.MappingValues.Any())
+                {
+                    var mapped = f.MappingValues.FirstOrDefault(m => m.ERPValue == value);
+                    if (mapped != null)
+                        value = mapped.SFValue;
+                }
+
+                if (DateTime.TryParse(value, out DateTime dateValue) && value.Length == 19)
+                    value = dateValue.ToString("s");
+
+                response[f.MapProperty] = value?.Trim();
             }
-            else
-            {
-                response[f.MapProperty] = value;
-            }
-        }
 
-        if (f.Type == "double")
-        {
-            double? defaultValue = ignoreDefault ? null : f.DefaultValue.ToDouble();
-            double? value = token?.Value<double?>();
-
-            if (value is not null)
+            if (f.Type == "integer")
             {
-                if (Math.Abs(value.Value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+                int? defaultValue = (f.DefaultValue ?? "0").ToInt32();
+                if (ignoreDefault)
+                    defaultValue = null;
+
+                int value = token?.Value<int>() ?? 0;
+
+                if (Math.Abs(value) < 0.0001 && Math.Abs((double)defaultValue.GetValueOrDefault()) >= 0.0001)
                 {
                     if (!ignoreDefault)
                         response[f.MapProperty] = defaultValue;
@@ -185,52 +149,97 @@ public static class DataSyncServiceUtil
                     response[f.MapProperty] = value;
                 }
             }
-            else if (!ignoreDefault)
+
+            if (f.Type == "float")
             {
-                response[f.MapProperty] = defaultValue;
+                float.TryParse(f.DefaultValue, out float tempDefault);
+                float? defaultValue = ignoreDefault ? null : tempDefault;
+
+                float value = token?.Value<float>() ?? 0;
+
+                if (Math.Abs(value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+                {
+                    if (!ignoreDefault)
+                        response[f.MapProperty] = defaultValue;
+                }
+                else
+                {
+                    response[f.MapProperty] = value;
+                }
             }
-        }
 
-        if (f.Type == "decimal")
-        {
-            decimal? defaultValue = ignoreDefault ? null : f.DefaultValue.ToDecimal();
-            decimal value = token?.Value<decimal>() ?? 0;
-
-            if (value == 0 && defaultValue != 0)
+            if (f.Type == "double")
             {
-                if (!ignoreDefault)
+                double? defaultValue = ignoreDefault ? null : f.DefaultValue.ToDouble();
+                double? value = token?.Value<double?>();
+
+                if (value is not null)
+                {
+                    if (Math.Abs(value.Value) < 0.0001 && Math.Abs(defaultValue.GetValueOrDefault()) >= 0.0001)
+                    {
+                        if (!ignoreDefault)
+                            response[f.MapProperty] = defaultValue;
+                    }
+                    else
+                    {
+                        response[f.MapProperty] = value;
+                    }
+                }
+                else if (!ignoreDefault)
+                {
                     response[f.MapProperty] = defaultValue;
+                }
             }
-            else
+
+            if (f.Type == "decimal")
             {
-                response[f.MapProperty] = value;
+                decimal? defaultValue = ignoreDefault ? null : f.DefaultValue.ToDecimal();
+                decimal value = token?.Value<decimal>() ?? 0;
+
+                if (value == 0 && defaultValue != 0)
+                {
+                    if (!ignoreDefault)
+                        response[f.MapProperty] = defaultValue;
+                }
+                else
+                {
+                    response[f.MapProperty] = value;
+                }
             }
-        }
 
-        if (f.Type == "bool")
-        {
-            response[f.MapProperty] = token?.Value<bool>() ?? false;
-        }
-
-        if (f.Type == "list")
-        {
-            JToken value = token ?? new JArray(); // ✅ safe fallback
-            // Pass current objToken as parentToken for nested children
-            dynamic elemChild = MapProperties(value, f.Children, ignoreDefault, objToken);
-            response[f.MapProperty] = JToken.FromObject(elemChild);
-        }
-
-        if (f.Type == "datetime")
-        {
-            if (token != null && DateTime.TryParse(token.ToString(), out DateTime dt))
+            if (f.Type == "bool")
             {
-                response[f.MapProperty] = dt;
+                response[f.MapProperty] = token?.Value<bool>() ?? false;
+            }
+
+            if (f.Type == "list")
+            {
+                // JToken value = token ?? new JArray(); 
+                // dynamic elemChild = MapProperties(value, f.Children, ignoreDefault, objToken);
+                // response[f.MapProperty] = JToken.FromObject(elemChild);
+                JToken value = (token == null || token.Type == JTokenType.Null) ? new JArray() : token;
+                if (value.Type != JTokenType.Array && value.Type != JTokenType.Object)
+                    value = new JArray();
+
+                dynamic elemChild = MapProperties(value, f.Children, ignoreDefault, objToken);
+
+                response[f.MapProperty] = elemChild == null
+                    ? new JArray()
+                    : JToken.FromObject(elemChild);
+
+            }
+
+            if (f.Type == "datetime")
+            {
+                if (token != null && DateTime.TryParse(token.ToString(), out DateTime dt))
+                {
+                    response[f.MapProperty] = dt;
+                }
             }
         }
+
+        return response;
     }
-
-    return response;
-}
 
     public static string GetErpErrors(this string input, string name)
     {
