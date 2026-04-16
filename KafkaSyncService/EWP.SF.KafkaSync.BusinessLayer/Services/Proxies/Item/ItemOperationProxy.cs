@@ -26,7 +26,7 @@ public class ItemOperationProxy : BaseHttpProxy, IItemOperation
         LevelMessage Level)
     {
         // Endpoint: Item/Bulk/{validate}/{level}
-        string endpoint = $"Item/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"Component/Merge/{Validate.ToString().ToLower()}";
         
         // Sending the list directly as the body
         return await PostAsync<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);

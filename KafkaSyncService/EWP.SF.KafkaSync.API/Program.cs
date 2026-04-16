@@ -8,6 +8,8 @@ using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 using EWP.SF.KafkaSync.BusinessLayer.Services;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +72,10 @@ builder.Services.AddScoped<IStockAllocationRepo, StockAllocationRepo>();
 builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
 builder.Services.AddScoped<DataSyncServiceProcessor>();
 builder.Services.AddScoped<DataSyncServiceManager>();
+builder.Services.AddSingleton<ISseService, SseService>();
+builder.Services.AddSingleton<IDataSyncNotifier, DataSyncNotifier>();
+builder.Services.AddSingleton<ISyncCompletionRegistry, SyncCompletionRegistry>(); 
+builder.Services.AddScoped<KafkaSyncRequestFactory>();
 // builder.Services.AddScoped<IInventoryOperation, InventoryOperation>(); // Moved to proxy selection section below
 // builder.Services.AddScoped<IEmployeeOperation, EmployeeOperation>(); // Moved to proxy selection section below
 builder.Services.AddScoped<IInventoryStatusOperation, InventoryStatusOperation>();
@@ -203,6 +209,8 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IDeviceOperation, DeviceKafkaProxy>();
             builder.Services.AddScoped<IWorkOrderOperation, ProductionOrderKafkaProxy>();
             builder.Services.AddScoped<IOrderTransactionProductOperation, ProductReceiptKafkaProxy>();
+
+            
         }
         else if (configuration.GetValue<bool>("AppSettings:UseExternalSyncApi"))
         {
@@ -224,6 +232,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IDeviceOperation>(sp => sp.GetRequiredService<DeviceOperationProxy>());
             builder.Services.AddScoped<IWorkOrderOperation>(sp => sp.GetRequiredService<ProductionOrderOperationProxy>());
             builder.Services.AddScoped<IOrderTransactionProductOperation>(sp => sp.GetRequiredService<ProductReceiptOperationProxy>());
+
         }
         else
         {
@@ -266,8 +275,15 @@ builder.Services.AddSingleton<IKafkaService, KafkaService>();
 // Register service consumer manager as a singleton
 builder.Services.AddSingleton<IServiceConsumerManager, ServiceConsumerManager>();
 
-builder.Services.AddControllers();
-
+//builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(options =>
+    {
+        options.SerializerSettings.ContractResolver = 
+            new DefaultContractResolver(); // PascalCase
+        options.SerializerSettings.NullValueHandling = 
+            NullValueHandling.Ignore; // Remove null properties
+    });
 // Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

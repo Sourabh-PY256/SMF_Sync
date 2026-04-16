@@ -44,5 +44,7 @@ namespace EWP.SF.KafkaSync.BusinessEntities.Kafka
         /// Used by the consumer to update the log with the microservice's response.
         /// </summary>
         public string LogId { get; set; }
+
+        public string CorrelationId { get; set; }
     }
 }

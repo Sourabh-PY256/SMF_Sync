@@ -1162,7 +1162,7 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	public int MinimumCapacity { get; set; }
+	public decimal  MinimumCapacity { get; set; }
 
 	/// <summary>
 	///

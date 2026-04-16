@@ -12,6 +12,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
 {
     private readonly ILogger<ProductionOrderOperationProxy> _logger;
+    private readonly bool _use2503ForSync;
 
     public ProductionOrderOperationProxy(
         HttpClient httpClient,
@@ -21,6 +22,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         : base(httpClient, configuration, authService)
     {
         _logger = logger;
+        _use2503ForSync = configuration.GetValue<bool>("Use2503ForSync");
     }
 
     public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(
@@ -346,11 +348,14 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
     }
 
+
+
     public async Task<object> CallOrderErpSyncService(ProductionOrder request, User systemOperator)
     {
         try
         {
-            var response = await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
+            var response = _use2503ForSync? await PostAsyncPO<ResponseModel>("WorkOrder/SendToERP", Sanitize(request)).ConfigureAwait(false): await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
+
             if (response?.Data == null)
             {
                 return null;
@@ -442,4 +447,113 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
 
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
+
+    public static ProductionOrder Sanitize(ProductionOrder order)
+    {
+        if (order == null) return null;
+
+        // -------- ROOT LEVEL --------
+        order.Code ??= string.Empty;
+        order.Name ??= string.Empty;
+        order.ProductCode ??= string.Empty;
+        order.UnitCode ??= string.Empty;
+        order.Warehouse ??= string.Empty;
+        order.OrderType ??= "Production";
+        order.Priority ??= "0";
+        order.Comments ??= string.Empty;
+
+        // Fix Dates
+        order.ActualStartDate = FixDate(order.ActualStartDate);
+        order.ActualEndDate = FixDate(order.ActualEndDate);
+        order.ActualStartDateUTC = FixDate(order.ActualStartDateUTC);
+
+        // Enum fix
+        order.Status = Enum.IsDefined(typeof(Status), order.Status)
+            ? order.Status
+            : default;
+
+        // ProductionLines fix
+        order.ProductionLines = order.ProductionLines?
+            .Where(x => !string.IsNullOrWhiteSpace(x) && x != "undefined")
+            .ToList() ?? new List<string>();
+
+        // -------- OPERATIONS --------
+        if (order.Operations != null)
+        {
+            foreach (var op in order.Operations)
+            {
+                op.Name ??= string.Empty;
+                op.OperationTypeCode ??= string.Empty;
+                op.OperationSubTypeCode ??= string.Empty;
+
+                op.ActualStartDate = FixDate(op.ActualStartDate);
+                op.ActualEndDate = FixDate(op.ActualEndDate);
+                op.ActualStartDateUTC = FixDate(op.ActualStartDateUTC);
+                op.ActualEndDateUTC = FixDate(op.ActualEndDateUTC);
+
+                op.Status = Enum.IsDefined(typeof(Status), op.Status)
+                    ? op.Status
+                    : default;
+
+                // Machines
+                if (op.Machines != null)
+                {
+                    foreach (var m in op.Machines)
+                    {
+                        m.MachineCode ??= string.Empty;
+
+                        m.Status = Enum.IsDefined(typeof(Status), m.Status)
+                            ? m.Status
+                            : default;
+
+                        m.Labor ??= new List<ProductionOrderResource>();
+                        m.ToolingType ??= new List<ProductionOrderResource>();
+                    }
+                }
+
+                // Items
+                if (op.Items != null)
+                {
+                    foreach (var item in op.Items)
+                    {
+                        item.ItemCode ??= string.Empty;
+                        item.UnitCode ??= string.Empty;
+                        item.WarehouseCode ??= string.Empty;
+
+                        item.Status = Enum.IsDefined(typeof(Status), item.Status)
+                            ? item.Status
+                            : default;
+                    }
+                }
+
+                // ByProducts
+                if (op.Byproducts != null)
+                {
+                    foreach (var bp in op.Byproducts)
+                    {
+                        bp.ItemCode ??= string.Empty;
+                        bp.UnitCode ??= string.Empty;
+                        bp.WarehouseCode ??= string.Empty;
+                    }
+                }
+
+                op.Labor ??= new List<ProductionOrderResource>();
+                op.ToolingType ??= new List<ProductionOrderResource>();
+                op.Tasks ??= new List<Activity>();
+            }
+        }
+
+        return order;
+    }
+
+    private static DateTime? FixDate(DateTime? date)
+    {
+        if (date == null) return null;
+
+        // Treat 1900 as invalid
+        if (date.Value.Year <= 1900)
+            return null;
+
+        return date;
+    }
 }

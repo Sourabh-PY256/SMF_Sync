@@ -16,6 +16,7 @@ using EWP.SF.Common.ResponseModels;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using EWP.SF.KafkaSync.BusinessLayer.Services;
 
 namespace EWP.SF.KafkaSync.BusinessLayer
 {
@@ -25,17 +26,20 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         private readonly IKafkaService _kafkaService;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IConfiguration _configuration;
+        private readonly ISyncCompletionRegistry _completionRegistry;
 
         public ServiceConsumerManager(
             ILogger<ServiceConsumerManager> logger,
             IKafkaService kafkaService,
             IServiceScopeFactory serviceScopeFactory,
-            IConfiguration configuration)
+            IConfiguration configuration, ISyncCompletionRegistry completionRegistry)
         {
             _logger = logger;
             _kafkaService = kafkaService;
             _serviceScopeFactory = serviceScopeFactory;
             _configuration = configuration;
+            _completionRegistry = completionRegistry;
+
         }
 
         /// <summary>
@@ -57,7 +61,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 System.Threading.Thread.Sleep(100);
 
                 // Pass the unique GroupId as the 5th argument
-                _kafkaService.StartConsumer(topic, async (key, value) => {
+                _kafkaService.StartConsumer(topic, async (key, value) =>
+                {
 
                     _logger.LogInformation("Received Kafka trigger message: {Key}", key);
 
@@ -90,7 +95,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                             _logger.LogInformation("ORDER_TRANSACTION_SERVICE processing complete: {Message}", response.Message);
                         }
-                        else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE && message.ServiceData.HttpMethod == "POST" )
+                        else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
@@ -148,7 +153,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                 _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
                             }
                         }
-                         else if (message.Service == SyncERPEntity.MACHINE_ISSUE_SERVICE && message.ServiceData.HttpMethod == "POST")
+                        else if (message.Service == SyncERPEntity.MACHINE_ISSUE_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
@@ -247,11 +252,106 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                 message.EntityCode ?? string.Empty,
                                 message.BodyData ?? string.Empty
                             ).ConfigureAwait(false);
-                            
+
                             _logger.LogInformation("{Service} ERP Sync execution complete", message.Service);
                         }
                     }
                 }, null, null, groupId);
+
+                string sseTopic = $"producer-syncSSE-{entityType.ToLower()}";
+                string sseGroupId = $"{prefix}-{entityType.ToLower()}-sse-group";
+                _logger.LogInformation("Starting SSE consumer for topic: {Topic} with GroupId: {GroupId}", sseTopic, sseGroupId);
+
+                System.Threading.Thread.Sleep(100);
+
+                // _kafkaService.StartConsumer(sseTopic, async (key, value) =>
+                // {
+                //     _logger.LogInformation("Received Kafka SSE trigger message: {Key}", key);
+
+                //     var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value);
+                //     if (message == null)
+                //     {
+                //         _logger.LogWarning("Failed to deserialize Kafka SSE message");
+                //         return;
+                //     }
+
+                //     using (var scope = _serviceScopeFactory.CreateScope())
+                //     {
+                //         TriggerType triggerType;
+                //         if (!Enum.TryParse<TriggerType>(message.Trigger, out triggerType))
+                //         {
+                //             triggerType = TriggerType.SmartFactory;
+                //         }
+
+                //         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+
+                //         var response = await processor.SyncExecution(
+                //             message.ServiceData,
+                //             message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
+                //             triggerType,
+                //             message.User,
+                //             message.EntityCode ?? string.Empty,
+                //             message.BodyData ?? string.Empty
+                //         ).ConfigureAwait(false);
+
+                //         _logger.LogInformation("{Service} SSE ERP Sync execution complete", message.Service);
+                //     }
+                // }, null, null, sseGroupId);
+                
+
+                _kafkaService.StartConsumer(sseTopic, async (key, value) =>
+                {
+                    _logger.LogInformation("Received Kafka SSE trigger message: {Key}", key);
+
+                    var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value);
+                    if (message == null)
+                    {
+                        _logger.LogWarning("Failed to deserialize Kafka SSE message");
+                        return;
+                    }
+
+                    using (var scope = _serviceScopeFactory.CreateScope())
+                    {
+                        TriggerType triggerType;
+                        if (!Enum.TryParse<TriggerType>(message.Trigger, out triggerType))
+                        {
+                            triggerType = TriggerType.SmartFactory;
+                        }
+                        DataSyncHttpResponse syncResponse = new();
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        bool success = false;
+
+                        try
+                        {
+                           syncResponse = await processor.SyncExecution(
+                                message.ServiceData,
+                                message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
+                                triggerType,
+                                message.User,
+                                message.EntityCode ?? string.Empty,
+                                message.BodyData ?? string.Empty
+                            ).ConfigureAwait(false);
+
+                            success = true;
+                            _logger.LogInformation("{Service} SSE ERP Sync execution complete", message.Service);
+                        }
+                        catch (Exception ex)
+                        {
+                            success = false;
+                            syncResponse.Message = ex.Message;
+                            _logger.LogError(ex, "{Service} SSE ERP Sync execution failed", message.Service);
+                        }
+                        finally
+                        {
+                            // 👇 Signal producer that consumer is done (success or fail)
+                             if (!string.IsNullOrEmpty(message.CorrelationId))
+                                {
+                                    _completionRegistry.Complete(message.CorrelationId, syncResponse);
+                                    _logger.LogInformation("Completed correlationId {CorrelationId}", message.CorrelationId);
+                                }
+                        }
+                    }
+                }, null, null, sseGroupId);
             }
 
             StartInvBinLocation();
@@ -301,7 +401,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<ToolingTypeOperationProxy>();
-                
+
                 var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
                 string logId = message.LogId ?? body.LogId?.ToString();
@@ -312,9 +412,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     var original = body.OriginalData?.ToObject<List<ToolTypeExternal>>() ?? new List<ToolTypeExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var listResponse = await httpProxy.ListUpdateToolType(list, original, message.User, validate, level, logId).ConfigureAwait(false);
-                    
+
                     if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -360,7 +460,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                
+
                 var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
                 string logId = message.LogId ?? body.LogId?.ToString();
@@ -371,9 +471,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
                     bool isDataSynced = body.IsDataSynced != null && (bool)body.IsDataSynced;
-                    
+
                     var listResponse = await httpProxy.ListUpdateProductionOrder(list, message.User, validate, level, isDataSynced, logId).ConfigureAwait(false);
-                    
+
                     if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -392,9 +492,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     var list = body.Data.ToObject<List<ProductionOrderChangeStatusExternal>>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var listResponse = httpProxy.ListUpdateWorkOrderChangeStatus(list, message.User, validate, level, logId);
-                    
+
                     if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -440,7 +540,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<ProductReceiptOperationProxy>();
-                
+
                 var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
                 string logId = message.LogId ?? body.LogId?.ToString();
@@ -450,9 +550,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     var list = body.Data.ToObject<List<ProductReceiptExternal>>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var listResponse = await httpProxy.ListUpdateProductReceipt(list, message.User, validate, level, logId).ConfigureAwait(false);
-                    
+
                     if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -558,7 +658,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<DeviceOperationProxy>();
-                
+
                 var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
                 string logId = message.LogId ?? body.LogId?.ToString();
@@ -569,9 +669,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
                     bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
-                    
+
                     var response = await httpProxy.CreateMachine(machineInfo, message.User, validate, "", notifyOnce, logId).ConfigureAwait(false);
-                    
+
                     if (!string.IsNullOrEmpty(logId) && machineInfo != null && response != null)
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -584,9 +684,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     var original = body.OriginalData?.ToObject<List<MachineExternal>>() ?? new List<MachineExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var listResponse = await httpProxy.ListUpdateMachine(list, original, message.User, validate, "", logId).ConfigureAwait(false);
-                    
+
                     if (!string.IsNullOrEmpty(logId) && list != null && listResponse != null)
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -643,7 +743,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                     var original = body.OriginalData?.ToObject<List<ComponentExternal>>() ?? new List<ComponentExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var responses = await httpProxy.ListUpdateComponentBulk(list, original, message.User, validate, level).ConfigureAwait(false);
 
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
@@ -958,10 +1058,10 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             _kafkaService.StartConsumer(topic, async (key, value) =>
             {
                 _logger.LogInformation("[BinLocation] Received Kafka message. Key: {Key}", key);
-                
+
                 var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
-                
+
                 if (message == null || string.IsNullOrEmpty(message.BodyData))
                 {
                     _logger.LogWarning("[BinLocation] Message is null or BodyData is empty. Key: {Key}", key);
@@ -970,22 +1070,22 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<BinLocationOperationProxy>();
-                var body      = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
 
                 if (action == "ListUpdateBinLocation")
                 {
-                    var list     = body.Data.ToObject<List<BinLocationExternal>>();
+                    var list = body.Data.ToObject<List<BinLocationExternal>>();
                     var original = body.OriginalData?.ToObject<List<BinLocationExternal>>() ?? new List<BinLocationExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var responses = await httpProxy.ListUpdateBinLocation(list, original, message.User, validate, level, message.LogId).ConfigureAwait(false);
-                    
+
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
-                        for(int i = 0; i < list.Count; i++)
+                        for (int i = 0; i < list.Count; i++)
                         {
                             var resp = responses.Count > i ? responses[i] : new EWP.SF.Common.ResponseModels.ResponseData { IsSuccess = false, Message = "No response for this item" };
                             await processor.UpdateLogDetailAsync(message.LogId, list[i].LocationCode, resp).ConfigureAwait(false);
@@ -994,12 +1094,12 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
                 else if (action == "MergeBinLocation")
                 {
-                    var info      = body.Data.ToObject<BinLocation>();
+                    var info = body.Data.ToObject<BinLocation>();
                     bool validate = body.Validate != null && (bool)body.Validate;
-                    bool once     = body.NotifyOnce != null && (bool)body.NotifyOnce;
-                    
+                    bool once = body.NotifyOnce != null && (bool)body.NotifyOnce;
+
                     var response = await httpProxy.MergeBinLocation(info, message.User, validate, once, message.LogId).ConfigureAwait(false);
-                    
+
                     if (response != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -1040,18 +1140,18 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<WarehouseOperationProxy>();
-                var body      = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
 
                 if (action == "ListUpdateWarehouseGroup")
                 {
-                    var list     = body.Data.ToObject<List<WarehouseExternal>>();
+                    var list = body.Data.ToObject<List<WarehouseExternal>>();
                     var original = body.OriginalData?.ToObject<List<WarehouseExternal>>() ?? new List<WarehouseExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var responses = await httpProxy.ListUpdateWarehouseGroup(list, original, message.User, validate, level, message.LogId).ConfigureAwait(false);
-                    
+
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -1064,12 +1164,12 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
                 else if (action == "MergeWarehouse")
                 {
-                    var info      = body.Data.ToObject<Warehouse>();
+                    var info = body.Data.ToObject<Warehouse>();
                     bool validate = body.Validate != null && (bool)body.Validate;
-                    bool once     = body.NotifyOnce != null && (bool)body.NotifyOnce;
-                    
+                    bool once = body.NotifyOnce != null && (bool)body.NotifyOnce;
+
                     var response = await httpProxy.MergeWarehouse(info, message.User, validate, once, message.LogId).ConfigureAwait(false);
-                    
+
                     if (response != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -1110,18 +1210,18 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 using var scope = _serviceScopeFactory.CreateScope();
                 //var inventoryOp = scope.ServiceProvider.GetRequiredService<IInventoryOperation>();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<InventoryOperationProxy>();
-                var body      = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
 
                 if (action == "ListUpdateInventoryGroup")
                 {
-                    var list     = body.Data.ToObject<List<InventoryExternal>>();
+                    var list = body.Data.ToObject<List<InventoryExternal>>();
                     var original = body.OriginalData?.ToObject<List<InventoryExternal>>() ?? new List<InventoryExternal>();
                     bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
-                    
+
                     var responses = await httpProxy.ListUpdateInventoryGroup(list, original, message.User, validate, level, message.LogId).ConfigureAwait(false);
-                    
+
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -1134,12 +1234,12 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
                 else if (action == "MergeInventory")
                 {
-                    var info      = body.Data.ToObject<InventoryItemGroup>();
+                    var info = body.Data.ToObject<InventoryItemGroup>();
                     bool validate = body.Validate != null && (bool)body.Validate;
-                    bool once     = body.NotifyOnce != null && (bool)body.NotifyOnce;
-                    
+                    bool once = body.NotifyOnce != null && (bool)body.NotifyOnce;
+
                     var response = await httpProxy.MergeInventory(info, message.User, validate, once, message.LogId).ConfigureAwait(false);
-                    
+
                     if (response != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -1179,20 +1279,20 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                 using var scope = _serviceScopeFactory.CreateScope();
                 var httpProxy = scope.ServiceProvider.GetRequiredService<EmployeeOperationProxy>();
-                var body      = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                var body = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
                 string action = body.Action;
 
                 if (action == "ImportEmployeesAsync")
                 {
-                    var list       = body.Data.ToObject<List<EmployeeExternal>>();
-                    var original   = body.OriginalData?.ToObject<List<EmployeeExternal>>() ?? new List<EmployeeExternal>();
-                    bool validate  = body.Validate != null && (bool)body.Validate;
+                    var list = body.Data.ToObject<List<EmployeeExternal>>();
+                    var original = body.OriginalData?.ToObject<List<EmployeeExternal>>() ?? new List<EmployeeExternal>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
                     bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
                     bool isDataSync = body.IsDataSync != null && (bool)body.IsDataSync;
-                    
+
                     var responses = await httpProxy.ImportEmployeesAsync(list, original, message.User, validate, level, notifyOnce, isDataSync, message.LogId).ConfigureAwait(false);
-                    
+
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
@@ -1205,14 +1305,14 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
                 else if (action == "MRGEmployee")
                 {
-                    var list       = body.Data.ToObject<List<Employee>>();
-                    bool validate  = body.Validate != null && (bool)body.Validate;
+                    var list = body.Data.ToObject<List<Employee>>();
+                    bool validate = body.Validate != null && (bool)body.Validate;
                     LevelMessage level = body.Level != null ? (LevelMessage)body.Level : LevelMessage.Success;
                     bool notifyOnce = body.NotifyOnce != null && (bool)body.NotifyOnce;
                     bool isDataSync = body.IsDataSync != null && (bool)body.IsDataSync;
-                    
+
                     var responses = await httpProxy.MRGEmployee(list, message.User, validate, level, notifyOnce, isDataSync, message.LogId).ConfigureAwait(false);
-                    
+
                     if (responses != null && !string.IsNullOrEmpty(message.LogId))
                     {
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();

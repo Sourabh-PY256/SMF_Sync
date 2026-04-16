@@ -28,7 +28,7 @@ public class MeasureUnitOperationProxy : BaseHttpProxy, IMeasureUnitOperation
         LevelMessage Level)
     {
         // Endpoint: MeasureUnit/Bulk/{validate}/{level}
-        string endpoint = $"MeasureUnit/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"MeasureUnit/{Validate.ToString().ToLower()}/{Level}";
         
         // Sending the list directly as the body
         return await PostAsync<List<ResponseData>>(endpoint, measureUnitInfoList).ConfigureAwait(false);

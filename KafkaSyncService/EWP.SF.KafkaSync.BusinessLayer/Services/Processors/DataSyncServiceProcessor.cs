@@ -31,20 +31,21 @@ public class DataSyncServiceProcessor
 
 	IDataSyncServiceOperation _dataSyncServiceOperation;
 	IServiceProvider _serviceProvider;
-
+	IDataSyncNotifier _notifier;
 
 
 
 
 
 	public DataSyncServiceProcessor(ILogger<DataSyncServiceProcessor> logger,
-	IDataSyncServiceOperation operations, IServiceProvider serviceProvider)
+	IDataSyncServiceOperation operations, IServiceProvider serviceProvider, IDataSyncNotifier notifier)
 	{
 		_logger = logger;
 		_dataSyncServiceOperation = operations;
 		_systemOperator = _dataSyncServiceOperation.GetUserWithoutValidations(new User(-1)).ConfigureAwait(false).GetAwaiter().GetResult();
 		ContextCache.ERPOffset = null;
 		_serviceProvider = serviceProvider;
+		_notifier = notifier;
 
 
 	}
@@ -94,6 +95,7 @@ public class DataSyncServiceProcessor
 			_ = _dataSyncServiceOperation.UpdateDataSyncServiceStatus(ServiceData.Id, ServiceStatus.Executing);
 
 			//ServiceManager.Datasync_NotifyStart(ServiceData, EntityCode);
+			await _notifier.NotifyStartAsync(ServiceData, EntityCode).ConfigureAwait(false);
 			// Actualizar fecha de ultima ejecución solo cuando no sea GET o no exista un EntityCode definido
 
 			string httpMethod = string.Empty;
@@ -157,6 +159,7 @@ public class DataSyncServiceProcessor
 		}
 		finally
 		{
+			await _notifier.NotifyStopAsync(ServiceData, EntityCode, initDate).ConfigureAwait(false);
 			// Reset status to Active in DB
 			_ = _dataSyncServiceOperation.UpdateDataSyncServiceStatus(ServiceData.Id, ServiceStatus.Active);
 
@@ -191,7 +194,7 @@ public class DataSyncServiceProcessor
 				if (erpResult.StatusCode == HttpStatusCode.NoContent)
 				{
 					string message = "ERP returned no content";
-					HttpResponse.StatusCode = HttpStatusCode.NotFound;
+					HttpResponse.StatusCode = HttpStatusCode.NoContent;
 					HttpResponse.Message = message;
 					return HttpResponse;
 				}
@@ -723,7 +726,8 @@ public class DataSyncServiceProcessor
 										listMachinesOriginal,
 										SystemOperator,
 										false,
-										"Success"
+										"Success",
+										LogInfo.Id
 									).ConfigureAwait(false)).FirstOrDefault();
 
 									LogSingleInfo.ResponseJson = JsonConvert.SerializeObject(sfResponse);

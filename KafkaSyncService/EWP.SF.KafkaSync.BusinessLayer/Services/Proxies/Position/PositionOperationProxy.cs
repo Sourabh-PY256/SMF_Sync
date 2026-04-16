@@ -29,7 +29,7 @@ public class PositionOperationProxy : BaseHttpProxy, IProfileOperation
         LevelMessage Level)
     {
         // Endpoint: Position/Bulk/{validate}/{level}
-        string endpoint = $"Position/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"Position/{Validate.ToString().ToLower()}/{Level}";
         
         // Sending the list directly as the body
         return await PostAsync<List<ResponseData>>(endpoint, profileInfoList).ConfigureAwait(false);

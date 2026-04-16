@@ -11,6 +11,8 @@ public abstract class BaseHttpProxy
 {
     protected readonly HttpClient _httpClient;
     protected readonly string _baseUrl;
+
+    protected readonly string _baseUrl2503;
     private readonly IConfiguration _configuration;
     private readonly IAuthenticationService _authService;
 
@@ -19,23 +21,72 @@ public abstract class BaseHttpProxy
         _httpClient = httpClient;
         _configuration = configuration;
         _authService = authService;
-        _baseUrl = configuration[$"AppSettings:{baseUrlKey}"] 
-                  ?? configuration[baseUrlKey] 
-                  ?? configuration["AppSettings:ExternalServiceUrl"] 
-                  ?? configuration["ExternalServiceUrl"] 
+        _baseUrl = configuration[$"AppSettings:{baseUrlKey}"]
+                  ?? configuration[baseUrlKey]
+                  ?? configuration["AppSettings:ExternalServiceUrl"]
+                  ?? configuration["ExternalServiceUrl"]
                   ?? "http://localhost:5000";
+
     }
 
     private async Task<string> GetAccessTokenAsync()
     {
         return await _authService.GetAccessTokenAsync();
     }
+    protected async Task<T> PostAsyncPO<T>(string endpoint, object data, bool authorize = true)
+    {
+        try
+        {
+            var baseUrl = _baseUrl;
+            var url = $"{baseUrl.TrimEnd('/')}/{endpoint.TrimStart('/')}";
 
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            if (authorize)
+            {
+                var token = await GetAccessTokenAsync();
+
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    throw new Exception("Authorization token is null or empty");
+                }
+                request.Headers.TryAddWithoutValidation("Authorization", token);
+            }
+
+            request.Content = new StringContent(
+                JsonConvert.SerializeObject(data),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            var response = await _httpClient.SendAsync(request);
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"HTTP {(int)response.StatusCode} - URL: {url} - Body: {responseContent}");
+            }
+
+            return JsonConvert.DeserializeObject<T>(responseContent);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new Exception($"HTTP Request failed: {ex.Message}", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new Exception("Request timed out", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Unexpected error: {ex.Message}", ex);
+        }
+    }
     protected async Task<T> PostAsync<T>(string endpoint, object data, bool authorize = true)
     {
         var url = $"{_baseUrl.TrimEnd('/')}/{endpoint.TrimStart('/')}";
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        
+
         if (authorize)
         {
             var token = await GetAccessTokenAsync();
@@ -43,6 +94,8 @@ public abstract class BaseHttpProxy
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
+
+
         }
 
         request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
