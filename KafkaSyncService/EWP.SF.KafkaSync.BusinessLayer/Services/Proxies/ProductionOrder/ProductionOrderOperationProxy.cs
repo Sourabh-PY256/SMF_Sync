@@ -22,7 +22,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         : base(httpClient, configuration, authService)
     {
         _logger = logger;
-        _use2503ForSync = configuration.GetValue<bool>("Use2503ForSync");
+        _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(
@@ -74,10 +74,18 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         //var url = $"WorkOrder/{Validate}/{Level}";
         var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
 
-        var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
+        if (_use2503ForSync)
+        {
+             var response = await PostAsyncPO<List<WorkOrderResponse>>(url, workOrderList)
                             .ConfigureAwait(false);
-
-        return response ?? new List<WorkOrderResponse>();
+                            return response ?? new List<WorkOrderResponse>();
+        }
+        else
+        {
+            var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
+                            .ConfigureAwait(false);
+                            return response ?? new List<WorkOrderResponse>();
+        }
     }
 
     public List<WorkOrderResponse> ListUpdateWorkOrderChangeStatus(List<ProductionOrderChangeStatusExternal> workOrderList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
@@ -101,16 +109,68 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     public Task<List<ResponseData>> ListUpdateProductTransfer(List<ProductTransferExternal> transferList, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
     public void AddWorkOrderDatesOffset(WorkOrderExternal order, double offset) => throw new NotSupportedException();
 
-    public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
+    // public async Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
+    // {
+    //     try
+    //     {
+    //         var microserviceRequest = new
+    //         {
+    //             TransactionId = request.OrderTransactionsMaterial[0].TransactionId
+    //         };
+
+    //         var response = _use2503ForSync? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", request).ConfigureAwait(false): await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", request).ConfigureAwait(false);
+
+    //         //var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+
+    //         if (response?.Data == null)
+    //         {
+    //             return null;
+    //         }
+
+    //         JObject dataObj = JObject.FromObject(response.Data);
+
+    //         JToken transactions = dataObj["Transactions"];
+
+    //         return transactions;
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         throw new Exception($"Error while fetching transaction material: {ex.Message}", ex);
+    //     }
+    // }
+
+    public async Task<object> UpdateWorkOrderComponent(object request, User systemOperator)
     {
         try
         {
-            var microserviceRequest = new
-            {
-                TransactionId = request.OrderTransactionsMaterial[0].TransactionId
-            };
+            ResponseModel response = null;
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            if (request is TransactionMaterialSyncRequest materialRequest)
+            {
+                var microserviceRequest = new
+                {
+                    TransactionId = materialRequest.OrderTransactionsMaterial?[0]?.TransactionId
+                };
+
+                response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", materialRequest).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", materialRequest).ConfigureAwait(false);
+            }
+            else if (request is TransactionRequest normalRequest)
+            {
+                var microserviceRequest = new
+                {
+                    TransactionId = normalRequest.TransactionId
+                };
+
+                response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", normalRequest).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", normalRequest).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new Exception("Unsupported request type");
+            }
 
             if (response?.Data == null)
             {
@@ -118,7 +178,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             }
 
             JObject dataObj = JObject.FromObject(response.Data);
-
             JToken transactions = dataObj["Transactions"];
 
             return transactions;
@@ -138,7 +197,10 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 TransactionId = request.TransactionId,
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            //var response = await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId", microserviceRequest).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/ProductionOrder/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
@@ -227,7 +289,11 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 externalId = requestBody
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
+            //var response = await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
+            var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/UpdateExternalID", request).ConfigureAwait(false);
+
             return response?.Data;
         }
         catch (Exception ex)
@@ -248,7 +314,11 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 SystemOperator = systemOperator
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
+            //var response = await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
+             var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
+
             return response?.Data;
         }
         catch (Exception ex)
@@ -257,7 +327,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
 
     }
-
     public async Task<object> UpdateMachineIssueExternalID(string externalId, string requestBody, User systemOperator)
     {
         try
@@ -268,7 +337,10 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 externalId = requestBody
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
+          //  var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
+           var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
             return response?.Data;
         }
         catch (Exception ex)
@@ -277,7 +349,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
 
     }
-
     public async Task<object> UpdateLaborIssueExternalID(string externalId, string requestBody, User systemOperator)
     {
         try
@@ -288,7 +359,10 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 externalId = requestBody
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
+           // var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
+            var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
             return response?.Data;
         }
         catch (Exception ex)
@@ -297,7 +371,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         }
 
     }
-
     public async Task<object> UpdateMachineIssue(MachineIssueSyncRequest request, User systemOperator)
     {
         try
@@ -307,7 +380,10 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 TransactionId = request.TransactionId
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/MachineIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            //var response = await PostAsync<ResponseModel>("WorkOrder/MachineIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/MachineIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/MachineIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
@@ -347,14 +423,11 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             throw new Exception($"Error while fetching machine issue: {ex.Message}", ex);
         }
     }
-
-
-
     public async Task<object> CallOrderErpSyncService(ProductionOrder request, User systemOperator)
     {
         try
         {
-            var response = _use2503ForSync? await PostAsyncPO<ResponseModel>("WorkOrder/SendToERP", Sanitize(request)).ConfigureAwait(false): await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
+            var response = _use2503ForSync ? await PostAsyncPO<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false) : await PostAsync<ResponseModel>("WorkOrder/SendToERP", request).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
@@ -393,8 +466,6 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             throw new Exception($"Error while fetching machine issue: {ex.Message}", ex);
         }
     }
-
-
     public async Task<object> UpdateLaborIssue(MachineIssueSyncRequest request, User systemOperator)
     {
         try
@@ -404,7 +475,10 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 TransactionId = request.TransactionId
             };
 
-            var response = await PostAsync<ResponseModel>("WorkOrder/LaborIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            //var response = await PostAsync<ResponseModel>("WorkOrder/LaborIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
+            var response = _use2503ForSync
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/LaborIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/LaborIssue/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
@@ -444,116 +518,11 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             throw new Exception($"Error while fetching machine issue: {ex.Message}", ex);
         }
     }
-
     public Task<object> GetMaterialTransactionRequestParams(User systemOperator, CancellationToken cancel = default) => throw new NotSupportedException();
     public List<ResponseData> ListUpdateCLockInOutBulk(List<ClockInOutDetailsExternal> clockList, List<ClockInOutDetailsExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level) => throw new NotSupportedException();
 
-    public static ProductionOrder Sanitize(ProductionOrder order)
+    public Task<object> UpdateWorkOrderComponent(TransactionMaterialSyncRequest request, User systemOperator)
     {
-        if (order == null) return null;
-
-        // -------- ROOT LEVEL --------
-        order.Code ??= string.Empty;
-        order.Name ??= string.Empty;
-        order.ProductCode ??= string.Empty;
-        order.UnitCode ??= string.Empty;
-        order.Warehouse ??= string.Empty;
-        order.OrderType ??= "Production";
-        order.Priority ??= "0";
-        order.Comments ??= string.Empty;
-
-        // Fix Dates
-        order.ActualStartDate = FixDate(order.ActualStartDate);
-        order.ActualEndDate = FixDate(order.ActualEndDate);
-        order.ActualStartDateUTC = FixDate(order.ActualStartDateUTC);
-
-        // Enum fix
-        order.Status = Enum.IsDefined(typeof(Status), order.Status)
-            ? order.Status
-            : default;
-
-        // ProductionLines fix
-        order.ProductionLines = order.ProductionLines?
-            .Where(x => !string.IsNullOrWhiteSpace(x) && x != "undefined")
-            .ToList() ?? new List<string>();
-
-        // -------- OPERATIONS --------
-        if (order.Operations != null)
-        {
-            foreach (var op in order.Operations)
-            {
-                op.Name ??= string.Empty;
-                op.OperationTypeCode ??= string.Empty;
-                op.OperationSubTypeCode ??= string.Empty;
-
-                op.ActualStartDate = FixDate(op.ActualStartDate);
-                op.ActualEndDate = FixDate(op.ActualEndDate);
-                op.ActualStartDateUTC = FixDate(op.ActualStartDateUTC);
-                op.ActualEndDateUTC = FixDate(op.ActualEndDateUTC);
-
-                op.Status = Enum.IsDefined(typeof(Status), op.Status)
-                    ? op.Status
-                    : default;
-
-                // Machines
-                if (op.Machines != null)
-                {
-                    foreach (var m in op.Machines)
-                    {
-                        m.MachineCode ??= string.Empty;
-
-                        m.Status = Enum.IsDefined(typeof(Status), m.Status)
-                            ? m.Status
-                            : default;
-
-                        m.Labor ??= new List<ProductionOrderResource>();
-                        m.ToolingType ??= new List<ProductionOrderResource>();
-                    }
-                }
-
-                // Items
-                if (op.Items != null)
-                {
-                    foreach (var item in op.Items)
-                    {
-                        item.ItemCode ??= string.Empty;
-                        item.UnitCode ??= string.Empty;
-                        item.WarehouseCode ??= string.Empty;
-
-                        item.Status = Enum.IsDefined(typeof(Status), item.Status)
-                            ? item.Status
-                            : default;
-                    }
-                }
-
-                // ByProducts
-                if (op.Byproducts != null)
-                {
-                    foreach (var bp in op.Byproducts)
-                    {
-                        bp.ItemCode ??= string.Empty;
-                        bp.UnitCode ??= string.Empty;
-                        bp.WarehouseCode ??= string.Empty;
-                    }
-                }
-
-                op.Labor ??= new List<ProductionOrderResource>();
-                op.ToolingType ??= new List<ProductionOrderResource>();
-                op.Tasks ??= new List<Activity>();
-            }
-        }
-
-        return order;
-    }
-
-    private static DateTime? FixDate(DateTime? date)
-    {
-        if (date == null) return null;
-
-        // Treat 1900 as invalid
-        if (date.Value.Year <= 1900)
-            return null;
-
-        return date;
+        throw new NotImplementedException();
     }
 }

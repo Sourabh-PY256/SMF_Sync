@@ -13,9 +13,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class ItemOperationProxy : BaseHttpProxy, IItemOperation
 {
+     private readonly bool _use2503ForSync;
     public ItemOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
+            _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public async Task<List<ResponseData>> ListUpdateComponentBulk(
@@ -28,7 +30,15 @@ public class ItemOperationProxy : BaseHttpProxy, IItemOperation
         // Endpoint: Item/Bulk/{validate}/{level}
         string endpoint = $"Component/Merge/{Validate.ToString().ToLower()}";
         
+        if(_use2503ForSync)
+        {
+            return await PostAsyncPO<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);
+        }
+        else
+        {
+            return await PostAsync<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);
+        }
         // Sending the list directly as the body
-        return await PostAsync<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);
+        
     }
 }

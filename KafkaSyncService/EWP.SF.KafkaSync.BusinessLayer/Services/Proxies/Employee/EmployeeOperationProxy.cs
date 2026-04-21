@@ -11,9 +11,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class EmployeeOperationProxy : BaseHttpProxy, IEmployeeOperation
 {
+     private readonly bool _use2503ForSync;
     public EmployeeOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
+         _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public async Task<List<ResponseData>> ImportEmployeesAsync(
@@ -28,7 +30,14 @@ public class EmployeeOperationProxy : BaseHttpProxy, IEmployeeOperation
     {
         // Endpoint: Employee/{validate}/{level}
         string endpoint = $"employee/{Validate.ToString().ToLower()}/{Level}";
-        return await PostAsync<List<ResponseData>>(endpoint, requestValue).ConfigureAwait(false);
+        if(_use2503ForSync)
+        {
+            return await PostAsyncPO<List<ResponseData>>(endpoint, requestValue).ConfigureAwait(false);
+        }
+        else
+        {
+            return await PostAsync<List<ResponseData>>(endpoint, requestValue).ConfigureAwait(false);
+        }
     }
 
     public async Task<List<ResponseData>> MRGEmployee(

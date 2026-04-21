@@ -11,9 +11,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class DeviceOperationProxy : BaseHttpProxy, IDeviceOperation
 {
+     private readonly bool _use2503ForSync;
     public DeviceOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
+            _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public Task<Machine[]> ListDevices(
@@ -49,7 +51,14 @@ public class DeviceOperationProxy : BaseHttpProxy, IDeviceOperation
             NormalizeMachine(machine);
         }
         string endpoint = $"Machine/{validate.ToString().ToLower()}/{level}";
-        return await PostAsync<List<ResponseData>>(endpoint, listMachines).ConfigureAwait(false);
+        if (_use2503ForSync)
+        {
+            return await PostAsyncPO<List<ResponseData>>(endpoint, listMachines).ConfigureAwait(false);
+        }
+        else
+        {
+            return await PostAsync<List<ResponseData>>(endpoint, listMachines).ConfigureAwait(false);
+        }
     }
 
 

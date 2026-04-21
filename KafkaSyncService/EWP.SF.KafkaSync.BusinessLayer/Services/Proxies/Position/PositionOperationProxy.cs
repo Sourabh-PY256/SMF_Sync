@@ -13,9 +13,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class PositionOperationProxy : BaseHttpProxy, IProfileOperation
 {
+    private readonly bool _use2503ForSync;
     public PositionOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
+        _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public Task<ResponseData> MergeProfile(CatProfile ProfileInfo, User systemOperator, bool Validate = false, bool NotifyOnce = true)
@@ -32,6 +34,13 @@ public class PositionOperationProxy : BaseHttpProxy, IProfileOperation
         string endpoint = $"Position/{Validate.ToString().ToLower()}/{Level}";
         
         // Sending the list directly as the body
-        return await PostAsync<List<ResponseData>>(endpoint, profileInfoList).ConfigureAwait(false);
+        if (_use2503ForSync)
+        {
+            return await PostAsyncPO<List<ResponseData>>(endpoint, profileInfoList).ConfigureAwait(false);
+        }
+        else
+        {
+            return await PostAsync<List<ResponseData>>(endpoint, profileInfoList).ConfigureAwait(false);
+        }
     }
 }

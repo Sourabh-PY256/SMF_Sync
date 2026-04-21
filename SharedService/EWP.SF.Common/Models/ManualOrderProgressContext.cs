@@ -729,6 +729,90 @@ public class TransactionMaterialSyncRequest
 	public List<OrderTransactionMaterialDetailSync> OrderTransactionsMaterialDetail { get; set; }
 }
 
+public class TransactionRequest
+{
+    public string TransactionId { get; set; }
+    public string ExternalId { get; set; }
+    public DateTime Date { get; set; }
+    public string Type { get; set; }
+    public string OrderBatch { get; set; }
+    public List<ComponentTransaction> Components { get; set; }
+    public string Comments { get; set; }
+    public string Employee { get; set; }
+}
+
+public class ComponentTransaction
+{
+    public string OrderCode { get; set; }
+    public string OrderType { get; set; }
+    public string OperationCode { get; set; }
+    public string MachineId { get; set; }
+    public string OriginalMachineId { get; set; }
+    public int Step { get; set; }
+    public int? ProcessTypeId { get; set; }
+    public int ComponentType { get; set; }
+    public int? SourceTypeId { get; set; }
+    public string SourceId { get; set; }
+    public string BatchId { get; set; }
+    public double TargetQty { get; set; }
+    public string TargetUnitId { get; set; }
+    public double InputQty { get; set; }
+    public string InputUnitId { get; set; }
+    public string ProcessId { get; set; }
+    public string OperationId { get; set; }
+    public bool IsAuxiliarDevice { get; set; }
+    public bool IsInlineIssue { get; set; }
+    public int Status { get; set; }
+    public string OriginalSourceId { get; set; }
+    public double NewFactor { get; set; }
+    public string ExternalId { get; set; }
+    public string WarehouseCode { get; set; }
+    public string ComponentName { get; set; }
+    public string ComponentCode { get; set; }
+    public string MaterialImage { get; set; }
+    public string LineId { get; set; }
+    public string LineUID { get; set; }
+    public bool IsBackflush { get; set; }
+    public string Location { get; set; }
+    public string InventoryStatus { get; set; }
+    public string ManagedBy { get; set; }
+    public double QuantityStage { get; set; }
+    public double RequiredQuantity { get; set; }
+    public string Source { get; set; }
+    public int MaterialType { get; set; }
+    public List<BatchTransaction> Batches { get; set; }
+    public string Comments { get; set; }
+    public string ActivityInstanceId { get; set; }
+}
+
+public class BatchTransaction
+{
+    public string BatchId { get; set; }
+    public string ComponentId { get; set; }
+    public string Batch { get; set; }
+    public string Location { get; set; }
+    public string InventoryStatus { get; set; }
+    public string Pallet { get; set; }
+    public double Quantity { get; set; }
+    public DateTime BatchDate { get; set; }
+    public string BatchStatus { get; set; }
+    public string OrderId { get; set; }
+    public double Allocated { get; set; }
+    public string WarehouseCode { get; set; }
+    public string LineId { get; set; }
+    public bool IsSelected { get; set; }
+    public string Type { get; set; }
+    public string UoM { get; set; }
+    public string WarehouseName { get; set; }
+    public string BinLocationName { get; set; }
+    public string InventoryStatusName { get; set; }
+    public string Comments { get; set; }
+    public string ScrapTypeCode { get; set; }
+    public string ProcessId { get; set; }
+}
+
+
+
 /// <summary>
 ///
 /// </summary>

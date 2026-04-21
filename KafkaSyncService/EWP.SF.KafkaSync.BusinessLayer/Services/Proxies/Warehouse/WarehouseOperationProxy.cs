@@ -13,9 +13,12 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class WarehouseOperationProxy : BaseHttpProxy, IWarehouseOperation
 {
+        private readonly bool _use2503ForSync;
     public WarehouseOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "InventoryServiceUrl")  // same service as BinLocation
-    { }
+    {
+            _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
+    }
 
     // ─── Write operations (forwarded to Inventory Microservice) ───────────────
 
@@ -29,8 +32,14 @@ public class WarehouseOperationProxy : BaseHttpProxy, IWarehouseOperation
     {
         // Endpoint: API/V1/Warehouse/{validate}/{level}
         string endpoint = $"Warehouse/{Validate.ToString().ToLower()}/{Level}";
-        return await PostAsync<List<ResponseData>>(endpoint, warehouseGroupList)
-                    .ConfigureAwait(false);
+        if (_use2503ForSync)
+        {
+            return await PostAsyncPO<List<ResponseData>>(endpoint, warehouseGroupList).ConfigureAwait(false);
+        }
+        else
+        {
+            return await PostAsync<List<ResponseData>>(endpoint, warehouseGroupList).ConfigureAwait(false);
+        }   
     }
 
     public async Task<ResponseData> MergeWarehouse(

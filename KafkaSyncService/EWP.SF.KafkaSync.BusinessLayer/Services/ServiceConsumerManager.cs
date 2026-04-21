@@ -28,6 +28,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         private readonly IConfiguration _configuration;
         private readonly ISyncCompletionRegistry _completionRegistry;
 
+        private readonly bool _use2503ForSync;
+
         public ServiceConsumerManager(
             ILogger<ServiceConsumerManager> logger,
             IKafkaService kafkaService,
@@ -39,6 +41,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             _serviceScopeFactory = serviceScopeFactory;
             _configuration = configuration;
             _completionRegistry = completionRegistry;
+             _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
 
         }
 
@@ -97,11 +100,20 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                         }
                         else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE && message.ServiceData.HttpMethod == "POST")
                         {
+                            object request;
                             message.ServiceData.HttpMethod = "POST";
                             _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
 
                             var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            var request = JsonConvert.DeserializeObject<TransactionMaterialSyncRequest>(message.BodyData);
+                            if(_use2503ForSync)
+                            {
+                                 request = JsonConvert.DeserializeObject<TransactionRequest>(message.BodyData);
+                            }
+                            else
+                            {
+                                 request = JsonConvert.DeserializeObject<TransactionMaterialSyncRequest>(message.BodyData);
+                            }
+                            
 
                             var syncData = await workOrderOperation.UpdateWorkOrderComponent(request, message.User).ConfigureAwait(false);
 

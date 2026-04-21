@@ -13,9 +13,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class InventoryOperationProxy : BaseHttpProxy, IInventoryOperation
 {
+     private readonly bool _use2503ForSync;
     public InventoryOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
+         _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public async Task<List<ResponseData>> ListUpdateInventoryGroup(
@@ -28,9 +30,16 @@ public class InventoryOperationProxy : BaseHttpProxy, IInventoryOperation
     {
         // Endpoint: API/V1/ItemGroup/{validate}/{level}
         string endpoint = $"Inventory/{Validate.ToString().ToLower()}/{Level}";
-        
+        if(_use2503ForSync)
+        {
+            return await PostAsyncPO<List<ResponseData>>(endpoint, inventoryGroupList).ConfigureAwait(false);
+        }
+        else
+        {
+            return await PostAsync<List<ResponseData>>(endpoint, inventoryGroupList).ConfigureAwait(false);
+        }
         // Sending the list directly as the body
-        return await PostAsync<List<ResponseData>>(endpoint, inventoryGroupList).ConfigureAwait(false);
+        
     }
 
     public async Task<ResponseData> MergeInventory(

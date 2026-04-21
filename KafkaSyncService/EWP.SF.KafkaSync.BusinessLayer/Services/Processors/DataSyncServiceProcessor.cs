@@ -2011,7 +2011,7 @@ public class DataSyncServiceProcessor
 			}
 			if (ServiceData.Entity.Name == SyncERPEntity.LABOR_ISSUE_SERVICE)
 			{
-				await HandleMachineIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
+				await HandleLaborIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
 			}
 
 		}
@@ -2712,31 +2712,39 @@ public class DataSyncServiceProcessor
 			}
 
 			JObject rawResponse = JObject.Parse(rawResponseJson);
-			string batchNbr = null;
+			string externalId = null;
+			
+			externalId = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
 
-			// Try Acumatica structure: message[0].entity.batchNbr.value
-			batchNbr = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
-
-			// If not found, try SAP B1 structure: message.data.docEntry
-			if (string.IsNullOrEmpty(batchNbr))
+			if (string.IsNullOrEmpty(externalId))
 			{
-				batchNbr = rawResponse["message"]?["data"]?["docEntry"]?.ToString();
+				externalId = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
 			}
 
-			if (!string.IsNullOrEmpty(batchNbr))
+			if (!string.IsNullOrEmpty(externalId))
 			{
-				_logger.LogInformation("Extracted batchNbr/docEntry: {BatchNbr}. Calling TransactionProduct UpdateExternalID microservice.", batchNbr);
+				_logger.LogInformation(
+					"Extracted externalId: {ExternalId}. Calling ProductReceipt UpdateExternalID microservice.",
+					externalId);
+
 				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
-				await workOrderOperation.UpdateProductExternalID(batchNbr, requestBody, systemOperator).ConfigureAwait(false);
+
+				await workOrderOperation
+					.UpdateProductExternalID(externalId, requestBody, systemOperator)
+					.ConfigureAwait(false);
 			}
 			else
 			{
-				_logger.LogWarning("Could not extract batchNbr/docEntry from ERP response. Neither Acumatica nor SAP B1 structure matched.");
+				_logger.LogWarning(
+					"Could not extract docEntry/batchNbr from ERP response. Neither SAP B1 nor Acumatica structure matched.");
 			}
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Post-success processing for PRODUCT_RECEIPT_SERVICE failed: {Message}", ex.Message);
+			_logger.LogError(ex,
+				"Post-success processing for PRODUCT_RECEIPT_SERVICE failed: {Message}",
+				ex.Message);
+
 			throw new Exception($"Post-success processing failed: {ex.Message}", ex);
 		}
 	}

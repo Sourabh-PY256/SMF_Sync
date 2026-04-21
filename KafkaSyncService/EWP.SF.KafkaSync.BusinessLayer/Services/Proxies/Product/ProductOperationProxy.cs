@@ -12,9 +12,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 /// </summary>
 public class ProductOperationProxy : BaseHttpProxy, IComponentOperation
 {
+     private readonly bool _use2503ForSync;
     public ProductOperationProxy(HttpClient httpClient, IConfiguration configuration, IAuthenticationService authService)
         : base(httpClient, configuration, authService, "ExternalServiceUrl")
     {
+            _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
     public async Task<List<ResponseData>> ListUpdateProduct(
@@ -30,17 +32,36 @@ public class ProductOperationProxy : BaseHttpProxy, IComponentOperation
             // Call the single-item Merge endpoint for each component.
             // Using "Product/Merge/Create" matches the current user preference.
             string endpoint = "Product/Merge/Update";
-            var response = await PostAsync<ResponseModel>(endpoint, item).ConfigureAwait(false);
 
-            results.Add(new ResponseData
+            if(_use2503ForSync)
             {
-                IsSuccess = response.IsSuccess,
-                Message = response.Message,
-                Entity = response.Data,
-                Code = item.Code,
-                Action = ActionDB.Update,
-                Version = item.Version
-            });
+                var response = await PostAsyncPO<ResponseModel>(endpoint, item).ConfigureAwait(false);
+                results.Add(new ResponseData
+                {
+                    IsSuccess = response.IsSuccess,
+                    Message = response.Message,
+                    Entity = response.Data,
+                    Code = item.Code,
+                    Action = ActionDB.Update,
+                    Version = item.Version
+                });
+            }
+            else
+            {
+                
+                var response = await PostAsync<ResponseModel>(endpoint, item).ConfigureAwait(false);
+                results.Add(new ResponseData
+                {
+                    IsSuccess = response.IsSuccess,
+                    Message = response.Message,
+                    Entity = response.Data,
+                    Code = item.Code,
+                    Action = ActionDB.Update,
+                    Version = item.Version
+                });
+            }
+
+            
         }
         return results;
     }
