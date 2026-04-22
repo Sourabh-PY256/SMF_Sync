@@ -257,20 +257,20 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
             
         }
-builder.Services.AddScoped<IDemandOperation, DemandOperation>();
+// builder.Services.AddScoped<IDemandOperation, DemandOperation>(); // Moved to proxy selection section above
 builder.Services.AddScoped<IAttachmentOperation, AttachmentOperation>();
 builder.Services.AddScoped<IDataImportOperation, DataImportOperation>();
-builder.Services.AddScoped<IItemOperation, ItemOperation>();
+// builder.Services.AddScoped<IItemOperation, ItemOperation>(); // Moved to proxy selection section above
 builder.Services.AddScoped<ISchedulingShiftStatusOperation, SchedulingShiftStatusOperation>();
 builder.Services.AddScoped<ISchedulingCalendarShiftsOperation, SchedulingCalendarShiftsOperation>();
 builder.Services.AddScoped<IOEEOperation, OEEOperation>();
-builder.Services.AddScoped<ISupplyOperation, SupplyOperation>();
-builder.Services.AddScoped<IToolOperation, ToolOperation>();
+// builder.Services.AddScoped<ISupplyOperation, SupplyOperation>(); // Moved to proxy selection section above
+// builder.Services.AddScoped<IToolOperation, ToolOperation>(); // Moved to proxy selection section above
 //builder.Services.AddScoped<IDeviceOperation, DeviceOperation>();
 builder.Services.AddScoped<IProductionLinesOperation, ProductionLinesOperation>();
-builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitOperation>();
-builder.Services.AddScoped<IProfileOperation, ProfileOperation>();
-builder.Services.AddScoped<IStockOperation, StockOperation>();
+// builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitOperation>(); // Moved to proxy selection section above
+// builder.Services.AddScoped<IProfileOperation, ProfileOperation>(); // Moved to proxy selection section above
+// builder.Services.AddScoped<IStockOperation, StockOperation>(); // Moved to proxy selection section above
 builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>();
 
 // Register Kafka services
