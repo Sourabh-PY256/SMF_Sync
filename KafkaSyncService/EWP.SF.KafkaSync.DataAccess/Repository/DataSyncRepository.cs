@@ -419,6 +419,7 @@ public class DataSyncRepository : IDataSyncRepository
 				command.Parameters.Clear();
 
 				_ = command.Parameters.AddWithValue("_EntityCode", EntityCode);
+				_ = command.Parameters.AddWithValue("_EntityValue", "");
 
 				connection.OpenAsync().ConfigureAwait(false).GetAwaiter().GetResult();
 				returnValue = command.ExecuteScalarAsync().ConfigureAwait(false).GetAwaiter().GetResult().ToStr();

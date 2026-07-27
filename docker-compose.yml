@@ -211,6 +211,14 @@ services:
         - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
       networks:
         - kafka-net
+      develop:
+        watch:
+          - action: rebuild
+            path: ./KafkaSyncService
+          - action: rebuild
+            path: ./SharedService
+          - action: rebuild
+            path: ./Lib
 
 networks:
   smf-network:

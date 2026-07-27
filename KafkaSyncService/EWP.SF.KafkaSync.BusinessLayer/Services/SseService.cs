@@ -1,9 +1,5 @@
-using EWP.SF.Common.Models;
-using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.ResponseModels;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 
@@ -17,26 +13,38 @@ public sealed class SseService : ISseService
     {
         HttpResponse response = context.Response;
         ConfigureSseResponse(response, serviceWorkerAllowed: "/notification/subscribe");
-        lock (_clientsGate) { _clients.Add(response); }
+        lock (_clientsGate)
+        {
+            _clients.Add(response);
+        }
 
         string jsonConnection = JsonSerializer.Serialize(new { Message = "connected to notification SSE" });
         await WriteSseEventAsync(response, "connection", jsonConnection, context.RequestAborted).ConfigureAwait(false);
 
         context.RequestAborted.WaitHandle.WaitOne();
-        lock (_clientsGate) { _clients.Remove(response); }
+        lock (_clientsGate)
+        {
+            _clients.Remove(response);
+        }
     }
 
     public async Task SubscribeDebugAsync(HttpContext context)
     {
         HttpResponse response = context.Response;
         ConfigureSseResponse(response, serviceWorkerAllowed: "/notification/debug");
-        lock (_clientsGate) { _debugClients.Add(response); }
+        lock (_clientsGate)
+        {
+            _debugClients.Add(response);
+        }
 
         string jsonConnection = JsonSerializer.Serialize(new { Message = "connected to notification SSE (debug)" });
         await WriteSseEventAsync(response, "connection", jsonConnection, context.RequestAborted).ConfigureAwait(false);
 
         context.RequestAborted.WaitHandle.WaitOne();
-        lock (_clientsGate) { _debugClients.Remove(response); }
+        lock (_clientsGate)
+        {
+            _debugClients.Remove(response);
+        }
     }
 
     public async Task SendEventToAllAsync(string message)
@@ -61,7 +69,10 @@ public sealed class SseService : ISseService
                     await WriteSseEventAsync(client, null, message, client.HttpContext.RequestAborted).ConfigureAwait(false);
                 }
             }
-            catch { disconnected.Add(client); }
+            catch
+            {
+                disconnected.Add(client);
+            }
         }
 
         foreach (HttpResponse client in debugClients)
@@ -69,21 +80,33 @@ public sealed class SseService : ISseService
             try
             {
                 if (!client.HttpContext.RequestAborted.IsCancellationRequested)
+                {
                     await WriteSseEventAsync(client, null, message, client.HttpContext.RequestAborted).ConfigureAwait(false);
+                }
             }
-            catch { disconnectedDebug.Add(client); }
+            catch
+            {
+                disconnectedDebug.Add(client);
+            }
         }
 
         lock (_clientsGate)
         {
-            foreach (HttpResponse c in disconnected) _clients.Remove(c);
-            foreach (HttpResponse c in disconnectedDebug) _debugClients.Remove(c);
+            foreach (HttpResponse client in disconnected)
+            {
+                _clients.Remove(client);
+            }
+
+            foreach (HttpResponse client in disconnectedDebug)
+            {
+                _debugClients.Remove(client);
+            }
         }
     }
 
     private static void ConfigureSseResponse(HttpResponse response, string serviceWorkerAllowed)
     {
-        response.StatusCode = 200;
+        response.StatusCode = StatusCodes.Status200OK;
         response.Headers.ContentType = "text/event-stream";
         response.Headers.CacheControl = "no-cache";
         response.Headers.Connection = "keep-alive";
@@ -91,10 +114,16 @@ public sealed class SseService : ISseService
         response.Headers["Service-Worker-Allowed"] = serviceWorkerAllowed;
     }
 
-    private static async Task WriteSseEventAsync(HttpResponse response, string? eventName, string data, CancellationToken cancel)
+    private static async Task WriteSseEventAsync(
+        HttpResponse response,
+        string? eventName,
+        string data,
+        CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(eventName))
-            await response.WriteAsync($"event: {eventName}\n", cancel).ConfigureAwait(false);
+        {
+            await response.WriteAsync($"event: {eventName}\n", cancellationToken).ConfigureAwait(false);
+        }
 
         string normalized = data
             .Replace("\r\n", "\n", StringComparison.Ordinal)
@@ -103,9 +132,11 @@ public sealed class SseService : ISseService
         using StringReader reader = new(normalized);
         string? line;
         while ((line = reader.ReadLine()) is not null)
-            await response.WriteAsync($"data: {line}\n", cancel).ConfigureAwait(false);
+        {
+            await response.WriteAsync($"data: {line}\n", cancellationToken).ConfigureAwait(false);
+        }
 
-        await response.WriteAsync("\n", cancel).ConfigureAwait(false);
-        await response.Body.FlushAsync(cancel).ConfigureAwait(false);
+        await response.WriteAsync("\n", cancellationToken).ConfigureAwait(false);
+        await response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 }

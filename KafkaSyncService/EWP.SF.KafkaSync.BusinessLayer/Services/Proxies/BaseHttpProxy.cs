@@ -50,6 +50,7 @@ public abstract class BaseHttpProxy
                     throw new Exception("Authorization token is null or empty");
                 }
                 request.Headers.TryAddWithoutValidation("Authorization", token);
+                request.Headers.TryAddWithoutValidation("CryptoKey", AuthenticationService.CryptoKey);
             }
 
             request.Content = new StringContent(
@@ -93,6 +94,7 @@ public abstract class BaseHttpProxy
             if (!string.IsNullOrEmpty(token))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                request.Headers.TryAddWithoutValidation("CryptoKey", AuthenticationService.CryptoKey);
             }
 
 
@@ -101,7 +103,6 @@ public abstract class BaseHttpProxy
         request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
 
         var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
 
         if (!response.IsSuccessStatusCode)
         {
@@ -124,11 +125,17 @@ public abstract class BaseHttpProxy
             if (!string.IsNullOrEmpty(token))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                request.Headers.TryAddWithoutValidation("CryptoKey", AuthenticationService.CryptoKey);
             }
         }
 
         var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            throw new Exception($"HTTP {(int)response.StatusCode} - URL: {url} - Body: {errorBody}");
+        }
 
         var responseContent = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<T>(responseContent);

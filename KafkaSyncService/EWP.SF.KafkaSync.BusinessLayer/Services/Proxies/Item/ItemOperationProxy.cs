@@ -27,18 +27,25 @@ public class ItemOperationProxy : BaseHttpProxy, IItemOperation
         bool Validate, 
         LevelMessage Level)
     {
-        // Endpoint: Item/Bulk/{validate}/{level}
         string endpoint = $"Component/Merge/{Validate.ToString().ToLower()}";
         
-        if(_use2503ForSync)
+        ResponseModel response = null;
+
+        if (_use2503ForSync)
         {
-            return await PostAsyncPO<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);
+            response = await PostAsyncPO<ResponseModel>(endpoint, itemList).ConfigureAwait(false);
         }
         else
         {
-            return await PostAsync<List<ResponseData>>(endpoint, itemList).ConfigureAwait(false);
+            response = await PostAsync<ResponseModel>(endpoint, itemList).ConfigureAwait(false);
         }
-        // Sending the list directly as the body
-        
+
+        if (response != null && response.IsSuccess && response.Data != null)
+        {
+            var jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(response.Data);
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<List<ResponseData>>(jsonString);
+        }
+
+        return new List<ResponseData>();
     }
 }

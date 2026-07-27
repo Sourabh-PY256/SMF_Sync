@@ -19,6 +19,8 @@ public class AuthenticationService : IAuthenticationService
     private readonly ILogger<AuthenticationService> _logger;
     private const string CACHE_KEY = "SF_Access_Token";
 
+    public static readonly string CryptoKey = Guid.NewGuid().ToString();
+
     public AuthenticationService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthenticationService> logger)
     {
         _httpClient = httpClient;
@@ -60,7 +62,8 @@ public class AuthenticationService : IAuthenticationService
         {
             GrantType = "client_credentials",
             ClientId = clientId,
-            ClientSecret = clientSecret
+            ClientSecret = clientSecret,
+            CryptoKey = CryptoKey
         };
 
         try

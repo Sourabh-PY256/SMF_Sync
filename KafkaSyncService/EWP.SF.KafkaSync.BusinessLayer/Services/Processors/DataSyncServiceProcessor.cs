@@ -66,10 +66,7 @@ public class DataSyncServiceProcessor
 		{
 			ServiceInstanceId = ServiceData.Id,
 			ExecutionInitDate = initDate,
-			ExecutionOrigin = ExecOrigin,
-
-			LogUser = requestUser.Id,
-			LogEmployee = requestUser.EmployeeId
+			ExecutionOrigin = ExecOrigin
 		};
 		if (!string.IsNullOrEmpty(loggerId))
 		{
@@ -1067,7 +1064,6 @@ public class DataSyncServiceProcessor
 
 						var productOrderOperation = GetOperation<IWorkOrderOperation>();
 						double offset = await _dataSyncServiceOperation.GetTimezoneOffset("ERP").ConfigureAwait(false) * -1;
-						listWorkOrders.ForEach(elem => productOrderOperation.AddWorkOrderDatesOffset(elem, offset));
 						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listWorkOrders);
 						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
 						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);

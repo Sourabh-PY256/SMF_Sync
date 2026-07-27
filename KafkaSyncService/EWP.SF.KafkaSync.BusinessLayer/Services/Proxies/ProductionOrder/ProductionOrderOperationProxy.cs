@@ -25,6 +25,69 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
     }
 
+    // public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(
+    // List<WorkOrderExternal> workOrderList,
+    // User systemOperator,
+    // bool Validate,
+    // LevelMessage Level,
+    // bool isDataSynced = false,
+    // string logId = null)
+    // {
+    //     // var request = new
+    //     // {
+    //     //     WorkOrderList = workOrderList
+    //     // };
+
+    //     foreach (var order in workOrderList)
+    //     {
+    //         // Fix Status casing
+    //         if (!string.IsNullOrEmpty(order.Status))
+    //             order.Status = System.Globalization.CultureInfo.CurrentCulture
+    //                                 .TextInfo.ToTitleCase(order.Status.ToLower());
+
+    //         foreach (var op in order.Operations ?? [])
+    //         {
+    //             // Null out empty regex-validated strings
+    //             if (string.IsNullOrEmpty(op.OperationTimeType))
+    //                 op.OperationTimeType = null;
+
+    //             foreach (var item in op.Items ?? [])
+    //             {
+    //                 if (string.IsNullOrEmpty(item.IssueMethod))
+    //                     item.IssueMethod = null;
+
+    //                 if (string.IsNullOrEmpty(item.Type))
+    //                     item.Type = null;
+
+    //                 if (string.IsNullOrEmpty(item.Source))
+    //                     item.Source = null;
+    //             }
+
+    //             foreach (var machine in op.Machines ?? [])
+    //             {
+    //                 if (string.IsNullOrEmpty(machine.IssueMode))
+    //                     machine.IssueMode = null;
+    //             }
+    //         }
+    //     }
+
+    //     //var url = $"WorkOrder/{Validate}/{Level}";
+    //     var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
+
+    //     if (_use2503ForSync)
+    //     {
+    //          var response = await PostAsyncPO<List<WorkOrderResponse>>(url, workOrderList)
+    //                         .ConfigureAwait(false);
+    //                         return response ?? new List<WorkOrderResponse>();
+    //     }
+    //     else
+    //     {
+    //         var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
+    //                         .ConfigureAwait(false);
+    //                         return response ?? new List<WorkOrderResponse>();
+    //     }
+    // }
+
     public async Task<List<WorkOrderResponse>> ListUpdateProductionOrder(
     List<WorkOrderExternal> workOrderList,
     User systemOperator,
@@ -33,10 +96,20 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
     bool isDataSynced = false,
     string logId = null)
     {
-        // var request = new
-        // {
-        //     WorkOrderList = workOrderList
-        // };
+        // Allowed values per RegularExpression attributes on the model
+        var validIssueMethods = new[] { "Manual", "Backflush", "Operation Issue" };
+        var validIssueModes = new[] { "Manual", "Backflush" };
+        var validTypes = new[] { "Material", "Consumable" };
+        var validSources = new[] { "BOM", "Formula" };
+
+        string NormalizeRegexField(string value, string[] allowedValues)
+        {
+            if (string.IsNullOrEmpty(value))
+                return null;
+
+            return allowedValues.FirstOrDefault(v =>
+                string.Equals(v, value, StringComparison.OrdinalIgnoreCase));
+        }
 
         foreach (var order in workOrderList)
         {
@@ -53,38 +126,44 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
 
                 foreach (var item in op.Items ?? [])
                 {
-                    if (string.IsNullOrEmpty(item.IssueMethod))
-                        item.IssueMethod = null;
-
-                    if (string.IsNullOrEmpty(item.Type))
-                        item.Type = null;
-
-                    if (string.IsNullOrEmpty(item.Source))
-                        item.Source = null;
+                    item.IssueMethod = NormalizeRegexField(item.IssueMethod, validIssueMethods);
+                    item.Type = NormalizeRegexField(item.Type, validTypes);
+                    item.Source = NormalizeRegexField(item.Source, validSources);
                 }
 
                 foreach (var machine in op.Machines ?? [])
                 {
-                    if (string.IsNullOrEmpty(machine.IssueMode))
-                        machine.IssueMode = null;
+                    machine.IssueMode = NormalizeRegexField(machine.IssueMode, validIssueModes);
+
+                    foreach (var machineLabor in machine.Labor ?? [])
+                        machineLabor.IssueMode = NormalizeRegexField(machineLabor.IssueMode, validIssueModes);
+
+                    foreach (var machineTool in machine.Tooling ?? [])
+                        machineTool.IssueMode = NormalizeRegexField(machineTool.IssueMode, validIssueModes);
                 }
+
+                // THIS WAS MISSING - op.Labor[].IssueMode was never touched
+                foreach (var labor in op.Labor ?? [])
+                    labor.IssueMode = NormalizeRegexField(labor.IssueMode, validIssueModes);
+
+                foreach (var tooling in op.Tooling ?? [])
+                    tooling.IssueMode = NormalizeRegexField(tooling.IssueMode, validIssueModes);
             }
         }
 
-        //var url = $"WorkOrder/{Validate}/{Level}";
         var url = $"WorkOrder/{Validate.ToString().ToLower()}/{Level}";
 
         if (_use2503ForSync)
         {
-             var response = await PostAsyncPO<List<WorkOrderResponse>>(url, workOrderList)
+            var response = await PostAsyncPO<List<WorkOrderResponse>>(url, workOrderList)
                             .ConfigureAwait(false);
-                            return response ?? new List<WorkOrderResponse>();
+            return response ?? new List<WorkOrderResponse>();
         }
         else
         {
             var response = await PostAsync<List<WorkOrderResponse>>(url, workOrderList)
                             .ConfigureAwait(false);
-                            return response ?? new List<WorkOrderResponse>();
+            return response ?? new List<WorkOrderResponse>();
         }
     }
 
@@ -315,9 +394,9 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             };
 
             //var response = await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
-             var response = _use2503ForSync
-                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false)
-                    : await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
+            var response = _use2503ForSync
+                   ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false)
+                   : await PostAsync<ResponseModel>("WorkOrder/TransactionProduct/UpdateExternalID", request).ConfigureAwait(false);
 
             return response?.Data;
         }
@@ -337,10 +416,10 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 externalId = requestBody
             };
 
-          //  var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
-           var response = _use2503ForSync
-                    ? await PostAsyncPO<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false)
-                    : await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
+            //  var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
+            var response = _use2503ForSync
+                     ? await PostAsyncPO<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false)
+                     : await PostAsync<ResponseModel>("WorkOrder/ResourceIssueMachine/UpdateExternalID", request).ConfigureAwait(false);
             return response?.Data;
         }
         catch (Exception ex)
@@ -359,7 +438,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 externalId = requestBody
             };
 
-           // var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
+            // var response = await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
             var response = _use2503ForSync
                     ? await PostAsyncPO<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false)
                     : await PostAsync<ResponseModel>("WorkOrder/ResourceIssueLabor/UpdateExternalID", request).ConfigureAwait(false);
