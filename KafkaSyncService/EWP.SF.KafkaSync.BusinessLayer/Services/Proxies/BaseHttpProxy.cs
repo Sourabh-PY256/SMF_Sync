@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
+using EWP.SF.Common.ResponseModels;
+using EWP.SF.Common.Models;
 
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 
@@ -68,7 +70,7 @@ public abstract class BaseHttpProxy
                 throw new Exception($"HTTP {(int)response.StatusCode} - URL: {url} - Body: {responseContent}");
             }
 
-            return JsonConvert.DeserializeObject<T>(responseContent);
+            return DeserializeResponse<T>(responseContent);
         }
         catch (HttpRequestException ex)
         {
@@ -111,7 +113,7 @@ public abstract class BaseHttpProxy
         }
 
         var responseContent = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<T>(responseContent);
+        return DeserializeResponse<T>(responseContent);
     }
 
     protected async Task<T> GetAsync<T>(string endpoint, bool authorize = true)
@@ -138,6 +140,42 @@ public abstract class BaseHttpProxy
         }
 
         var responseContent = await response.Content.ReadAsStringAsync();
+        return DeserializeResponse<T>(responseContent);
+    }
+
+    protected T DeserializeResponse<T>(string responseContent)
+    {
+        if (typeof(T) == typeof(ResponseModel))
+        {
+            return JsonConvert.DeserializeObject<T>(responseContent);
+        }
+
+        try
+        {
+            var jToken = JToken.Parse(responseContent);
+            if (jToken is JObject jObject && (jObject.ContainsKey("IsSuccess") || jObject.ContainsKey("isSuccess")) && (jObject.ContainsKey("Data") || jObject.ContainsKey("data")))
+            {
+                var responseModel = jObject.ToObject<ResponseModel>();
+                if (responseModel.IsSuccess)
+                {
+                    if (responseModel.Data != null)
+                    {
+                        var dataJson = JsonConvert.SerializeObject(responseModel.Data);
+                        return JsonConvert.DeserializeObject<T>(dataJson);
+                    }
+                    return default(T);
+                }
+                else
+                {
+                    throw new Exception(responseModel.Message ?? "Microservice returned an error");
+                }
+            }
+        }
+        catch (JsonReaderException)
+        {
+            // Fallback for non-JSON or array strings
+        }
+
         return JsonConvert.DeserializeObject<T>(responseContent);
     }
 }

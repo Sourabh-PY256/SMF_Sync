@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Xml.Serialization;
 using EWP.SF.Common.Attributes;
@@ -1162,12 +1162,12 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	public decimal  MinimumCapacity { get; set; }
+	public double MinimumCapacity { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	public int? MaximumCapacity { get; set; }
+	public double? MaximumCapacity { get; set; }
 
 	/// <summary>
 	///
@@ -1177,7 +1177,7 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	[RegularExpression("Finite|Infinite|InfiniteWithShiftPattern", ErrorMessage = "Invalid Capacity Mode")]
+	[RegularExpression("^(Finite|Infinite|InfiniteWithShiftPattern)$", ErrorMessage = "Invalid Capacity Mode")]
 	[MaxLength(100)]
 	public string CapacityMode { get; set; }
 
@@ -1210,7 +1210,7 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	[RegularExpression("Finite|Infinite|InfiniteWithShiftPattern", ErrorMessage = "Invalid Behavior")]
+	[RegularExpression("^(Finite|Infinite|InfiniteWithShiftPattern)$", ErrorMessage = "Invalid Behavior")]
 	[MaxLength(100)]
 	public string InfiniteModeBehavior { get; set; }
 

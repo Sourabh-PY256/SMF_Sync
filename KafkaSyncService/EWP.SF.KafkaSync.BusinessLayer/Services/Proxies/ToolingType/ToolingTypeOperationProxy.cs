@@ -24,17 +24,9 @@ public class ToolingTypeOperationProxy : BaseHttpProxy, IToolOperation
 
     public async Task<List<ResponseData>> ListUpdateToolType(List<ToolTypeExternal> toolTypeList, List<ToolTypeExternal> toolTypeListOriginal, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        var request = new
-        {
-            ToolTypeList = toolTypeList,
-            ToolTypeListOriginal = toolTypeListOriginal,
-            SystemOperator = systemOperator,
-            Validate = Validate,
-            Level = Level,
-            LogId = logId
-        };
+         string endpoint = $"ToolType/{Validate.ToString().ToLower()}/{Level}";
 
-        var response = await PostAsync<List<ResponseData>>("ToolingType/Bulk", request).ConfigureAwait(false);
+        var response = await PostAsync<List<ResponseData>>(endpoint, toolTypeList).ConfigureAwait(false);
         return response ?? new List<ResponseData>();
     }
 

@@ -10,7 +10,7 @@ using EWP.SF.KafkaSync.BusinessLayer.Services;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-
+using EWP.SF.KafkaSync.BusinessLayer.Services.Handlers;
 var builder = WebApplication.CreateBuilder(args);
 
 // Load AppSettings into the builder's configuration so it's available for DI
@@ -273,6 +273,12 @@ builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>(
 builder.Services.AddSingleton<IKafkaService, KafkaService>();
 
 // Register service consumer manager as a singleton
+builder.Services.AddSingleton<ISyncMessageHandler, OrderTransactionMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, MaterialSyncMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, ProductReceiptMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, MachineLaborIssueMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, ProductionOrderMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, DefaultSyncMessageHandler>();
 builder.Services.AddSingleton<IServiceConsumerManager, ServiceConsumerManager>();
 
 //builder.Services.AddControllers();

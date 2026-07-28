@@ -27,22 +27,21 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IConfiguration _configuration;
         private readonly ISyncCompletionRegistry _completionRegistry;
-
-        private readonly bool _use2503ForSync;
+        private readonly IEnumerable<ISyncMessageHandler> _handlers;
 
         public ServiceConsumerManager(
             ILogger<ServiceConsumerManager> logger,
             IKafkaService kafkaService,
             IServiceScopeFactory serviceScopeFactory,
-            IConfiguration configuration, ISyncCompletionRegistry completionRegistry)
+            IConfiguration configuration, ISyncCompletionRegistry completionRegistry,
+            IEnumerable<ISyncMessageHandler> handlers)
         {
             _logger = logger;
             _kafkaService = kafkaService;
             _serviceScopeFactory = serviceScopeFactory;
             _configuration = configuration;
             _completionRegistry = completionRegistry;
-             _use2503ForSync = configuration.GetValue<bool>("AppSettings:Use2503ForSync");
-
+            _handlers = handlers;
         }
 
         /// <summary>
@@ -86,186 +85,16 @@ namespace EWP.SF.KafkaSync.BusinessLayer
 
                         var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
 
-                        // ORDER_TRANSACTION_SERVICE doesn't need full SyncExecution - call dedicated method
-                        if (message.Service == SyncERPEntity.ORDER_TRANSACTION_SERVICE)
+                        var handler = _handlers.FirstOrDefault(h => h.SupportedServices.Contains(message.Service))
+                                      ?? _handlers.FirstOrDefault(h => h.SupportedServices.Length == 0);
+
+                        if (handler != null)
                         {
-                            _logger.LogInformation("Processing ORDER_TRANSACTION_SERVICE message");
-
-                            var response = await processor.ProcessOrderTransactionService(
-                                message.BodyData ?? string.Empty,
-                                message.User ?? new User()
-                            ).ConfigureAwait(false);
-
-                            _logger.LogInformation("ORDER_TRANSACTION_SERVICE processing complete: {Message}", response.Message);
-                        }
-                        else if (message.Service == SyncERPEntity.MATERIAL_ISSUE_SERVICE || message.Service == SyncERPEntity.MATERIAL_RETURN_SERVICE && message.ServiceData.HttpMethod == "POST")
-                        {
-                            object request;
-                            message.ServiceData.HttpMethod = "POST";
-                            _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
-
-                            var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            if(_use2503ForSync)
-                            {
-                                 request = JsonConvert.DeserializeObject<TransactionRequest>(message.BodyData);
-                            }
-                            else
-                            {
-                                 request = JsonConvert.DeserializeObject<TransactionMaterialSyncRequest>(message.BodyData);
-                            }
-                            
-
-                            var syncData = await workOrderOperation.UpdateWorkOrderComponent(request, message.User).ConfigureAwait(false);
-
-                            if (syncData != null)
-                            {
-                                // Proceed to ERP sync with the returned data
-                                var response = await processor.SyncExecution(
-                                    message.ServiceData,
-                                    message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
-                                    triggerType,
-                                    message.User,
-                                    message.EntityCode ?? string.Empty,
-                                    JsonConvert.SerializeObject(syncData)
-                                ).ConfigureAwait(false);
-
-                                _logger.LogInformation("{Service} ERP Sync execution complete via microservice", message.Service);
-                            }
-                            else
-                            {
-                                _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
-                            }
-                        }
-                        else if (message.Service == SyncERPEntity.PRODUCT_RECEIPT_SERVICE && message.ServiceData.HttpMethod == "POST")
-                        {
-                            message.ServiceData.HttpMethod = "POST";
-                            _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
-
-                            var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            var request = JsonConvert.DeserializeObject<TransactionProductReceiptSyncRequest>(message.BodyData);
-
-                            var syncData = await workOrderOperation.UpdateWorkOrderProduct(request, message.User).ConfigureAwait(false);
-
-                            if (syncData != null)
-                            {
-                                // Proceed to ERP sync with the returned data
-                                var response = await processor.SyncExecution(
-                                    message.ServiceData,
-                                    message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
-                                    triggerType,
-                                    message.User,
-                                    message.EntityCode ?? string.Empty,
-                                    JsonConvert.SerializeObject(syncData)
-                                ).ConfigureAwait(false);
-
-                                _logger.LogInformation("{Service} ERP Sync execution complete via microservice", message.Service);
-                            }
-                            else
-                            {
-                                _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
-                            }
-                        }
-                        else if (message.Service == SyncERPEntity.MACHINE_ISSUE_SERVICE && message.ServiceData.HttpMethod == "POST")
-                        {
-                            message.ServiceData.HttpMethod = "POST";
-                            _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
-
-                            var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            var request = JsonConvert.DeserializeObject<MachineIssueSyncRequest>(message.BodyData);
-
-                            var syncData = await workOrderOperation.UpdateMachineIssue(request, message.User).ConfigureAwait(false);
-
-                            if (syncData != null)
-                            {
-                                // Proceed to ERP sync with the returned data
-                                var response = await processor.SyncExecution(
-                                    message.ServiceData,
-                                    message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
-                                    triggerType,
-                                    message.User,
-                                    message.EntityCode ?? string.Empty,
-                                    JsonConvert.SerializeObject(syncData)
-                                ).ConfigureAwait(false);
-
-                                _logger.LogInformation("{Service} ERP Sync execution complete via microservice", message.Service);
-                            }
-                            else
-                            {
-                                _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
-                            }
-                        }
-                        else if (message.Service == SyncERPEntity.LABOR_ISSUE_SERVICE && message.ServiceData.HttpMethod == "POST")
-                        {
-                            message.ServiceData.HttpMethod = "POST";
-                            _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
-
-                            var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            var request = JsonConvert.DeserializeObject<MachineIssueSyncRequest>(message.BodyData);
-
-                            var syncData = await workOrderOperation.UpdateMachineIssue(request, message.User).ConfigureAwait(false);
-
-                            if (syncData != null)
-                            {
-                                // Proceed to ERP sync with the returned data
-                                var response = await processor.SyncExecution(
-                                    message.ServiceData,
-                                    message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
-                                    triggerType,
-                                    message.User,
-                                    message.EntityCode ?? string.Empty,
-                                    JsonConvert.SerializeObject(syncData)
-                                ).ConfigureAwait(false);
-
-                                _logger.LogInformation("{Service} ERP Sync execution complete via microservice", message.Service);
-                            }
-                            else
-                            {
-                                _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
-                            }
-                        }
-                        else if (message.Service == SyncERPEntity.PRODUCTION_ORDER_SERVICE && message.ServiceData.HttpMethod == "POST")
-                        {
-                            message.ServiceData.HttpMethod = "POST";
-                            _logger.LogInformation("Processing {Service} message with microservice call", message.Service);
-
-                            var workOrderOperation = scope.ServiceProvider.GetRequiredService<ProductionOrderOperationProxy>();
-                            var request = JsonConvert.DeserializeObject<ProductionOrder>(message.BodyData);
-
-                            var syncData = await workOrderOperation.CallOrderErpSyncService(request, message.User).ConfigureAwait(false);
-
-                            if (syncData != null)
-                            {
-                                // Proceed to ERP sync with the returned data
-                                var response = await processor.SyncExecution(
-                                    message.ServiceData,
-                                    message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
-                                    triggerType,
-                                    message.User,
-                                    message.EntityCode ?? string.Empty,
-                                    JsonConvert.SerializeObject(syncData)
-                                ).ConfigureAwait(false);
-
-                                _logger.LogInformation("{Service} ERP Sync execution complete via microservice", message.Service);
-                            }
-                            else
-                            {
-                                _logger.LogError("Microservice call for {Service} failed or returned null", message.Service);
-                            }
+                            await handler.HandleAsync(message, triggerType, processor, scope.ServiceProvider).ConfigureAwait(false);
                         }
                         else
                         {
-                            // FOR ALL OTHER SERVICES (including BinLocation triggers):
-                            // This fetches data from ERP and then calls the Producers (Kafka Proxies)
-                            var response = await processor.SyncExecution(
-                                message.ServiceData,
-                                message.ExecutionType == 1 ? ServiceExecOrigin.Event : ServiceExecOrigin.SyncButton,
-                                triggerType,
-                                message.User,
-                                message.EntityCode ?? string.Empty,
-                                message.BodyData ?? string.Empty
-                            ).ConfigureAwait(false);
-
-                            _logger.LogInformation("{Service} ERP Sync execution complete", message.Service);
+                            _logger.LogWarning("No handler found for service {Service}", message.Service);
                         }
                     }
                 }, null, null, groupId);

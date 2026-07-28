@@ -2,162 +2,174 @@
 
 services:
   # Admin Service (Identity + Configuration Service)
-  # admin-service:
-    # build:
-    #   context: .
-    #   dockerfile: AdminService/Dockerfile
-    # container_name: admin-service
-    # restart: unless-stopped
-    # ports:
-    #   - "8001:8001"  # AdminService port
-    #   - "5680:5679"  # Debug port (changed host port to avoid conflict)
-    # environment:
-    #   # Override specific settings for container environment
-    #   - DEBUG=True
-    #   - PYTHONPATH=/app
-    #   - PYDEVD_DISABLE_FILE_VALIDATION=1
-    #   - PYTHONUNBUFFERED=1
-    #   # Database configuration
-    #   - DB_HOST=172.16.5.117
-    #   - DB_PORT=3306
-    #   - DB_NAME=ewp_sf_admin
-    #   - DB_USER=mesuser
-    #   - DB_PASSWORD=check@123
-    #   # Redis configuration
-    #   - REDIS_HOST=redis
-    #   - REDIS_PORT=6379
-    #   - REDIS_DB=0
-    #   - REDIS_PASSWORD=
-    #   - REDIS_ENABLED=True
-    #   # JWT configuration
-    #   - JWT_SECRET=X7kP9mW3qL2rT8vF0bH5cY2eD1jN6xP4tM8zQ9w
-    #   - JWT_ALGORITHM=HS256
-    #   - JWT_EXPIRATION_MINUTES=60
-    #   # Service configuration
-    #   - ADMIN_SERVICE_PORT=8001
-    # volumes:
-    #   - ./AdminService/app:/app/app
-    #   - admin_data:/app/data
-    # depends_on:
-    #   - redis
-    # networks:
-    #   - smf-network
+  admin-service:
+    profiles:
+      - core
+    build:
+      context: .
+      dockerfile: AdminService/Dockerfile
+    container_name: admin-service
+    restart: unless-stopped
+    ports:
+      - "8001:8001"  # AdminService port
+      - "5680:5679"  # Debug port (changed host port to avoid conflict)
+    environment:
+      # Override specific settings for container environment
+      - DEBUG=True
+      - PYTHONPATH=/app
+      - PYDEVD_DISABLE_FILE_VALIDATION=1
+      - PYTHONUNBUFFERED=1
+      # Database configuration
+      - DB_HOST=172.16.5.117
+      - DB_PORT=3306
+      - DB_NAME=ewp_sf_admin
+      - DB_USER=mesuser
+      - DB_PASSWORD=check@123
+      # Redis configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - REDIS_ENABLED=True
+      # JWT configuration
+      - JWT_SECRET=X7kP9mW3qL2rT8vF0bH5cY2eD1jN6xP4tM8zQ9w
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_MINUTES=60
+      # Service configuration
+      - ADMIN_SERVICE_PORT=8001
+    volumes:
+      - ./AdminService/app:/app/app
+      - admin_data:/app/data
+    depends_on:
+      - redis
+    networks:
+      - smf-network
 
   # Gateway Service
-  # gateway-service:
-    # build:
-    #   context: .
-    #   dockerfile: GatewayService/Dockerfile
-    # container_name: api-gateway
-    # restart: unless-stopped
-    # ports:
-    #   - "8000:8000"
-    #   - "5678:5678"  # Debug port
-    # env_file:
-    #   - ./GatewayService/.env
-    # environment:
-    #   # Override specific settings for production/container environment
-    #   - DEBUG=True
-    #   - DEBUGPY_ENABLE=false
-    #   - PYTHONPATH=/app
-    #   # Python debugger settings to suppress frozen modules warnings
-    #   - PYDEVD_DISABLE_FILE_VALIDATION=1
-    #   - PYTHONUNBUFFERED=1
-    #   # Database configuration overrides
-    #   - DB_HOST=172.16.5.117
-    #   - DB_PASSWORD=check@123
-    #   # Redis configuration overrides
-    #   - REDIS_HOST=redis
-    #   - REDIS_PASSWORD=redis2k25@ework
-    #   # JWT configuration overrides
-    #   - JWT_SECRET=X7kP9mW3qL2rT8vF0bH5cY2eD1jN6xP4tM8zQ9w
-    # volumes:
-    #   - ./GatewayService:/app/GatewayService
-    #   - gateway_data:/app/data
-    # depends_on:
-    #   - redis
-    #   - admin-service  # Add AdminService dependency
-    #   - inventory-service
-    # networks:
-    #   - smf-network
+  gateway-service:
+    profiles:
+      - core
+    build:
+      context: .
+      dockerfile: GatewayService/Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # Debug port
+    env_file:
+      - ./GatewayService/.env
+    environment:
+      # Override specific settings for production/container environment
+      - DEBUG=True
+      - DEBUGPY_ENABLE=false
+      - PYTHONPATH=/app
+      # Python debugger settings to suppress frozen modules warnings
+      - PYDEVD_DISABLE_FILE_VALIDATION=1
+      - PYTHONUNBUFFERED=1
+      # Database configuration overrides
+      - DB_HOST=172.16.5.117
+      - DB_PASSWORD=check@123
+      # Redis configuration overrides
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=redis2k25@ework
+      # JWT configuration overrides
+      - JWT_SECRET=X7kP9mW3qL2rT8vF0bH5cY2eD1jN6xP4tM8zQ9w
+    volumes:
+      - ./GatewayService:/app/GatewayService
+      - gateway_data:/app/data
+    depends_on:
+      - redis
+      - admin-service  # Add AdminService dependency
+      - inventory-service
+    networks:
+      - smf-network
 
   # MySQL Database is hosted externally at 172.16.5.117:3306
 
   # Redis Cache
-  # redis:
-    # image: redis:7.0-alpine
-    # container_name: api-gateway-redis
-    # restart: unless-stopped
-    # command: redis-server --requirepass redis2k25@ework --protected-mode no
-    # ports:
-    #   - "6379:6379"
-    # volumes:
-    #   - redis-data:/data
-    # networks:
-    #   - smf-network
+  redis:
+    profiles:
+      - core
+    image: redis:7.0-alpine
+    container_name: api-gateway-redis
+    restart: unless-stopped
+    command: redis-server --requirepass redis2k25@ework --protected-mode no
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - smf-network
 
   # Redis Commander - Web UI for Redis
-  # redis-commander:
-    # image: rediscommander/redis-commander:latest
-    # container_name: redis-commander
-    # restart: unless-stopped
-    # environment:
-    #   - REDIS_HOSTS=local:redis:6379
-    #   - HTTP_USER=admin
-    #   - HTTP_PASSWORD=admin123
-    # ports:
-    #   - "8081:8081"
-    # networks:
-    #   - smf-network
-    # depends_on:
-    #   - redis
+  redis-commander:
+    profiles:
+      - core
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin123
+    ports:
+      - "8081:8081"
+    networks:
+      - smf-network
+    depends_on:
+      - redis
 
   # Redis Stack - Includes Redis Insight
-  # redis-stack:
-    # image: redis/redis-stack:latest
-    # container_name: redis-stack
-    # restart: unless-stopped
-    # ports:
-    #   - "8002:8002"  # RedisInsight (changed to avoid conflict with AdminService)
-    #   - "6380:6379"  # Redis port
-    # networks:
-    #   - smf-network
+  redis-stack:
+    profiles:
+      - core
+    image: redis/redis-stack:latest
+    container_name: redis-stack
+    restart: unless-stopped
+    ports:
+      - "8002:8002"  # RedisInsight (changed to avoid conflict with AdminService)
+      - "6380:6379"  # Redis port
+    networks:
+      - smf-network
 
   # Inventory Service
-  # inventory-service:
-    # build:
-    #   context: .
-    #   dockerfile: InventoryService/Dockerfile
-    # container_name: inventory-service
-    # restart: unless-stopped
-    # # No port mapping - only accessible within the Docker network
-    # expose:
-    #   - "8080"
-    # environment:
-    #   - ASPNETCORE_ENVIRONMENT=Development
-    # volumes:
-    #   - ./Lib:/app/Lib
-    # networks:
-    #   - smf-network
+  inventory-service:
+    profiles:
+      - core
+    build:
+      context: .
+      dockerfile: InventoryService/Dockerfile
+    container_name: inventory-service
+    restart: unless-stopped
+    # No port mapping - only accessible within the Docker network
+    expose:
+      - "8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - ./Lib:/app/Lib
+    networks:
+      - smf-network
 
   # Shop Floor Service (disabled by default). Enable by uncommenting and adding to a compose profile if needed.
-  # shopfloor-service:
-  #   profiles:
-  #     - shopfloor
-  #   build:
-  #     context: .
-  #     dockerfile: ShopFloorService/Dockerfile
-  #   container_name: shopfloor-service
-  #   restart: unless-stopped
-  #   # No port mapping - only accessible within the Docker network
-  #   expose:
-  #     - "8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #   volumes:
-  #     - ./Lib:/app/Lib
-  #   networks:
-  #     - smf-network
+  shopfloor-service:
+    profiles:
+      - shopfloor
+    build:
+      context: .
+      dockerfile: ShopFloorService/Dockerfile
+    container_name: shopfloor-service
+    restart: unless-stopped
+    # No port mapping - only accessible within the Docker network
+    expose:
+      - "8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    volumes:
+      - ./Lib:/app/Lib
+    networks:
+      - smf-network
   kafka:
       image: apache/kafka:3.7.0
       container_name: kafka
@@ -226,14 +238,14 @@ networks:
   kafka-net:
     driver: bridge
 
-# volumes:
-  # admin_data:
-  #   # Named volume for AdminService data
-  #   driver: local
-  # gateway_data:
-  #   # Named volume for GatewayService data
-  #   driver: local
-  # redis-data:
-  #   driver: local
-  # redisinsight-data:
-  #   driver: local
+volumes:
+  admin_data:
+    # Named volume for AdminService data
+    driver: local
+  gateway_data:
+    # Named volume for GatewayService data
+    driver: local
+  redis-data:
+    driver: local
+  redisinsight-data:
+    driver: local

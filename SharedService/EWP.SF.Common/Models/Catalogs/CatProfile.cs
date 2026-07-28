@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using EWP.SF.Common.Attributes;
 using EWP.SF.Common.EntityLogger;
@@ -220,7 +220,7 @@ public class PositionExternal
 	/// <summary>
 	///
 	/// </summary>
-	[RegularExpression("Active|Disable", ErrorMessage = "Invalid Status")]
+	[RegularExpression("^(Active|Disable|ACTIVE|DISABLE|active|disable)$", ErrorMessage = "Invalid Status")]
 	[Description("Position Status")]
 	[JsonProperty(PropertyName = "Status")]
 	public string Status { get; set; }
@@ -228,7 +228,7 @@ public class PositionExternal
 	/// <summary>
 	///
 	/// </summary>
-	[RegularExpression("Yes|No", ErrorMessage = "Invalid Value for ReqAuthorization")]
+	[RegularExpression("^(Yes|No|YES|NO|yes|no)$", ErrorMessage = "Invalid Value for ReqAuthorization")]
 	[Description("Requires Authorization")]
 	[JsonProperty(PropertyName = "ReqAuthorization")]
 	public string ReqAuthorization { get; set; }
@@ -250,14 +250,14 @@ public class PositionExternal
 	/// <summary>
 	///
 	/// </summary>
-	[RegularExpression("Primary|Secondary", ErrorMessage = "Invalid scheduling level")]
+	[RegularExpression("^(Primary|Secondary|PRIMARY|SECONDARY|primary|secondary)$", ErrorMessage = "Invalid scheduling level")]
 	[MaxLength(100)]
 	public string ScheduleLevel { get; set; }
 
 	/// <summary>
 	///
 	/// </summary>
-	[RegularExpression("Yes|No", ErrorMessage = "Invalid value")]
+	[RegularExpression("^(Yes|No|YES|NO|yes|no)$", ErrorMessage = "Invalid value")]
 	[MaxLength(100)]
 	public string Schedule { get; set; }
 }
