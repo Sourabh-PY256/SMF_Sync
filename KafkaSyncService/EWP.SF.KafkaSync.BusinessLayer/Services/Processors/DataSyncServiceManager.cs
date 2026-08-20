@@ -13,17 +13,20 @@ public class DataSyncServiceManager
 	private readonly IDataSyncServiceOperation _operations;
 	private readonly IServiceConsumerManager _serviceConsumerManager;
 	private readonly IConfiguration _configuration;
+	private readonly IHttpClientFactory _httpClientFactory;
 
 	public DataSyncServiceManager(
 		ILogger<DataSyncServiceManager> logger,
 		IDataSyncServiceOperation operations,
 		IServiceConsumerManager serviceConsumerManager,
-		IConfiguration configuration)
+		IConfiguration configuration,
+		IHttpClientFactory httpClientFactory)
 	{
 		_logger = logger;
 		_operations = operations;
 		_serviceConsumerManager = serviceConsumerManager;
 		_configuration = configuration;
+		_httpClientFactory = httpClientFactory;
 	}
 
 	public  async Task InsertDataSyncServiceLog(string serviceName, string ErrorMessage, User systemOperator)
@@ -100,7 +103,7 @@ public async Task<DataSyncHttpResponse> ExecuteServiceEndpoint(
 {
     try
     {
-        var httpClient = new HttpClient();
+        var httpClient = _httpClientFactory.CreateClient(nameof(DataSyncServiceManager));
         var dataSyncRequest = new DataSyncExecuteRequest
         {
             Services = new List<string> { serviceName },

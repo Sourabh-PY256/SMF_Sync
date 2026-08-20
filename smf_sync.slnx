@@ -9,4 +9,7 @@
     <Project Path="KafkaSyncService/EWP.SF.KafkaSync.BusinessLayer/EWP.SF.KafkaSync.BusinessLayer.csproj" />
     <Project Path="KafkaSyncService/EWP.SF.KafkaSync.DataAccess/EWP.SF.KafkaSync.DataAccess.csproj" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/EWP.SF.KafkaSync.Tests/EWP.SF.KafkaSync.Tests.csproj" />
+  </Folder>
 </Solution>

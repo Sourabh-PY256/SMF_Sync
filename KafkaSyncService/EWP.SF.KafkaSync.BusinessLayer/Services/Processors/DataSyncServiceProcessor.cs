@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -1697,6 +1697,240 @@ public class DataSyncServiceProcessor
 
 						break;
 
+					case SyncERPEntity.FACILITY_SERVICE:
+					case SyncERPEntity.FLOOR_SERVICE:
+					case SyncERPEntity.WORKCENTER_SERVICE:
+					case SyncERPEntity.PRODUCTION_LINE_SERVICE:
+						List<AssetExternal> listAssets = JsonConvert.DeserializeObject<List<AssetExternal>>(dataJson);
+						List<AssetExternal> listAssetsOriginal = JsonConvert.DeserializeObject<List<AssetExternal>>(dataJsonOriginal);
+						var assetOperation = GetOperation<IAssetOperation>();
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listAssets);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						List<DataSyncServiceLogDetail> returnDetailListAsset = [];
+						if (listAssets.Count > 0)
+						{
+							List<ResponseData> sfListResponse = await assetOperation.CreateAssetsExternal(listAssets, listAssetsOriginal, SystemOperator, false, "Success").ConfigureAwait(false);
+							if (sfListResponse is not null)
+							{
+								foreach (ResponseData rsp in sfListResponse)
+								{
+									DataSyncServiceLogDetail LogSingleInfo = new()
+									{
+										LogId = LogInfo.Id,
+										RowKey = rsp.Code,
+										ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+										SfMappedJson = JsonConvert.SerializeObject(rsp).Replace("\"", "\\\"", StringComparison.Ordinal)
+									};
+									try
+									{
+										if (rsp.IsSuccess)
+										{
+											successRecords++;
+											LogSingleInfo.LogType = DataSyncLogType.Success;
+										}
+										else
+										{
+											throw new Exception(rsp.Message);
+										}
+										returnDetailListAsset.Add(LogSingleInfo);
+									}
+									catch (Exception ex)
+									{
+										failedRecords++;
+										LogSingleInfo.LogType = DataSyncLogType.Error;
+										LogSingleInfo.MessageException = ex.Message;
+										returnDetailListAsset.Add(LogSingleInfo);
+									}
+								}
+								//_ = _dataSyncServiceOperation.InsertDataSyncServiceLogDetailBulk(returnDetailListAsset);
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
+						}
+
+						break;
+
+					case SyncERPEntity.PROCEDURE_SERVICE:
+						List<ProcedureExternalSync> listProcedures = JsonConvert.DeserializeObject<List<ProcedureExternalSync>>(dataJson);
+						List<ProcedureExternalSync> listProceduresOriginal = JsonConvert.DeserializeObject<List<ProcedureExternalSync>>(dataJsonOriginal);
+						var procedureOperation = GetOperation<IProcedureOperation>();
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listProcedures);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						List<DataSyncServiceLogDetail> returnDetailListProcedure = [];
+						if (listProcedures.Count > 0)
+						{
+							List<ResponseData> sfListResponse = await procedureOperation.ProcessMasterInsExternalSync(listProcedures, listProceduresOriginal, SystemOperator, false, LevelMessage.Success).ConfigureAwait(false);
+							if (sfListResponse is not null)
+							{
+								foreach (ResponseData rsp in sfListResponse)
+								{
+									DataSyncServiceLogDetail LogSingleInfo = new()
+									{
+										LogId = LogInfo.Id,
+										RowKey = rsp.Code,
+										ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+										SfMappedJson = JsonConvert.SerializeObject(rsp).Replace("\"", "\\\"", StringComparison.Ordinal)
+									};
+									try
+									{
+										if (rsp.IsSuccess)
+										{
+											successRecords++;
+											LogSingleInfo.LogType = DataSyncLogType.Success;
+										}
+										else
+										{
+											throw new Exception(rsp.Message);
+										}
+										returnDetailListProcedure.Add(LogSingleInfo);
+									}
+									catch (Exception ex)
+									{
+										failedRecords++;
+										LogSingleInfo.LogType = DataSyncLogType.Error;
+										LogSingleInfo.MessageException = ex.Message;
+										returnDetailListProcedure.Add(LogSingleInfo);
+									}
+								}
+								//_ = _dataSyncServiceOperation.InsertDataSyncServiceLogDetailBulk(returnDetailListProcedure);
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
+						}
+
+						break;
+
+					case SyncERPEntity.ATTACHMENT_SERVICE:
+						List<AttachmentExternal> listAttachments = JsonConvert.DeserializeObject<List<AttachmentExternal>>(dataJson);
+						var attachmentOperation = GetOperation<IAttachmentOperation>();
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listAttachments);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						if (listAttachments.Count > 0)
+						{
+							List<AttachmentExternalResponse> sfAttachmentResponse = await attachmentOperation.AttachmentSyncSel(listAttachments, SystemOperator).ConfigureAwait(false);
+							successRecords = 0;
+							if (sfAttachmentResponse.Count > 0)
+							{
+								foreach (AttachmentExternalResponse elem in sfAttachmentResponse)
+								{
+									try
+									{
+										ServiceData.SingleRecordParam = "AttachmentId={0}";
+										DataSyncResponse erpAttachmentResult = await ErpGetRequest(ServiceData, elem.AttachmentIdExternal, LogInfo).ConfigureAwait(false);
+										if (erpAttachmentResult.StatusMessage == "OK" && !string.IsNullOrEmpty(erpAttachmentResult.Response))
+										{
+											AttachmentResponse response = await attachmentOperation.SaveAttachmentExternal(elem, erpAttachmentResult.Response, SystemOperator).ConfigureAwait(false);
+											successRecords++;
+											if (!string.IsNullOrEmpty(response.Id))
+											{
+												LogInfo.SfResponseJson = JsonConvert.SerializeObject(response);
+											}
+										}
+										else
+										{
+											failedRecords++;
+										}
+									}
+									catch
+									{
+										failedRecords++;
+									}
+								}
+							}
+						}
+
+						break;
+
+					case SyncERPEntity.CLOCKINOUT_SERVICE:
+						List<ClockInOutDetailsExternal> listClockInRecords = JsonConvert.DeserializeObject<List<ClockInOutDetailsExternal>>(dataJson);
+						List<ClockInOutDetailsExternal> listClockInRecordsOriginal = JsonConvert.DeserializeObject<List<ClockInOutDetailsExternal>>(dataJsonOriginal);
+						var clockInOutOperation = GetOperation<IClockInOutOperation>();
+						double clockInOffset = await _dataSyncServiceOperation.GetTimezoneOffset("ERP").ConfigureAwait(false) * -1;
+						foreach (ClockInOutDetailsExternal itm in listClockInRecords)
+						{
+							if (itm.StartDate.HasValue && itm.StartDate.Value.Year <= 1900)
+							{
+								itm.StartDate = null;
+							}
+							else if (itm.StartDate.HasValue)
+							{
+								itm.StartDate = itm.StartDate.Value.AddHours(clockInOffset);
+							}
+							if (itm.EndDate.HasValue && itm.EndDate.Value.Year <= 1900)
+							{
+								itm.EndDate = null;
+							}
+							else if (itm.EndDate.HasValue)
+							{
+								itm.EndDate = itm.EndDate.Value.AddHours(clockInOffset);
+							}
+						}
+						foreach (ClockInOutDetailsExternal itm in listClockInRecordsOriginal)
+						{
+							if (itm.StartDate.HasValue && itm.StartDate.Value.Year <= 1900)
+							{
+								itm.StartDate = null;
+							}
+							else if (itm.StartDate.HasValue)
+							{
+								itm.StartDate = itm.StartDate.Value.AddHours(clockInOffset);
+							}
+							if (itm.EndDate.HasValue && itm.EndDate.Value.Year <= 1900)
+							{
+								itm.EndDate = null;
+							}
+							else if (itm.EndDate.HasValue)
+							{
+								itm.EndDate = itm.EndDate.Value.AddHours(clockInOffset);
+							}
+						}
+						LogInfo.SfMappedJson = JsonConvert.SerializeObject(listClockInRecords);
+						LogInfo.SfProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone);
+						await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
+						List<DataSyncServiceLogDetail> returnClockList = [];
+						if (listClockInRecords.Count > 0)
+						{
+							List<ResponseData> sfListResponse = clockInOutOperation.ListUpdateCLockInOutBulk(listClockInRecords, listClockInRecordsOriginal, SystemOperator, false, LevelMessage.Success);
+							if (sfListResponse is not null)
+							{
+								foreach (ResponseData rsp in sfListResponse)
+								{
+									DataSyncServiceLogDetail LogSingleInfo = new()
+									{
+										LogId = LogInfo.Id,
+										RowKey = rsp.Code,
+										ProcessDate = DataSyncServiceUtil.ConvertDate(ServiceData.ErpData.DateTimeFormat, DateTime.Now, ServiceData.ErpData.TimeZone),
+										SfMappedJson = JsonConvert.SerializeObject(rsp).Replace("\"", "\\\"", StringComparison.Ordinal)
+									};
+									try
+									{
+										if (rsp.IsSuccess)
+										{
+											successRecords++;
+											LogSingleInfo.LogType = DataSyncLogType.Success;
+										}
+										else
+										{
+											throw new Exception(rsp.Message);
+										}
+										returnClockList.Add(LogSingleInfo);
+									}
+									catch (Exception ex)
+									{
+										failedRecords++;
+										LogSingleInfo.LogType = DataSyncLogType.Error;
+										LogSingleInfo.MessageException = ex.Message;
+										returnClockList.Add(LogSingleInfo);
+									}
+								}
+								//_ = _dataSyncServiceOperation.InsertDataSyncServiceLogDetailBulk(returnClockList);
+							}
+							LogInfo.SfResponseJson = JsonConvert.SerializeObject(new { SuccessRecords = successRecords, FailedRecords = failedRecords, Data = sfListResponse.Select(x => new { x.Code, x.IsSuccess, x.Message }) });
+						}
+
+						break;
+
 					default:
 						throw new Exception("No instance configured to receive data from ERP");
 
@@ -2083,7 +2317,7 @@ public class DataSyncServiceProcessor
 			double erpOffset = await datasyncOperation.GetTimezoneOffset("ERP");
 			DateTime offsetExecDate = ServiceData.LastExecutionDate.AddMinutes(-ServiceData.OffsetMin).AddHours(erpOffset);
 			string syncDate = offsetExecDate.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss");
-			if (syncAllData || ServiceData.DeltaSync == EnableType.No)
+			if (syncAllData || ServiceData.DeltaSync == EnableType.No || offsetExecDate.Year < 1900)
 			{
 				syncDate = _defaultSyncDate;
 			}
@@ -2107,6 +2341,10 @@ public class DataSyncServiceProcessor
 				if (DateTime.TryParseExact(EntityCode[..19], "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime deltaDate))
 				{
 					string syncDate = deltaDate.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss");
+					if (deltaDate.Year < 1900)
+					{
+						syncDate = _defaultSyncDate;
+					}
 					endpointUrl = ServiceData.ErpData.BaseUrl + ServiceData.Path;
 					endpointUrl += $"?{ServiceData.UrlParams.Replace("{0}", syncDate)}";
 				}

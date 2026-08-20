@@ -3,13 +3,13 @@
 public static class SyncERPEntity
 {
 	// Asset
-	// public const string FACILITY_SERVICE = "Facility";
+	public const string FACILITY_SERVICE = "Facility";
 
-	// public const string FLOOR_SERVICE = "Floor";
+	public const string FLOOR_SERVICE = "Floor";
 
-	// public const string WORKCENTER_SERVICE = "Workcenter";
+	public const string WORKCENTER_SERVICE = "Workcenter";
 
-	// public const string PRODUCTION_LINE_SERVICE = "ProductionLine";
+	public const string PRODUCTION_LINE_SERVICE = "ProductionLine";
 
 	public const string MACHINE_SERVICE = "Machine";
 
@@ -26,7 +26,7 @@ public static class SyncERPEntity
 	// Employees
 	public const string EMPLOYEE_SERVICE = "Employee";
 
-	//public const string CLOCKINOUT_SERVICE = "ClockInOut";
+	public const string CLOCKINOUT_SERVICE = "ClockInOut";
 
 	public const string POSITION_SERVICE = "Position";
 
@@ -39,7 +39,7 @@ public static class SyncERPEntity
 	//public const string EMPLOYEE_SHIFT_STATUS_SERVICE = "EmployeeShiftsStatus";
 
 	// General
-	//public const string ATTACHMENT_SERVICE = "Attachment";
+	public const string ATTACHMENT_SERVICE = "Attachment";
 
 	//public const string ATTACHMENT_LINK_SERVICE = "AttachmentLink";
 
@@ -105,7 +105,7 @@ public static class SyncERPEntity
 	public const string PROCESS_TYPE_SERVICE = "OperationSubtype";
 	
 	public const string ORDER_TRANSACTION_SERVICE = "OrderTransaction";
-	//public const string PROCEDURE_SERVICE = "Procedure";
+	public const string PROCEDURE_SERVICE = "Procedure";
 	// public const string IOT_DATA_SIMULATOR_SERVICE = "IoTDataSimulator";
 }
 

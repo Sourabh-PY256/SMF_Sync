@@ -67,11 +67,14 @@ builder.Services.AddScoped<IMeasureUnitRepo, MeasureUnitRepo>();
 builder.Services.AddScoped<IMachineRepo, MachineRepo>();
 builder.Services.AddScoped<IStockRepo, StockRepo>();
 builder.Services.AddScoped<IStockAllocationRepo, StockAllocationRepo>();
+builder.Services.AddScoped<IAssetRepo, AssetRepo>();
+builder.Services.AddScoped<IClockInOutRepo, ClockInOutRepo>();
 
 // Register services
 builder.Services.AddScoped<IDataSyncServiceOperation, DataSyncServiceOperation>();
 builder.Services.AddScoped<DataSyncServiceProcessor>();
 builder.Services.AddScoped<DataSyncServiceManager>();
+builder.Services.AddHttpClient(nameof(DataSyncServiceManager));
 builder.Services.AddSingleton<ISseService, SseService>();
 builder.Services.AddSingleton<IDataSyncNotifier, DataSyncNotifier>();
 builder.Services.AddSingleton<ISyncCompletionRegistry, SyncCompletionRegistry>(); 
@@ -88,6 +91,8 @@ builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
 builder.Services.AddScoped<IWorkOrderOperation, WorkOrderOperation>();
 builder.Services.AddScoped<IOrderTransactionProductOperation, OrderTransactionProductOperation>();
 builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionMaterialOperation>();
+builder.Services.AddScoped<IAssetOperation, AssetOperation>();
+builder.Services.AddScoped<IClockInOutOperation, ClockInOutOperation>();
 
         // Register Authentication Service first
         builder.Services.AddHttpClient<IAuthenticationService, AuthenticationService>()
@@ -348,9 +353,17 @@ using (var scope = app.Services.CreateScope())
         .ToList();
 
     var kafkaBootstrapServers = configuration["KafkaSettings:BootstrapServers"];
+    if (!int.TryParse(configuration["KafkaSettings:DefaultPartitions"], out int defaultPartitions) || defaultPartitions < 1)
+    {
+        defaultPartitions = 3; // Allows up to 3 consumer instances per topic to run in parallel instead of the previous hardcoded 1.
+    }
+    if (!short.TryParse(configuration["KafkaSettings:DefaultReplicationFactor"], out short defaultReplicationFactor) || defaultReplicationFactor < 1)
+    {
+        defaultReplicationFactor = 1; // Single-broker dev cluster; raise via config once the cluster has multiple brokers.
+    }
 
     var topicValidator = new KafkaTopicValidator(logger, kafkaBootstrapServers);
-    await topicValidator.EnsureTopicsExistAsync(topicNames);
+    await topicValidator.EnsureTopicsExistAsync(topicNames, defaultPartitions, defaultReplicationFactor);
 
     logger.LogInformation("All required Kafka topics validated and created successfully.");
 }

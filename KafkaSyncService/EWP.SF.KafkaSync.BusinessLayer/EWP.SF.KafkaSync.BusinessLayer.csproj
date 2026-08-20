@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="EWP.SF.KafkaSync.Tests" />
+  </ItemGroup>
 <!-- Includes the LicenseModule DLL after the PostBuildEvent. -->
 	<ItemGroup>
 		<Reference Include="EWP.SF.LicenseModule">

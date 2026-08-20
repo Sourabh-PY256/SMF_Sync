@@ -55,11 +55,18 @@ public abstract class BaseHttpProxy
                 request.Headers.TryAddWithoutValidation("CryptoKey", AuthenticationService.CryptoKey);
             }
 
-            request.Content = new StringContent(
-                JsonConvert.SerializeObject(data),
-                Encoding.UTF8,
-                "application/json"
-            );
+            if (data is string jsonString)
+            {
+                request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+            }
+            else
+            {
+                request.Content = new StringContent(
+                    JsonConvert.SerializeObject(data),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+            }
 
             var response = await _httpClient.SendAsync(request);
 
@@ -102,7 +109,14 @@ public abstract class BaseHttpProxy
 
         }
 
-        request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
+        if (data is string jsonString)
+        {
+            request.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+        }
+        else
+        {
+            request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
+        }
 
         var response = await _httpClient.SendAsync(request);
 

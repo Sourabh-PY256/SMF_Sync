@@ -19,6 +19,10 @@ public class AuthenticationService : IAuthenticationService
     private readonly ILogger<AuthenticationService> _logger;
     private const string CACHE_KEY = "SF_Access_Token";
 
+    // Guards the cache-miss login call so concurrent callers await one in-flight login
+    // instead of each firing a separate request at the ERP/SF login endpoint (cache stampede).
+    private static readonly SemaphoreSlim _loginLock = new(1, 1);
+
     public static readonly string CryptoKey = Guid.NewGuid().ToString();
 
     public AuthenticationService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthenticationService> logger)
@@ -37,6 +41,26 @@ public class AuthenticationService : IAuthenticationService
             return token;
         }
 
+        await _loginLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            // Re-check: another caller may have already logged in while we were waiting for the lock.
+            token = MemoryCache.Default.Get(CACHE_KEY) as string;
+            if (!string.IsNullOrEmpty(token))
+            {
+                return token;
+            }
+
+            return await LoginAndCacheTokenAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            _loginLock.Release();
+        }
+    }
+
+    private async Task<string> LoginAndCacheTokenAsync()
+    {
         _logger.LogInformation("Token expired or missing. Attempting login to Smart Factory API...");
 
         // Perform login

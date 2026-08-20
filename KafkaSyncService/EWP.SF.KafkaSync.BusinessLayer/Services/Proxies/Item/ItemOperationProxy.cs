@@ -27,7 +27,7 @@ public class ItemOperationProxy : BaseHttpProxy, IItemOperation
         bool Validate, 
         LevelMessage Level)
     {
-        string endpoint = $"Component/Merge/{Validate.ToString().ToLower()}";
+        string endpoint = $"Component/{Validate.ToString().ToLower()}/{Level}";
         
         ResponseModel response = null;
 

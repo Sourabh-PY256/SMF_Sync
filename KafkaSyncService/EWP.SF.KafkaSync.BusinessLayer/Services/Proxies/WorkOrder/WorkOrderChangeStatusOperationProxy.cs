@@ -26,7 +26,7 @@ public class WorkOrderChangeStatusOperationProxy : BaseHttpProxy, IWorkOrderChan
         string logId = null)
     {
         // Endpoint: WorkOrder/ChangeStatus/Bulk/{validate}/{level}
-        string endpoint = $"WorkOrder/ChangeStatus/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"WorkOrderChangeStatus/{Validate.ToString().ToLower()}/{Level}";
         
         // Sending the list with logId in a wrapper if needed, but for now just updating signature
         // If the API expects logId, it should be passed here.

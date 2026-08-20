@@ -179,33 +179,41 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                                         topic, consumeResult.Message.Key, config.GroupId);
                                     
                                     bool processedSuccessfully = false;
+                                    bool deadLettered = false;
                                     try
                                     {
                                         // Process message with retry logic and await the async operation
                                         await ProcessMessageWithRetryAsync(
-                                            consumeResult.Message.Key, 
-                                            consumeResult.Message.Value, 
-                                            messageHandler, 
-                                            retries, 
+                                            consumeResult.Message.Key,
+                                            consumeResult.Message.Value,
+                                            messageHandler,
+                                            retries,
                                             delay);
-                                        
+
                                         processedSuccessfully = true;
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger.LogError(ex, "Failed to process message after all retries. Message will be reprocessed on next consumer start.");
-                                        // Don't store or commit offset - let the message be reprocessed
-                                        continue; // Skip to the next message
+                                        // Give up after the retry budget is exhausted instead of leaving the offset
+                                        // uncommitted forever - an uncommitted poison message would otherwise be
+                                        // re-consumed and re-fail on every consumer restart, permanently blocking
+                                        // this partition. Log it prominently as a dropped/dead-lettered message so
+                                        // operators can find and reprocess it manually.
+                                        deadLettered = true;
+                                        _logger.LogError(ex, "[DEAD-LETTER] Message with key {Key} on topic {Topic} failed after {Retries} retries and is being skipped (offset will still be committed) to avoid blocking the partition. Payload: {Payload}",
+                                            consumeResult.Message.Key, topic, retries, consumeResult.Message.Value);
                                     }
-                                    
-                                    // Only store and commit offset if processing was successful
-                                    if (processedSuccessfully)
+
+                                    // Commit the offset whether the message succeeded or was dead-lettered, so a
+                                    // single bad message can't wedge this partition; only a genuine commit failure
+                                    // (KafkaException) leaves the offset for the next consumer start to retry.
+                                    if (processedSuccessfully || deadLettered)
                                     {
                                         try
                                         {
-                                            // Store offset after successful processing
+                                            // Store offset after processing (successful or given up on)
                                             consumer.StoreOffset(consumeResult);
-                                            
+
                                             // Manually commit the offset
                                             consumer.Commit();
                                             _logger.LogDebug("Successfully committed offset for message with key {Key}", consumeResult.Message.Key);
@@ -253,7 +261,9 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             }
         }
 
-        private async Task ProcessMessageWithRetryAsync(string key, string value, Func<string, string, Task> messageHandler, int maxRetries, int retryDelayMs)
+        // internal (not private) so EWP.SF.KafkaSync.Tests can unit-test the retry/backoff behavior
+        // directly, without needing a real Kafka broker.
+        internal async Task ProcessMessageWithRetryAsync(string key, string value, Func<string, string, Task> messageHandler, int maxRetries, int retryDelayMs)
         {
             int retryCount = 0;
             bool processed = false;
