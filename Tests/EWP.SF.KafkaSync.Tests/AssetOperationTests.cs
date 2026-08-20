@@ -1,3 +1,4 @@
+using EWP.SF.Common.Constants;
 using EWP.SF.Common.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.KafkaSync.BusinessLayer;
@@ -90,9 +91,12 @@ public class AssetOperationTests
         // Act
         var result = await sut.CreateAssetsExternal(assets, [], user, false, "Success");
 
-        // Assert
+        // Assert - must fail specifically because of the permission check, not some other
+        // validation path, otherwise this test would still pass after an unrelated regression.
         Assert.Single(result);
         Assert.False(result[0].IsSuccess);
+        Assert.Equal(ErrorMessage.noPermission, result[0].Message);
+        _assetRepo.Verify(x => x.CreateFacility(It.IsAny<Facility>(), It.IsAny<User>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
