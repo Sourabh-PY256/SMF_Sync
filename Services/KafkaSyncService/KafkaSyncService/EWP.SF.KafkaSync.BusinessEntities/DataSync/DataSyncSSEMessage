@@ -1,0 +1,6 @@
+namespace EWP.SF.KafkaSync.BusinessEntities;
+public sealed class Message
+{
+    public int Type { get; set; }
+    public object Value { get; set; }
+}

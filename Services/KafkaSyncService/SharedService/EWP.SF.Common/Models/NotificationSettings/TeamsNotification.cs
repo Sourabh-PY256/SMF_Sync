@@ -1,0 +1,3 @@
+namespace EWP.SF.Common.Models.NotificationSettings;
+
+// ... existing code ... 

@@ -1,0 +1,54 @@
+{
+    "version": "0.2.0",
+    
+    "configurations": [
+        {
+            // DEVELOPMENT: runs the API directly on the host via `dotnet` - only Kafka runs in Docker
+            // (started automatically by the "dev: start kafka + build" preLaunchTask). Edit a .cs file,
+            // hit F5 again: this only re-runs `dotnet build` (seconds), no Docker image rebuild.
+            "name": "Development (Local .NET + Kafka in Docker)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dev: start kafka + build",
+            "program": "${workspaceFolder}/KafkaSyncService/EWP.SF.KafkaSync.API/bin/Debug/net9.0/EWP.SF.KafkaSync.API.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/KafkaSyncService/EWP.SF.KafkaSync.API",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:8080",
+                "KafkaSettings__BootstrapServers": "localhost:29092",
+                "AppSettings__ExternalServiceUrl": "https://localhost:7307/API/V1/",
+                "AppSettings__ExternalSyncApiBaseUrl": "https://localhost:7307/API/V1/",
+                "AppSettings__SmartFactoryAuth__LoginUrl": "https://localhost:7307/API/V1/User/Login/Angular"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            // DEPLOYMENT: attaches a debugger to the already-running `kafka-sync-service` Docker container.
+            // Requires the current `docker-compose down/build/up` cycle whenever code changes - use this
+            // only to validate the actual deployment image, not for everyday iteration.
+            "name": "Deployment (Attach to Docker Container)",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickRemoteProcess}",
+            "pipeTransport": {
+                "pipeProgram": "docker",
+                "pipeArgs": ["exec", "-i", "kafka-sync-service"],
+                "debuggerPath": "/vsdbg/vsdbg",
+                "pipeCwd": "${workspaceRoot}",
+                "quoteArgs": false
+            },
+            "sourceFileMap": {
+                "/src": "${workspaceFolder}"
+            }
+        }
+    ]
+}
+

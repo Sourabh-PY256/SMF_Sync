@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+	<!-- Includes the ConnectionModule DLL after the PostBuildEvent. -->
+	<ItemGroup>
+		<Reference Include="EWP.SF.ConnectionModule">
+			<HintPath>..\..\Lib\Windows\EWP.SF.ConnectionModule.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="NLog.Database" Version="5.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\EWP.SF.Helper\EWP.SF.Helper.csproj" />
+	</ItemGroup>
+
+
+</Project>
