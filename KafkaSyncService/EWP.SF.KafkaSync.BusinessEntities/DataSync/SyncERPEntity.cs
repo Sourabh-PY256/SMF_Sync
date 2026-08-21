@@ -83,6 +83,8 @@ public static class SyncERPEntity
 
 	public const string PRODUCTION_ORDER_CHANGE_STATUS_SERVICE = "ProductionOrderChangeStatus";
 
+	public const string MATERIAL_INVENTORY_TRANSFER_REQUEST_SERVICE = "InventoryTransferRequest";
+
 	public const string PRODUCT_RECEIPT_SERVICE = "ProductReceipt";
 
 	public const string PRODUCT_RETURN_SERVICE = "ProductReturn";

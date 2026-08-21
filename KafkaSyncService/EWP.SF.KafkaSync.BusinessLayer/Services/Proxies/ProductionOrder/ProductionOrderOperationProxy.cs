@@ -232,8 +232,8 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
                 };
 
                 response = _use2503ForSync
-                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", materialRequest).ConfigureAwait(false)
-                    : await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", materialRequest).ConfigureAwait(false);
+                    ? await PostAsyncPO<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false)
+                    : await PostAsync<ResponseModel>("WorkOrder/TransactionMaterial/WithoutExternalId", microserviceRequest).ConfigureAwait(false);
             }
             else if (request is TransactionRequest normalRequest)
             {
@@ -250,6 +250,30 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
             {
                 throw new Exception("Unsupported request type");
             }
+
+            if (response?.Data == null)
+            {
+                return null;
+            }
+
+            JObject dataObj = JObject.FromObject(response.Data);
+            JToken transactions = dataObj["Transactions"];
+
+            return transactions;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error while fetching transaction material: {ex.Message}", ex);
+        }
+    }
+
+     public async Task<object> UpdateInventoryTransferRequest(object request, User systemOperator)
+    {
+        try
+        {
+            ResponseModel response = _use2503ForSync
+                ? await PostAsyncPO<ResponseModel>("WorkOrder/InventoryTransferRequest/WithoutExternalId", request).ConfigureAwait(false)
+                : await PostAsync<ResponseModel>("WorkOrder/InventoryTransferRequest/WithoutExternalId", request).ConfigureAwait(false);
 
             if (response?.Data == null)
             {
