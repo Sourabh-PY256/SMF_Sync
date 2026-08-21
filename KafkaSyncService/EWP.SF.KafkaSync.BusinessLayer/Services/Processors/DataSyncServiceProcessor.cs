@@ -950,8 +950,8 @@ public class DataSyncServiceProcessor
 								try
 								{
 									sfResponse = (await productOperation.ListUpdateProduct(
-									listElem.Select(Component.FromProductExternal).ToList(),
-									listProductsOriginal?.Select(Component.FromProductExternal).ToList(),
+									listElem,
+									listProductsOriginal,
 									SystemOperator,
 									false,
 									LevelMessage.Success
@@ -1652,7 +1652,7 @@ public class DataSyncServiceProcessor
 						//await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 						if (listProcessTypes.Count > 0)
 						{
-							List<ResponseData> sfListResponse = processTypeOperation.ListUpdateSuboperationTypes_Bulk(listProcessTypes, SystemOperator, false, LevelMessage.Success);
+							List<ResponseData> sfListResponse = await processTypeOperation.ListUpdateSuboperationTypes_Bulk(listProcessTypes, SystemOperator, false, LevelMessage.Success).ConfigureAwait(false);
 							if (sfListResponse is not null)
 							{
 								foreach (ResponseData rsp in sfListResponse)

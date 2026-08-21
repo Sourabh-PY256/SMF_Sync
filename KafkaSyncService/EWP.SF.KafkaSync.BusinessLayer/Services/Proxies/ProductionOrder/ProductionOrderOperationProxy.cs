@@ -179,7 +179,7 @@ public class ProductionOrderOperationProxy : BaseHttpProxy, IWorkOrderOperation
         };
 
         // This might need a different endpoint, but following the general pattern
-        var response = Task.Run(() => PostAsync<List<WorkOrderResponse>>("ProductionOrder/ChangeStatus", request)).Result;
+        var response = Task.Run(() => PostAsync<List<WorkOrderResponse>>($"WorkOrderChangeStatus/{Validate.ToString().ToLower()}/{Level}", request)).Result;
         return response ?? new List<WorkOrderResponse>();
     }
 

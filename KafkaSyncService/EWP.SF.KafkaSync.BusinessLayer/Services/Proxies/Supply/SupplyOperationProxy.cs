@@ -36,7 +36,7 @@ public class SupplyOperationProxy : BaseHttpProxy, ISupplyOperation
         }
         else
         {
-            string endpoint = $"Supply/Bulk/{Validate.ToString().ToLower()}/{Level}";
+            string endpoint = $"Supply/{Validate.ToString().ToLower()}/{Level}";
             return await PostAsync<List<ResponseData>>(endpoint, SupplyList).ConfigureAwait(false);
         }
         // Sending the list directly as the body

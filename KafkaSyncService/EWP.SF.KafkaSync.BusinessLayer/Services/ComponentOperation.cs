@@ -147,15 +147,16 @@ public class ComponentOperation : IComponentOperation
 	/// Automatically determines mode (Create/Update) based on existing components,
 	/// then normalizes and merges via ProcessProduct.
 	/// </summary>
-	public async Task<List<ResponseData>> ListUpdateProduct(List<Component> itemList, List<Component> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
+	public async Task<List<ResponseData>> ListUpdateProduct(List<ProductExternal> itemList, List<ProductExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level)
 	{
 		List<ResponseData> returnValue = [];
 		if (itemList?.Count > 0)
 		{
-			foreach (Component item in itemList)
+			foreach (ProductExternal itemExt in itemList)
 			{
 				try
 				{
+                    Component item = Component.FromProductExternal(itemExt);
 					// For synchronization, determine the ActionDB mode automatically.
 					Component existingComponent = (await GetComponents(item.Code, true).ConfigureAwait(false))?.FirstOrDefault(c => c.Status != Status.Failed);
 					
@@ -174,7 +175,7 @@ public class ComponentOperation : IComponentOperation
 				{
 					returnValue.Add(new ResponseData
 					{
-						Code = item.Code,
+						Code = itemExt.ProductCode,
 						Entity = "Product",
 						IsSuccess = false,
 						Message = ex.Message

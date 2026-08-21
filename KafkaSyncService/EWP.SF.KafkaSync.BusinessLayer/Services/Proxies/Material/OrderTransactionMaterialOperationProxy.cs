@@ -25,19 +25,19 @@ public class OrderTransactionMaterialOperationProxy : BaseHttpProxy, IOrderTrans
 
     public async Task<List<ResponseData>> ListUpdateMaterialIssue(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"Material/Issue/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"WorkOrderProgress/ComponentValues/{Validate.ToString().ToLower()}/{Level}";
         return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
     }
 
     public async Task<List<ResponseData>> ListUpdateMaterialReturn(List<MaterialReturnExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"Material/Return/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"WorkOrderProgress/ComponentValues/{Validate.ToString().ToLower()}/{Level}";
         return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
     }
 
     public async Task<List<ResponseData>> ListUpdateMaterialScrap(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"Material/Scrap/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"WorkOrderProgress/Scrap/{Validate.ToString().ToLower()}/{Level}";
         return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
     }
 }

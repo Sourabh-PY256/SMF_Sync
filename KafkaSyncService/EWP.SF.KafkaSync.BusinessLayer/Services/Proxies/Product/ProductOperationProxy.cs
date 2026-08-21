@@ -20,50 +20,46 @@ public class ProductOperationProxy : BaseHttpProxy, IComponentOperation
     }
 
     public async Task<List<ResponseData>> ListUpdateProduct(
-        List<Component> itemList,
-        List<Component> itemListOriginal,
+        List<ProductExternal> itemList,
+        List<ProductExternal> itemListOriginal,
         User systemOperator,
         bool Validate,
         LevelMessage Level)
     {
-        var results = new List<ResponseData>();
-        foreach (var item in itemList)
+        string endpoint = $"Product/{Validate.ToString().ToLower()}/{Level}";
+        
+        ResponseModel response;
+        if (_use2503ForSync)
         {
-            // Call the single-item Merge endpoint for each component.
-            // Using "Product/Merge/Create" matches the current user preference.
-            string endpoint = "Product/Merge/Update";
-
-            if(_use2503ForSync)
-            {
-                var response = await PostAsyncPO<ResponseModel>(endpoint, item).ConfigureAwait(false);
-                results.Add(new ResponseData
-                {
-                    IsSuccess = response.IsSuccess,
-                    Message = response.Message,
-                    Entity = response.Data,
-                    Code = item.Code,
-                    Action = ActionDB.Update,
-                    Version = item.Version
-                });
-            }
-            else
-            {
-                
-                var response = await PostAsync<ResponseModel>(endpoint, item).ConfigureAwait(false);
-                results.Add(new ResponseData
-                {
-                    IsSuccess = response.IsSuccess,
-                    Message = response.Message,
-                    Entity = response.Data,
-                    Code = item.Code,
-                    Action = ActionDB.Update,
-                    Version = item.Version
-                });
-            }
-
-            
+            response = await PostAsyncPO<ResponseModel>(endpoint, itemList).ConfigureAwait(false);
         }
-        return results;
+        else
+        {
+            response = await PostAsync<ResponseModel>(endpoint, itemList).ConfigureAwait(false);
+        }
+
+        if (response.IsSuccess)
+        {
+            if (response.Data is IEnumerable<ResponseData> dataList)
+            {
+                return dataList.ToList();
+            }
+            else if (response.Data != null)
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<List<ResponseData>>(response.Data.ToString());
+            }
+        }
+        else
+        {
+             return itemList.Select(x => new ResponseData
+             {
+                 IsSuccess = false,
+                 Message = response.Message,
+                 Code = x.ProductCode
+             }).ToList();
+        }
+
+        return new List<ResponseData>();
     }
 
     public Task<ResponseData> ProcessProduct(ActionDB mode, Component component, User systemOperator)

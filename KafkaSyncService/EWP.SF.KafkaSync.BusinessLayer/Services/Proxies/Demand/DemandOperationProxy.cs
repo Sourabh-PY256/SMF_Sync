@@ -39,7 +39,7 @@ public class DemandOperationProxy : BaseHttpProxy, IDemandOperation
         else
         {
             // Endpoint: Demand/Bulk/{validate}/{level}
-            string endpoint = $"Demand/Bulk/{Validate.ToString().ToLower()}/{Level}";
+            string endpoint = $"Demand/{Validate.ToString().ToLower()}/{Level}";
             // Sending the list directly as the body
             return await PostAsync<List<ResponseData>>(endpoint, demandList).ConfigureAwait(false);
         }

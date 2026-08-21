@@ -22,7 +22,7 @@ public interface IComponentOperation
     /// (caller converts ProductExternal → Component before calling this).
     /// Applies the same NormalizeComponent rules as the UI path for each item.
     /// </summary>
-    Task<List<ResponseData>> ListUpdateProduct(List<Component> itemList, List<Component> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level);
+    Task<List<ResponseData>> ListUpdateProduct(List<ProductExternal> itemList, List<ProductExternal> itemListOriginal, User systemOperator, bool Validate, LevelMessage Level);
 
     Task<Component[]> GetComponents(string componentId, bool ignoreImages = false, string filter = "");
     Task<List<ProcessEntry>> GetProcessEntryById(string processEntryId, User systemOperator);

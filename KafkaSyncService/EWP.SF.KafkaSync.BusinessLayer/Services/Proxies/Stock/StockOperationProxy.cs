@@ -26,7 +26,7 @@ public class StockOperationProxy : BaseHttpProxy, IStockOperation
     {
         if(_use2503ForSync)
         {
-            string endpoint = $"Stock/{Validate.ToString().ToLower()}/{Level}";
+            string endpoint = $"Stock/Bulk/{Validate.ToString().ToLower()}/{Level}";
 
             // Sending the list directly as the body
             return await PostAsyncPO<ResponseData>(endpoint, stockList).ConfigureAwait(false);

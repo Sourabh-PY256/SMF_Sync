@@ -22,8 +22,8 @@ public class ProductKafkaProxy : BaseKafkaProxy, IComponentOperation
     { }
 
     public async Task<List<ResponseData>> ListUpdateProduct(
-        List<Component> itemList,
-        List<Component> itemListOriginal,
+        List<ProductExternal> itemList,
+        List<ProductExternal> itemListOriginal,
         User systemOperator,
         bool Validate,
         LevelMessage Level)

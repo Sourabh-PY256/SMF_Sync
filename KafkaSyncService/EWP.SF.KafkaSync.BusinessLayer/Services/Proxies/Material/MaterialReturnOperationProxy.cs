@@ -30,7 +30,7 @@ public class MaterialReturnOperationProxy : BaseHttpProxy, IOrderTransactionMate
 
     public async Task<List<ResponseData>> ListUpdateMaterialReturn(List<MaterialReturnExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"Material/Return/Bulk/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"WorkOrderProgress/ComponentValues/{Validate.ToString().ToLower()}/{Level}";
         return await PostAsync<List<ResponseData>>(endpoint, new { Data = OrderTransactionList, Validate, Level, LogId = logId }).ConfigureAwait(false);
     }
 

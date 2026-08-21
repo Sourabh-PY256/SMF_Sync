@@ -34,7 +34,7 @@ public class DeviceOperationProxy : BaseHttpProxy, IDeviceOperation
         bool notifyOnce = true,
         string logId = null)
     {
-        string endpoint = $"Machine/Create/{validate.ToString().ToLower()}/{level}";
+        string endpoint = $"Machine/{validate.ToString().ToLower()}/{level}";
         return await PostAsync<ResponseData>(endpoint, new { machineInfo, systemOperator, notifyOnce }).ConfigureAwait(false);
     }
 

@@ -95,7 +95,6 @@ builder.Services.AddSingleton<ISyncCompletionRegistry, SyncCompletionRegistry>()
 builder.Services.AddScoped<KafkaSyncRequestFactory>();
 builder.Services.AddScoped<IInventoryStatusOperation, InventoryStatusOperation>();
 builder.Services.AddScoped<ILotSerialStatusOperation, LotSerialStatusOperation>();
-builder.Services.AddScoped<IProcessTypeOperation, ProcessTypeOperation>();
 builder.Services.AddScoped<IProcessTypeRepo, ProcessTypeRepo>();
 builder.Services.AddScoped<IProcedureOperation, ProcedureOperation>();
 builder.Services.AddScoped<IActivityOperation, ActivityOperation>();
@@ -167,6 +166,11 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
             });
         builder.Services.AddHttpClient<ToolingTypeOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<ProcessTypeOperationProxy>()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
@@ -245,7 +249,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IDeviceOperation>(sp => sp.GetRequiredService<DeviceOperationProxy>());
             builder.Services.AddScoped<IWorkOrderOperation>(sp => sp.GetRequiredService<ProductionOrderOperationProxy>());
             builder.Services.AddScoped<IOrderTransactionProductOperation>(sp => sp.GetRequiredService<ProductReceiptOperationProxy>());
-            
+            builder.Services.AddScoped<IProcessTypeOperation>(sp => sp.GetRequiredService<ProcessTypeOperationProxy>());
             
         }
         else
@@ -255,6 +259,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IInventoryOperation, InventoryOperation>();
             builder.Services.AddScoped<IEmployeeOperation, EmployeeOperation>();
             builder.Services.AddScoped<IComponentOperation, ComponentOperation>();
+            builder.Services.AddScoped<IProcessTypeOperation, ProcessTypeOperation>();
             
         }
 // builder.Services.AddScoped<IDemandOperation, DemandOperation>(); // Moved to proxy selection section above

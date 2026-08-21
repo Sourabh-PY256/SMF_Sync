@@ -61,7 +61,7 @@ public class DataSyncRepository : IDataSyncRepository
 					await using (rdr.ConfigureAwait(false))
 					{
 						if (rdr.HasRows)
-						{
+						{ 
 							// Get ordinals for column indices
 							int idOrdinal = rdr.GetOrdinal("Id");
 							int erpDataIdOrdinal = rdr.GetOrdinal("ErpDataId");

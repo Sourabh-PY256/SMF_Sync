@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using EWP.SF.Common.Constants;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.Models;
@@ -39,7 +39,7 @@ public class ProcessTypeOperation : IProcessTypeOperation
 	/// <summary>
 	///
 	/// </summary>
-	public List<ResponseData> ListUpdateSuboperationTypes_Bulk(List<SubProcessTypeExternal> clockList, User systemOperator, bool Validate, LevelMessage Level)
+	public Task<List<ResponseData>> ListUpdateSuboperationTypes_Bulk(List<SubProcessTypeExternal> clockList, User systemOperator, bool Validate, LevelMessage Level)
 	{
 		List<ResponseData> returnValue = [];
 		ResponseData MessageError;
@@ -130,7 +130,7 @@ public class ProcessTypeOperation : IProcessTypeOperation
 			};
 		}
 
-		return returnValue;
+		return Task.FromResult(returnValue);
 	}
 /// <summary>
 	///
