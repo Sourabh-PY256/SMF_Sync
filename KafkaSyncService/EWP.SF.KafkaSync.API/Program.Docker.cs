@@ -10,6 +10,7 @@ using EWP.SF.KafkaSync.BusinessLayer.Services;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using EWP.SF.KafkaSync.BusinessLayer.Services.Handlers;
 
 if (Environment.GetEnvironmentVariable("ENABLE_REMOTE_DEBUG") == "true")
 {
@@ -277,6 +278,13 @@ builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>(
 builder.Services.AddSingleton<IKafkaService, KafkaService>();
 
 // Register service consumer manager as a singleton
+builder.Services.AddSingleton<ISyncMessageHandler, OrderTransactionMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, MaterialSyncMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, InventoryTransferMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, ProductReceiptMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, MachineLaborIssueMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, ProductionOrderMessageHandler>();
+builder.Services.AddSingleton<ISyncMessageHandler, DefaultSyncMessageHandler>();
 builder.Services.AddSingleton<IServiceConsumerManager, ServiceConsumerManager>();
 
 //builder.Services.AddControllers();

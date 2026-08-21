@@ -1859,8 +1859,9 @@ public class DataSyncServiceProcessor
 					throw new Exception("No request body found");
 			}
 		}
-		dynamic requestErpMapped = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.RequestMapSchema, RequestBody) ?? throw new Exception("No data to process");
-		string requestErpJson = JsonConvert.SerializeObject(requestErpMapped[0]);
+		object requestErpMapped = DataSyncServiceUtil.MapEntity(ServiceData.ErpMapping.RequestMapSchema, RequestBody) ?? throw new Exception("No data to process");
+		JToken requestErpToken = requestErpMapped is List<JObject> requestErpList ? requestErpList.FirstOrDefault() : (JToken)requestErpMapped;
+		string requestErpJson = JsonConvert.SerializeObject(requestErpToken);
 		LogInfo.SfMappedJson = requestErpJson;
 		LogInfo.EndpointUrl = ServiceData.ErpData.BaseUrl + ServiceData.Path;
 		_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
@@ -1991,7 +1992,7 @@ public class DataSyncServiceProcessor
 			//_ = await _dataSyncServiceOperation.InsertDataSyncServiceLog(LogInfo).ConfigureAwait(false);
 
 			// Handle post-success operations for MATERIAL_ISSUE_SERVICE
-			if (ServiceData.Entity.Name == SyncERPEntity.MATERIAL_ISSUE_SERVICE)
+			if (ServiceData.Entity.Name == SyncERPEntity.MATERIAL_ISSUE_SERVICE || ServiceData.Entity.Name == SyncERPEntity.MATERIAL_SCRAP_SERVICE)
 			{
 				await HandleMaterialIssueSuccess(responseErp, RequestBody, SystemOperator, ServiceData, erpResult.Response).ConfigureAwait(false);
 			}
@@ -2767,11 +2768,11 @@ public class DataSyncServiceProcessor
 				externalId = rawResponse["message"]?[0]?["entity"]?["batchNbr"]?["value"]?.ToString();
 			}
 
-			if (!string.IsNullOrEmpty(externalId))
+			if (string.IsNullOrEmpty(externalId))
 			{
 				_logger.LogInformation("Extracted externalId: {ExternalId}. Calling MachineIssue UpdateExternalID microservice.", externalId);
 				var workOrderOperation = GetOperation<ProductionOrderOperationProxy>();
-				await workOrderOperation.UpdateMachineIssueExternalID(externalId, requestBody, systemOperator).ConfigureAwait(false);
+				//await workOrderOperation.UpdateMachineIssueExternalID(externalId, requestBody, systemOperator).ConfigureAwait(false);
 			}
 			else
 			{
