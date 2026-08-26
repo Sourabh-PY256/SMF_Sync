@@ -25,7 +25,7 @@ public class OrderTransactionMaterialOperationProxy : BaseHttpProxy, IOrderTrans
 
     public async Task<List<ResponseData>> ListUpdateMaterialIssue(List<MaterialIssueExternal> OrderTransactionList, User systemOperator, bool Validate, LevelMessage Level, string logId = null)
     {
-        string endpoint = $"WorkOrderProgress/ComponentValues/{Validate.ToString().ToLower()}/{Level}";
+        string endpoint = $"MaterialIssue/{Validate.ToString().ToLower()}/{Level}";
         return await PostAsync<List<ResponseData>>(endpoint, OrderTransactionList).ConfigureAwait(false);
     }
 

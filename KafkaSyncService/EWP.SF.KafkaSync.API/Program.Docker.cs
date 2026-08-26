@@ -146,6 +146,11 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             {
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
             });
+            builder.Services.AddHttpClient<StockAllocationProxy>()
+              .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+              {
+                  ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; }
+              });
         builder.Services.AddHttpClient<DemandOperationProxy>()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
@@ -240,6 +245,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IItemOperation>(sp => sp.GetRequiredService<ItemOperationProxy>());
             builder.Services.AddScoped<ISupplyOperation>(sp => sp.GetRequiredService<SupplyOperationProxy>());
             builder.Services.AddScoped<IDemandOperation>(sp => sp.GetRequiredService<DemandOperationProxy>());
+            builder.Services.AddScoped<IStockAllocationOperation>(sp => sp.GetRequiredService<StockAllocationProxy>());
             builder.Services.AddScoped<IMeasureUnitOperation>(sp => sp.GetRequiredService<MeasureUnitOperationProxy>());
             builder.Services.AddScoped<IProfileOperation>(sp => sp.GetRequiredService<PositionOperationProxy>());
             builder.Services.AddScoped<IWorkOrderChangeStatusOperation>(sp => sp.GetRequiredService<WorkOrderChangeStatusOperationProxy>());
@@ -277,7 +283,7 @@ builder.Services.AddScoped<IProductionLinesOperation, ProductionLinesOperation>(
 // builder.Services.AddScoped<IMeasureUnitOperation, MeasureUnitOperation>(); // Moved to proxy selection section above
 // builder.Services.AddScoped<IProfileOperation, ProfileOperation>(); // Moved to proxy selection section above
 // builder.Services.AddScoped<IStockOperation, StockOperation>(); // Moved to proxy selection section above
-builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>();
+// builder.Services.AddScoped<IStockAllocationOperation, StockAllocationOperation>(); // Moved to proxy selection section above
 
 // Register Kafka services
 builder.Services.AddSingleton<IKafkaService, KafkaService>();
