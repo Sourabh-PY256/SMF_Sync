@@ -1,4 +1,4 @@
-﻿namespace EWP.SF.KafkaSync.BusinessEntities;
+namespace EWP.SF.KafkaSync.BusinessEntities;
 
 public static class SyncERPEntity
 {
@@ -107,6 +107,7 @@ public static class SyncERPEntity
 	public const string PROCESS_TYPE_SERVICE = "OperationSubtype";
 	
 	public const string ORDER_TRANSACTION_SERVICE = "OrderTransaction";
+	public const string MOVE_ENTRY_SERVICE = "MoveEntry";
 	//public const string PROCEDURE_SERVICE = "Procedure";
 	// public const string IOT_DATA_SIMULATOR_SERVICE = "IoTDataSimulator";
 }

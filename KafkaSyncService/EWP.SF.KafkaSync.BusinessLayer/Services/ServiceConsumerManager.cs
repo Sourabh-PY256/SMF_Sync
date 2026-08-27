@@ -213,6 +213,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             StartProductionOrderConsumer();
             StartProductReceiptConsumer();
             StartMaterialReturnConsumer();
+            StartMoveEntryConsumer();
         }
 
         /// <summary>
@@ -409,6 +410,95 @@ namespace EWP.SF.KafkaSync.BusinessLayer
                 }
 
                 _logger.LogInformation("[ProductReceipt] {Action} forwarded to Product Receipt Microservice", action);
+            }, null, null, groupId);
+        }
+
+        /// <summary>
+        /// Consumer: Move Entry Microservice ← Move Entry
+        /// </summary>
+        private void StartMoveEntryConsumer()
+        {
+            // Note: DataSyncController uses producer-sync-{service.ToLower()}
+            // So we listen on producer-sync-moveentry for generic producer messages.
+            string topic = "producer-sync-moveentry";
+            string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
+            string groupId = $"{prefix}-moveentry-group";
+            _logger.LogInformation("Starting Move Entry consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
+
+            System.Threading.Thread.Sleep(500);
+
+            _kafkaService.StartConsumer(topic, async (key, value) =>
+            {
+                _logger.LogInformation("[MoveEntry] Received Kafka message. Key: {Key}", key);
+
+                var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var message = System.Text.Json.JsonSerializer.Deserialize<SyncMessage>(value, options);
+
+                if (message == null || string.IsNullOrEmpty(message.BodyData))
+                {
+                    _logger.LogWarning("[MoveEntry] Message is null or BodyData is empty. Key: {Key}", key);
+                    return;
+                }
+
+                using var scope = _serviceScopeFactory.CreateScope();
+                var httpProxy = scope.ServiceProvider.GetRequiredService<MoveEntryOperationProxy>();
+
+                List<MoveEntryExternal> list = new List<MoveEntryExternal>();
+                string logId = message.LogId;
+                
+                try
+                {
+                    var parsedData = JsonConvert.DeserializeObject<dynamic>(message.BodyData);
+                    logId = logId ?? parsedData.LogId?.ToString();
+                    
+                    if (parsedData.Data != null)
+                    {
+                        list = parsedData.Data.ToObject<List<MoveEntryExternal>>();
+                    }
+                    else if (parsedData.Type == Newtonsoft.Json.Linq.JTokenType.Array)
+                    {
+                        list = parsedData.ToObject<List<MoveEntryExternal>>();
+                    }
+                    else
+                    {
+                        list = [parsedData.ToObject<MoveEntryExternal>()];
+                    }
+                }
+                catch
+                {
+                    try
+                    {
+                        list = JsonConvert.DeserializeObject<List<MoveEntryExternal>>(message.BodyData);
+                    }
+                    catch
+                    {
+                        _logger.LogWarning("[MoveEntry] Could not parse BodyData as List<MoveEntryExternal>. Key: {Key}", key);
+                        return;
+                    }
+                }
+
+                if (list != null && list.Count > 0)
+                {
+                    bool validate = false;
+                    LevelMessage level = LevelMessage.Success;
+
+                    var listResponse = await httpProxy.ListUpdateMoveEntry(list, message.User, validate, level, logId).ConfigureAwait(false);
+
+                    if (!string.IsNullOrEmpty(logId) && listResponse != null)
+                    {
+                        var processor = scope.ServiceProvider.GetRequiredService<DataSyncServiceProcessor>();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            var resp = i < listResponse.Count ? listResponse[i] : new ResponseData { IsSuccess = false, Message = "No response for this record" };
+                            if (resp != null)
+                            {
+                                await processor.UpdateLogDetailAsync(logId, list[i].DocCode, resp).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+
+                _logger.LogInformation("[MoveEntry] Message forwarded to Move Entry Microservice");
             }, null, null, groupId);
         }
 

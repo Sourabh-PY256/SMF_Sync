@@ -197,6 +197,11 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             {
                 ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
             });
+        builder.Services.AddHttpClient<MoveEntryOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
 
         if (configuration.GetValue<bool>("AppSettings:UseKafkaForSync"))
         {
@@ -218,6 +223,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IDeviceOperation, DeviceKafkaProxy>();
             builder.Services.AddScoped<IWorkOrderOperation, ProductionOrderKafkaProxy>();
             builder.Services.AddScoped<IOrderTransactionProductOperation, ProductReceiptKafkaProxy>();
+            builder.Services.AddScoped<IMoveEntryOperation, MoveEntryKafkaProxy>();
 
             
         }
@@ -242,6 +248,7 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             builder.Services.AddScoped<IDeviceOperation>(sp => sp.GetRequiredService<DeviceOperationProxy>());
             builder.Services.AddScoped<IWorkOrderOperation>(sp => sp.GetRequiredService<ProductionOrderOperationProxy>());
             builder.Services.AddScoped<IOrderTransactionProductOperation>(sp => sp.GetRequiredService<ProductReceiptOperationProxy>());
+            builder.Services.AddScoped<IMoveEntryOperation>(sp => sp.GetRequiredService<MoveEntryOperationProxy>());
             builder.Services.AddScoped<IProcessTypeOperation>(sp => sp.GetRequiredService<ProcessTypeOperationProxy>());
 
         }
