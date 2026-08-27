@@ -418,9 +418,8 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         /// </summary>
         private void StartMoveEntryConsumer()
         {
-            // Note: DataSyncController uses producer-sync-{service.ToLower()}
-            // So we listen on producer-sync-moveentry for generic producer messages.
-            string topic = "producer-sync-moveentry";
+            // Note: We listen on shopfloor-moveentry-sync for inbound updates from ERP.
+            string topic = "shopfloor-moveentry-sync";
             string prefix = _configuration["KafkaSettings:GroupIdPrefix"] ?? "sf-sync";
             string groupId = $"{prefix}-moveentry-group";
             _logger.LogInformation("Starting Move Entry consumer for topic: {Topic} with GroupId: {GroupId}", topic, groupId);
