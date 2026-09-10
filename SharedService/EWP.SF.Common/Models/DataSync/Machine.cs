@@ -1162,7 +1162,7 @@ public class MachineExternal
 	/// <summary>
 	///
 	/// </summary>
-	public double MinimumCapacity { get; set; }
+	public double? MinimumCapacity { get; set; }
 
 	/// <summary>
 	///

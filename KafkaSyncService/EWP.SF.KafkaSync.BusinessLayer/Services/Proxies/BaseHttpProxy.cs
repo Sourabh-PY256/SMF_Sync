@@ -161,7 +161,18 @@ public abstract class BaseHttpProxy
                     if (responseModel.Data != null)
                     {
                         var dataJson = JsonConvert.SerializeObject(responseModel.Data);
-                        return JsonConvert.DeserializeObject<T>(dataJson);
+                        try
+                        {
+                            return JsonConvert.DeserializeObject<T>(dataJson);
+                        }
+                        catch (JsonSerializationException)
+                        {
+                            if (dataJson.TrimStart().StartsWith("{") && typeof(System.Collections.IEnumerable).IsAssignableFrom(typeof(T)) && typeof(T) != typeof(string))
+                            {
+                                return JsonConvert.DeserializeObject<T>($"[{dataJson}]");
+                            }
+                            throw;
+                        }
                     }
                     return default(T);
                 }
