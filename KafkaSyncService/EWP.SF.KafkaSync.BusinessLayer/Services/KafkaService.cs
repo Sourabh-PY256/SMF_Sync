@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +23,16 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         private readonly int _defaultRetryDelayMs;
         private readonly bool _autoCreateTopics;
         private readonly CancellationTokenSource _cts = new();
+
+        // Long-lived Kafka clients. Building a producer / admin client / consumer per call costs
+        // seconds each (broker metadata + connection setup); RequestAsync used to do all of that on
+        // every RPC, which capped the relay at roughly one evaluation per 10-20 s. They are
+        // thread-safe (producer, admin) or guarded by _infraLock (metadata consumer).
+        private readonly object _infraLock = new();
+        private IProducer<string, string> _sharedProducer;
+        private IAdminClient _adminClient;
+        private IConsumer<string, string> _metaConsumer;
+        private readonly ConcurrentDictionary<string, List<int>> _topicPartitions = new();
         private bool _disposed = false;
 
         public KafkaService(IConfiguration configuration, ILogger<KafkaService> logger)
@@ -115,7 +126,7 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             {
                 _logger.LogInformation("Producing message to topic {Topic} with key {Key}", topic, key);
                 
-                using var producer = new ProducerBuilder<string, string>(_producerConfig).Build();
+                var producer = GetSharedProducer();
                 var jsonMessage = JsonSerializer.Serialize(message);
                 
                 var result = await producer.ProduceAsync(topic, new Message<string, string>
@@ -363,6 +374,153 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             return default;
         }
 
+
+        public async Task<TResponse> RequestAsync<TRequest, TResponse>(
+            string requestTopic,
+            string key,
+            TRequest request,
+            string responseTopic,
+            TimeSpan timeout,
+            Func<ConsumeResult<string, string>, bool> predicate = null)
+        {
+            await EnsureTopicExistsAsync(responseTopic).ConfigureAwait(false);
+
+            var consumerConfig = new ConsumerConfig
+            {
+                BootstrapServers = _consumerConfig.BootstrapServers,
+                GroupId = $"{responseTopic}-rpc-{Guid.NewGuid():N}",
+                EnableAutoCommit = false,
+                EnableAutoOffsetStore = false,
+                AutoOffsetReset = AutoOffsetReset.Latest
+            };
+
+            using var consumer = new ConsumerBuilder<string, string>(consumerConfig)
+                .SetErrorHandler((_, e) => _logger.LogError("Kafka RPC consumer error: {Error}", e.Reason))
+                .Build();
+
+            try
+            {
+                // Capture "now" (the high watermark) for every partition and assign from exactly there,
+                // BEFORE producing — so the reply can't land in a window the consumer never reads.
+                var metadata = GetTopicPartitions(responseTopic);
+                var assignments = new List<TopicPartitionOffset>();
+                foreach (var partition in metadata)
+                {
+                    var tp = new TopicPartition(responseTopic, partition);
+                    var watermarks = QueryWatermarks(tp);
+                    assignments.Add(new TopicPartitionOffset(tp, watermarks.High));
+                }
+                consumer.Assign(assignments);
+
+                await ProduceMessageAsync(requestTopic, key, request).ConfigureAwait(false);
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+                cts.CancelAfter(timeout);
+
+                while (!cts.IsCancellationRequested)
+                {
+                    ConsumeResult<string, string> result;
+                    try
+                    {
+                        result = consumer.Consume(cts.Token);
+                    }
+                    catch (ConsumeException ex)
+                    {
+                        _logger.LogWarning(ex, "RPC consumer error on {Topic}; retrying", responseTopic);
+                        await Task.Delay(200, CancellationToken.None).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    if (result?.Message != null && (predicate == null || predicate(result)))
+                    {
+                        return JsonSerializer.Deserialize<TResponse>(result.Message.Value);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("RPC wait on {Topic} timed out or was cancelled", responseTopic);
+            }
+            finally
+            {
+                try { consumer.Close(); } catch { /* best effort */ }
+            }
+
+            return default;
+        }
+
+        private IProducer<string, string> GetSharedProducer()
+        {
+            lock (_infraLock)
+            {
+                return _sharedProducer ??= new ProducerBuilder<string, string>(_producerConfig).Build();
+            }
+        }
+
+        private IAdminClient GetAdminClient()
+        {
+            lock (_infraLock)
+            {
+                return _adminClient ??= new AdminClientBuilder(new AdminClientConfig
+                {
+                    BootstrapServers = _consumerConfig.BootstrapServers
+                }).Build();
+            }
+        }
+
+        private WatermarkOffsets QueryWatermarks(TopicPartition topicPartition)
+        {
+            lock (_infraLock)
+            {
+                _metaConsumer ??= new ConsumerBuilder<string, string>(new ConsumerConfig
+                {
+                    BootstrapServers = _consumerConfig.BootstrapServers,
+                    GroupId = "kafka-sync-rpc-metadata",
+                    EnableAutoCommit = false
+                }).Build();
+
+                return _metaConsumer.QueryWatermarkOffsets(topicPartition, TimeSpan.FromSeconds(5));
+            }
+        }
+
+        private List<int> GetTopicPartitions(string topic) =>
+            _topicPartitions.TryGetValue(topic, out var partitions) ? partitions : new List<int> { 0 };
+
+        private async Task EnsureTopicExistsAsync(string topic)
+        {
+            // Resolved once per topic for the life of the process (topics aren't deleted/re-partitioned
+            // under a running service), instead of two admin-client round trips per RPC.
+            if (_topicPartitions.ContainsKey(topic))
+            {
+                return;
+            }
+
+            var admin = GetAdminClient();
+            var meta = admin.GetMetadata(topic, TimeSpan.FromSeconds(5));
+            var existing = meta.Topics.FirstOrDefault(x => x.Topic == topic);
+            if (existing != null && existing.Error.Code == ErrorCode.NoError && existing.Partitions.Count > 0)
+            {
+                _topicPartitions[topic] = existing.Partitions.Select(p => p.PartitionId).ToList();
+                return;
+            }
+
+            try
+            {
+                await admin.CreateTopicsAsync(new[]
+                {
+                    new Confluent.Kafka.Admin.TopicSpecification { Name = topic, NumPartitions = 1, ReplicationFactor = 1 }
+                }).ConfigureAwait(false);
+                _logger.LogInformation("Created missing response topic {Topic}", topic);
+            }
+            catch (Confluent.Kafka.Admin.CreateTopicsException ex)
+                when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
+            {
+                // Created concurrently by another request/broker auto-create — fine.
+            }
+
+            _topicPartitions[topic] = new List<int> { 0 };
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -372,6 +530,11 @@ namespace EWP.SF.KafkaSync.BusinessLayer
             
             // Wait a moment for consumers to close gracefully
             Thread.Sleep(500);
+
+            try { _sharedProducer?.Flush(TimeSpan.FromSeconds(5)); } catch { /* best effort */ }
+            _sharedProducer?.Dispose();
+            _adminClient?.Dispose();
+            _metaConsumer?.Dispose();
 
             _cts.Dispose();
             _disposed = true;

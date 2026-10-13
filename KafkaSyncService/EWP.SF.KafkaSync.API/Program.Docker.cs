@@ -111,6 +111,31 @@ builder.Services.AddScoped<IOrderTransactionMaterialOperation, OrderTransactionM
             });
 
         // Always register HTTP Proxies as themselves for Consumer use
+        builder.Services.AddHttpClient<NotificationOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<NotificationPublishOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<ExternalSitesOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<EventActionsOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
+        builder.Services.AddHttpClient<MachineAndDeviceGatewayOperationProxy>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (m, c, ch, e) => true
+            });
         builder.Services.AddHttpClient<BinLocationOperationProxy>()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
             {
@@ -304,6 +329,20 @@ builder.Services.AddSingleton<ISyncMessageHandler, MachineLaborIssueMessageHandl
 builder.Services.AddSingleton<ISyncMessageHandler, ProductionOrderMessageHandler>();
 builder.Services.AddSingleton<ISyncMessageHandler, DefaultSyncMessageHandler>();
 builder.Services.AddSingleton<IServiceConsumerManager, ServiceConsumerManager>();
+builder.Services.AddSingleton<IExternalSitesRequestConsumer, ExternalSitesRequestConsumer>();
+builder.Services.AddSingleton<
+	IMachineAndDeviceGatewayNotificationRequestConsumer,
+	MachineAndDeviceGatewayNotificationRequestConsumer
+>();
+builder.Services.AddSingleton<
+	IMachineAndDeviceGatewayEventActionsRequestConsumer,
+	MachineAndDeviceGatewayEventActionsRequestConsumer
+>();
+builder.Services.AddSingleton<
+	IEventActionsRefreshSignalConsumer,
+	EventActionsRefreshSignalConsumer
+>();
+builder.Services.AddSingleton<INotificationPublishConsumer, NotificationPublishConsumer>();
 
 //builder.Services.AddControllers();
 builder.Services.AddControllers()
@@ -379,6 +418,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseServiceConsumer();
+app.Services.GetRequiredService<IExternalSitesRequestConsumer>().Start();
+app.Services.GetRequiredService<IMachineAndDeviceGatewayNotificationRequestConsumer>().Start();
+app.Services.GetRequiredService<IMachineAndDeviceGatewayEventActionsRequestConsumer>().Start();
+app.Services.GetRequiredService<IEventActionsRefreshSignalConsumer>().Start();
+app.Services.GetRequiredService<INotificationPublishConsumer>().Start();
 
 app.MapControllers();
 app.Run();

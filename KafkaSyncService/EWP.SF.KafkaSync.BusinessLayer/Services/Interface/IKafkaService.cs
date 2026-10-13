@@ -25,5 +25,13 @@ namespace EWP.SF.KafkaSync.BusinessLayer
         void StartConsumer(string topic, Func<string, string, Task> messageHandler, int? maxRetries = null, int? retryDelayMs = null, string groupId = null);
        
        Task<T> ConsumeMessageAsync<T>(string topic, string groupId, TimeSpan timeout, Func<ConsumeResult<string, string>, bool> predicate = null);
+
+        /// <summary>
+        /// Request/response over Kafka without the produce-before-subscribe race of
+        /// ProduceMessageAsync + ConsumeMessageAsync: the response topic's end offsets are captured and
+        /// assigned to a consumer BEFORE the request is produced, so a fast reply can never be missed
+        /// (and a not-yet-existing response topic is created first). Returns default on timeout.
+        /// </summary>
+        Task<TResponse> RequestAsync<TRequest, TResponse>(string requestTopic, string key, TRequest request, string responseTopic, TimeSpan timeout, Func<ConsumeResult<string, string>, bool> predicate = null);
     }
 }
