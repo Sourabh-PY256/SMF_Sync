@@ -1,12 +1,12 @@
 
 using EWP.SF.KafkaSync.DataAccess;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using System.Xml.Serialization;
 using SixLabors.ImageSharp;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.KafkaSync.BusinessEntities.Models.Catalogs;
 using Newtonsoft.Json;
 using EWP.SF.Common.Constants;
 

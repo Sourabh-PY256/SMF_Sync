@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Interface;

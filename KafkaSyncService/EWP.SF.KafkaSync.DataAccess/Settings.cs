@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.ConnectionModule;
 using EWP.SF.Helper;

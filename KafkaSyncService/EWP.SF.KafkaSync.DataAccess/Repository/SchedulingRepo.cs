@@ -6,9 +6,9 @@ using EWP.SF.ConnectionModule;
 using System.Text;
 
 using Newtonsoft.Json;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Common.Models.IntegrationStaging;
+using EWP.SF.KafkaSync.BusinessEntities.Models.IntegrationStaging;
 using NLog;
 
 namespace EWP.SF.KafkaSync.DataAccess;

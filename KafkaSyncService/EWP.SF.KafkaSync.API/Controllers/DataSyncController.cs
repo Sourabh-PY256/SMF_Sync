@@ -1,5 +1,5 @@
 
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessEntities.Kafka;
 using EWP.SF.KafkaSync.BusinessLayer;

@@ -1,5 +1,5 @@
 using EWP.SF.KafkaSync.DataAccess;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Helper;
 using SixLabors.ImageSharp;
 

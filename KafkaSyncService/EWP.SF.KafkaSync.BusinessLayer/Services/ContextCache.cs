@@ -2,7 +2,7 @@
 
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.Helper;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using System.Runtime.Caching;
 using EWP.SF.Common.Enumerators;
 namespace EWP.SF.KafkaSync.BusinessLayer;

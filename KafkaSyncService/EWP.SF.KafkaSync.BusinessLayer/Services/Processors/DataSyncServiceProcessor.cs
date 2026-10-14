@@ -13,10 +13,10 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.KafkaSync.BusinessEntities.Models.Catalogs;
 using Microsoft.Extensions.DependencyInjection;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Proxies;
 

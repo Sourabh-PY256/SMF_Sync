@@ -2,7 +2,7 @@
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.Constants;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;

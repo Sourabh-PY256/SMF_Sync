@@ -4,7 +4,7 @@ using EWP.SF.KafkaSync.BusinessEntities.Kafka;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 using Microsoft.Extensions.Logging;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 
 namespace EWP.SF.KafkaSync.BusinessLayer.Services.Handlers

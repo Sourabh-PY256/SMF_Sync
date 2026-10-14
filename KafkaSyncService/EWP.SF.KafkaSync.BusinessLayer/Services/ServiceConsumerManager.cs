@@ -1,7 +1,7 @@
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessEntities.Kafka;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.KafkaSync.BusinessEntities.Models.Catalogs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;

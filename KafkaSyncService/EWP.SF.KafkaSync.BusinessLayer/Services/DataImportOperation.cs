@@ -1,4 +1,4 @@
-﻿using EWP.SF.Common.Models;
+﻿using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.DataAccess;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.Common.Enumerators;
@@ -6,7 +6,7 @@ using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.KafkaSync.BusinessEntities.Models.Catalogs;
 using EWP.SF.Common.Constants;
 using System.Text.RegularExpressions;
 
@@ -710,7 +710,7 @@ public  class DataImportOperation : IDataImportOperation
 	/// <summary>
 	///
 	/// </summary>
-	public List<Activity> GetDataImportOrderTasks(Common.Models.WorkOrderOperation operationType, OrderProcess currentProcess)
+	public List<Activity> GetDataImportOrderTasks(EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation operationType, OrderProcess currentProcess)
 	{
 		List<Activity> tasks = [];
 		if (operationType.Tasks?.Count > 0)
@@ -871,7 +871,7 @@ public  class DataImportOperation : IDataImportOperation
 		}
 		return tasks;
 	}
-public List<Activity> GetDataImportProductionOrderTasks(Common.Models.WorkOrderOperation operationType, ProductionOrderOperation currentProcess)
+public List<Activity> GetDataImportProductionOrderTasks(EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation operationType, ProductionOrderOperation currentProcess)
 	{
 		List<Activity> tasks = [];
 		if (operationType.Tasks?.Count > 0)

@@ -1,5 +1,5 @@
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using System.Threading;
 using System.Threading.Tasks;

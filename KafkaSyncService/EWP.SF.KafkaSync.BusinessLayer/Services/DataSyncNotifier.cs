@@ -1,4 +1,4 @@
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.DataAccess;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.Common.Enumerators;
@@ -6,7 +6,7 @@ using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;	
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.KafkaSync.BusinessEntities.Models.Catalogs;
 using EWP.SF.Common.Constants;
 using System.Text.RegularExpressions;
 

@@ -1,5 +1,5 @@
 ﻿
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using NLog;
 //using EWP.SF.LicenseModule;
 

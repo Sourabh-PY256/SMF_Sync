@@ -5,7 +5,7 @@ using EWP.SF.Helper;
 using MySqlConnector;
 using EWP.SF.ConnectionModule;
 using System.Text;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
 
 namespace EWP.SF.KafkaSync.DataAccess;

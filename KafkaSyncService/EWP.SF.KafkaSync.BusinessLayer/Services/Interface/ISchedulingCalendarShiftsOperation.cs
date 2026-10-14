@@ -1,7 +1,7 @@
 using EWP.SF.KafkaSync.DataAccess;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 

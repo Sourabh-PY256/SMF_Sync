@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.KafkaSync.BusinessEntities.Kafka;
 using EWP.SF.Common.ResponseModels;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 using EWP.SF.KafkaSync.BusinessLayer.Services.Interface;
 using Microsoft.Extensions.DependencyInjection;

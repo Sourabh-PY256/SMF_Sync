@@ -1,11 +1,11 @@
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using System.ComponentModel.DataAnnotations;
-using EWP.SF.Common.Models.Catalogs;
+using EWP.SF.KafkaSync.BusinessEntities.Models.Catalogs;
 using EWP.SF.Common.Enumerators;
 using EWP.SF.Common.ResponseModels;
 using EWP.SF.Helper;
 using Newtonsoft.Json;
-using EWP.SF.Common.Models.MigrationModels;
+using EWP.SF.KafkaSync.BusinessEntities.Models.MigrationModels;
 using System.Transactions;
 using System.Xml.Serialization;
 using System.Text;
@@ -768,7 +768,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 					{
 						//Validate OperationNo Sequence and Groups
 						ValidateOperationSequenceGroups(workOrder.Operations);
-						foreach (Common.Models.WorkOrderOperation op in workOrder.Operations)
+						foreach (EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation op in workOrder.Operations)
 						{
 							if (op.Step > 0)
 							{
@@ -2150,7 +2150,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 			};
 			foreach (var itm in order.Processes.GroupBy(g => g.ProcessId, (key, g) => new { OperationNo = key, Process = g.ToArray() }).ToArray())
 			{
-				Common.Models.WorkOrderOperation op = new();
+				EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation op = new();
 				OrderProcess prc = itm.Process[0];
 				op.OperationName = prc.OperationName;
 				op.OperationSubtype = prc.ProcessSubTypeId;
@@ -2481,7 +2481,7 @@ public class WorkOrderOperation : IWorkOrderOperation
 			foreach (var itm in order.Operations.GroupBy(x => x.OperationNo, (key, x) => new { OperationNo = key, Process = x.ToArray() }).ToArray())
 			{
 				ProductionOrderOperation prc = itm.Process[0];
-				EWP.SF.Common.Models.WorkOrderOperation op = new()
+				EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation op = new()
 				{
 					OperationName = prc.Name,
 					LineId = prc.LineId,
@@ -3504,7 +3504,7 @@ private static void RemoveProductionOrderResourceByLineId(ProductionOrder workOr
 		{
 		}
 	}
-	private static void ValidateOperationSequenceGroups(List<Common.Models.WorkOrderOperation> operations)
+	private static void ValidateOperationSequenceGroups(List<EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation> operations)
 	{
 
 		if (operations == null || operations.Count == 0)

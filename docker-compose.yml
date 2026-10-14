@@ -209,7 +209,7 @@ services:
         - KafkaSettings__GroupId=ewp-sf-kafka-group
         - KafkaSettings__Topics__KafkaSync=kafka-sync-topic
         - KafkaSettings__Topics__KafkaUpdates=kafka-updates-topic
-        - KafkaSettings__Consumer__MaxRetries=5
+        - KafkaSettings__Consumer__MaxRetries=1
         - KafkaSettings__Consumer__InitialRetryDelayMs=2000
         - KafkaSettings__Consumer__AutoCreateTopics=true
         - ENABLE_REMOTE_DEBUG=true

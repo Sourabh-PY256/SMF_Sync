@@ -7,7 +7,7 @@ using EWP.SF.ConnectionModule;
 using System.Text;
 
 using Newtonsoft.Json;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
 using NLog;
 

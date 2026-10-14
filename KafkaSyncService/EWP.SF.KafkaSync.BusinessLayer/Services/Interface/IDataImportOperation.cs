@@ -1,4 +1,4 @@
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessEntities;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
@@ -16,7 +16,7 @@ public interface IDataImportOperation
 
     Task<List<ProcessEntryLabor>> GetDataImportLabor(ProductExternal item, ProcessEntry pe, User systemOperator);
 
-    List<Activity> GetDataImportOrderTasks(Common.Models.WorkOrderOperation operationType, OrderProcess currentProcess);
-   List<Activity> GetDataImportProductionOrderTasks(Common.Models.WorkOrderOperation operationType, ProductionOrderOperation currentProcess);
+    List<Activity> GetDataImportOrderTasks(EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation operationType, OrderProcess currentProcess);
+   List<Activity> GetDataImportProductionOrderTasks(EWP.SF.KafkaSync.BusinessEntities.Models.WorkOrderOperation operationType, ProductionOrderOperation currentProcess);
 
 }

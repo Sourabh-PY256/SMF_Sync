@@ -1,4 +1,4 @@
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
 
 namespace EWP.SF.KafkaSync.DataAccess;

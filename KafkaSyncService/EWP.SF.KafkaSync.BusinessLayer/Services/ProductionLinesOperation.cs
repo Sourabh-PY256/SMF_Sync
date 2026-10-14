@@ -1,7 +1,7 @@
 ﻿
 using EWP.SF.Common.Constants;
 using EWP.SF.Common.Enumerators;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 
 namespace EWP.SF.KafkaSync.BusinessLayer;
 public class ProductionLinesOperation : IProductionLinesOperation

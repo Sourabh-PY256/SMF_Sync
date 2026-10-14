@@ -3,11 +3,11 @@
 
 // using DynamicExpresso;
 // using EWP.SF.Common.Enumerators;
-// using EWP.SF.Common.Models;
+// using EWP.SF.KafkaSync.BusinessEntities.Models;
 // using EWP.SF.Common.ResponseModels;
-// using EWP.SF.Common.Models.Sensors;
+// using EWP.SF.KafkaSync.BusinessEntities.Models.Sensors;
 // using EWP.SF.Common.EventHandlers;
-// using EWP.SF.Common.Models.Operations;
+// using EWP.SF.KafkaSync.BusinessEntities.Models.Operations;
 
 // using EWP.SF.Helper;
 

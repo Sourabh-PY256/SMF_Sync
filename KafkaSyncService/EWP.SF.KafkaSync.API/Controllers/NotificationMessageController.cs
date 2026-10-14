@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.KafkaSync.BusinessLayer;
 using Microsoft.AspNetCore.Mvc;
 

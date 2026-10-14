@@ -6,9 +6,9 @@ using MySqlConnector;
 using EWP.SF.ConnectionModule;
 using System.Text;
 
-using EWP.SF.Common.Models;
+using EWP.SF.KafkaSync.BusinessEntities.Models;
 using EWP.SF.Common.ResponseModels;
-using Range = EWP.SF.Common.Models.Range;
+using Range = EWP.SF.KafkaSync.BusinessEntities.Models.Range;
 using System.Text.Json;
 using NLog;
 
